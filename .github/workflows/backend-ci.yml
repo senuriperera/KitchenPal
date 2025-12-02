@@ -1,0 +1,61 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+env:
+  NODE_VERSION: "18"
+
+jobs:
+  test-and-build:
+    name: Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run unit tests
+        working-directory: ./backend
+        run: npm test
+
+      - name: Build application
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Validate build artifacts
+        working-directory: ./backend
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "❌ Build failed: dist directory not found"
+            exit 1
+          fi
+          
+          if [ ! -f "dist/app.js" ]; then
+            echo "❌ Build failed: main entry point not found"
+            exit 1
+          fi
+          
+          echo "✅ Build validation successful"
+          echo "� Build artifacts:"
+          ls -la dist/
