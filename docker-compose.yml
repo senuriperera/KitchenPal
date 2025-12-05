@@ -22,7 +22,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-      target: production
+      target: test
     container_name: kitchenpal_backend
     restart: always
     ports:
