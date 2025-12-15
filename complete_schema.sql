@@ -90,10 +90,12 @@ CREATE TABLE IF NOT EXISTS public.ingredients (
     name character varying(200) NOT NULL,
     quantity_in_stock numeric(12, 4) NOT NULL,
     unit_id integer,
+    manufacture_date date,
     expiry_date date,
     storage_type_id integer,
     cost_per_unit numeric(10, 4),
     reorder_level numeric(12, 4),
+    image_url text,
     added_at timestamp with time zone DEFAULT now(),
     last_updated timestamp with time zone DEFAULT now(),
     CONSTRAINT ingredients_pkey PRIMARY KEY (ingredient_id)
@@ -313,9 +315,7 @@ VALUES ('kg', 'Kilograms'),
     ('l', 'Liters'),
     ('ml', 'Milliliters'),
     ('pcs', 'Pieces'),
-    ('cups', 'Cups'),
-    ('tsp', 'Teaspoons'),
-    ('tbsp', 'Tablespoons') ON CONFLICT (code) DO NOTHING;
+    ('cups', 'Cups') ON CONFLICT (code) DO NOTHING;
 INSERT INTO public.storage_types (code, name)
 VALUES ('FRIDGE', 'Refrigerator'),
     ('FREEZER', 'Freezer'),
