@@ -1,0 +1,138 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { IngredientService, IngredientResponse } from '../../core/services/ingredient.service';
+import { HeaderComponent } from '../header/header';
+
+interface Ingredient {
+  id: number;
+  name: string;
+  quantity: number;
+  unit: string;
+  location: string;
+  expiryDate: string;
+  cost: number;
+  lastScanned: string;
+  status: 'OK' | 'Near expiry' | 'Expired';
+  branchId: number;
+  image?: string;
+}
+
+@Component({
+  selector: 'app-inventory',
+  standalone: true,
+  imports: [CommonModule, FormsModule, HeaderComponent],
+  templateUrl: './inventory.component.html',
+  styleUrls: ['./inventory.component.scss']
+})
+export class InventoryComponent implements OnInit {
+  ingredients: Ingredient[] = [];
+  filteredIngredients: Ingredient[] = [];
+  searchQuery: string = '';
+  isLoading: boolean = false;
+  error: string | null = null;
+
+  constructor(private ingredientService: IngredientService) {}
+
+  ngOnInit(): void {
+    this.loadIngredients();
+  }
+
+  loadIngredients(): void {
+    this.isLoading = true;
+    this.error = null;
+
+    this.ingredientService.getAllIngredients().subscribe({
+      next: (data: IngredientResponse[]) => {
+        this.ingredients = data.map((item: IngredientResponse) => this.mapToIngredient(item));
+        this.filteredIngredients = [...this.ingredients];
+        this.isLoading = false;
+      },
+      error: (err: any) => {
+        console.error('Error loading ingredients:', err);
+        this.error = 'Failed to load ingredients. Please try again.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  mapToIngredient(item: IngredientResponse): Ingredient {
+    const expiryDate = new Date(item.expiry_date || new Date());
+    const today = new Date();
+    const daysUntilExpiry = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    let status: 'OK' | 'Near expiry' | 'Expired' = 'OK';
+    if (daysUntilExpiry < 0) {
+      status = 'Expired';
+    } else if (daysUntilExpiry <= 7) {
+      status = 'Near expiry';
+    }
+
+    return {
+      id: item.ingredient_id,
+      name: item.name,
+      quantity: Number(item.quantity) || 0,
+      unit: item.unit?.code || item.unit?.name || 'kg',
+      location: item.storageType?.name || 'Unknown',
+      expiryDate: item.expiry_date || new Date().toISOString(),
+      cost: Number(item.price) || 0,
+      lastScanned: item.added_at || new Date().toISOString(),
+      status: status,
+      branchId: item.branch_id || 1,
+      image: item.image_url
+    };
+  }
+
+  searchInventory(): void {
+    if (!this.searchQuery.trim()) {
+      this.filteredIngredients = [...this.ingredients];
+      return;
+    }
+
+    const query = this.searchQuery.toLowerCase();
+    this.filteredIngredients = this.ingredients.filter(ingredient =>
+      ingredient.name.toLowerCase().includes(query) ||
+      ingredient.location.toLowerCase().includes(query)
+    );
+  }
+
+  viewDetails(ingredient: Ingredient): void {
+    console.log('View details for:', ingredient);
+    // TODO: Implement view details modal or navigation
+  }
+
+  editIngredient(ingredient: Ingredient): void {
+    console.log('Edit ingredient:', ingredient);
+    // TODO: Implement edit functionality
+  }
+
+  deleteIngredient(ingredient: Ingredient): void {
+    if (confirm(`Are you sure you want to delete ${ingredient.name}?`)) {
+      console.log('Delete ingredient:', ingredient);
+      // TODO: Implement delete functionality
+    }
+  }
+
+  filterData(): void {
+    console.log('Open filter dialog');
+    // TODO: Implement filter functionality
+  }
+
+  getStatusClass(status: string): string {
+    switch (status) {
+      case 'OK':
+        return 'status-ok';
+      case 'Near expiry':
+        return 'status-warning';
+      case 'Expired':
+        return 'status-danger';
+      default:
+        return '';
+    }
+  }
+
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  }
+}
