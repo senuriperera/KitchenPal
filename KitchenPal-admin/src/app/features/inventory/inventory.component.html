@@ -1,0 +1,90 @@
+<div class="inventory-container">
+  <div class="inventory-content">
+    
+    <div class="header-section">
+      <h1>Inventory Management</h1>
+      <p>Manage your food inventory and track expiry dates</p>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-container">
+        <input 
+          type="text" 
+          placeholder="Search inventory..." 
+          [(ngModel)]="searchQuery"
+          (input)="searchInventory()"
+          class="search-input"
+        >
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn btn-secondary">
+          <span class="btn-icon">⚡</span> Filter
+        </button>
+        <button class="btn btn-secondary">
+          <span class="btn-icon">📥</span> Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="inventory-table-container">
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th class="checkbox-col"><input type="checkbox"></th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Location</th>
+            <th>Expiry Date</th>
+            <th>Cost</th>
+            <th>Last Scanned</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredIngredients">
+            <td class="checkbox-col"><input type="checkbox"></td>
+            
+            <!-- Item Name with Image -->
+            <td>
+              <div class="item-info">
+                <div class="item-placeholder">{{ item.image }}</div>
+                <span class="item-name">{{ item.name }}</span>
+              </div>
+            </td>
+
+            <td>{{ item.quantity }} {{ item.unit }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.expiryDate }}</td>
+            <td>${{ item.cost | number:'1.2-2' }}</td>
+            <td>{{ item.lastScanned }}</td>
+            
+            <!-- Status Badge -->
+            <td>
+              <span class="status-badge" [ngClass]="getStatusClass(item.status)">
+                {{ item.status }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="actions-col">
+              <button class="action-btn view-btn" (click)="viewDetails(item)" title="View">👁️</button>
+              <button class="action-btn edit-btn" (click)="editIngredient(item)" title="Edit">✏️</button>
+              <button class="action-btn delete-btn" (click)="deleteIngredient(item)" title="Delete">🗑️</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredIngredients.length === 0" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h2>No items found</h2>
+        <p>Try adjusting your search query</p>
+      </div>
+    </div>
+
+  </div>
+</div>

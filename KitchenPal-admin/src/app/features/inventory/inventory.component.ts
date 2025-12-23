@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+import { HeaderComponent } from '../../shared/components/header/header';
 import { IngredientService, IngredientResponse } from '../../core/services/ingredient.service';
-import { HeaderComponent } from '../header/header';
 
 interface Ingredient {
   id: number;
@@ -14,14 +15,13 @@ interface Ingredient {
   cost: number;
   lastScanned: string;
   status: 'OK' | 'Near expiry' | 'Expired';
-  branchId: number;
-  image?: string;
+  image: string;
 }
 
 @Component({
   selector: 'app-inventory',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent],
+  imports: [CommonModule, FormsModule, HeaderComponent, HttpClientModule],
   templateUrl: './inventory.component.html',
   styleUrls: ['./inventory.component.scss']
 })
@@ -32,7 +32,10 @@ export class InventoryComponent implements OnInit {
   isLoading: boolean = false;
   error: string | null = null;
 
-  constructor(private ingredientService: IngredientService) {}
+  // Hardcoded Branch ID for now
+  private readonly BRANCH_ID = 1;
+
+  constructor(private ingredientService: IngredientService) { }
 
   ngOnInit(): void {
     this.loadIngredients();
@@ -42,16 +45,25 @@ export class InventoryComponent implements OnInit {
     this.isLoading = true;
     this.error = null;
 
-    this.ingredientService.getAllIngredients().subscribe({
-      next: (data: IngredientResponse[]) => {
-        this.ingredients = data.map((item: IngredientResponse) => this.mapToIngredient(item));
-        this.filteredIngredients = [...this.ingredients];
+    this.ingredientService.getIngredientsByBranch(this.BRANCH_ID).subscribe({
+      next: (response: any) => { // Using any because backend wraps in { ingredients: [] }
+        const data = response.ingredients || response; // Handle both wrapped and unwrapped cases
+
+        if (Array.isArray(data)) {
+          this.ingredients = data.map((item: IngredientResponse) => this.mapToIngredient(item));
+          this.filteredIngredients = [...this.ingredients];
+        } else {
+          console.error('Unexpected API response format:', response);
+          this.error = 'Invalid data received from server';
+        }
         this.isLoading = false;
       },
-      error: (err: any) => {
+      error: (err) => {
         console.error('Error loading ingredients:', err);
         this.error = 'Failed to load ingredients. Please try again.';
         this.isLoading = false;
+
+        // Fallback or empty state is handled by the template
       }
     });
   }
@@ -68,19 +80,34 @@ export class InventoryComponent implements OnInit {
       status = 'Near expiry';
     }
 
+    // Determine Emoji based on name (Simple logic for demo)
+    const emoji = this.getEmojiForIngredient(item.name);
+
     return {
       id: item.ingredient_id,
       name: item.name,
       quantity: Number(item.quantity) || 0,
-      unit: item.unit?.code || item.unit?.name || 'kg',
-      location: item.storageType?.name || 'Unknown',
-      expiryDate: item.expiry_date || new Date().toISOString(),
+      unit: item.unit?.code || 'units',
+      location: item.storageType?.name || 'Storage',
+      expiryDate: item.expiry_date ? new Date(item.expiry_date).toISOString().split('T')[0] : 'N/A',
       cost: Number(item.price) || 0,
-      lastScanned: item.added_at || new Date().toISOString(),
+      lastScanned: item.added_at ? new Date(item.added_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       status: status,
-      branchId: item.branch_id || 1,
-      image: item.image_url
+      image: item.image_url || emoji
     };
+  }
+
+  private getEmojiForIngredient(name: string): string {
+    const n = name.toLowerCase();
+    if (n.includes('apple')) return '🍎';
+    if (n.includes('milk')) return '🥛';
+    if (n.includes('chicken')) return '🍗';
+    if (n.includes('tomato')) return '🍅';
+    if (n.includes('bread')) return '🍞';
+    if (n.includes('egg')) return '🥚';
+    if (n.includes('cheese')) return '🧀';
+    if (n.includes('carrot')) return '🥕';
+    return '📦';
   }
 
   searchInventory(): void {
@@ -97,25 +124,27 @@ export class InventoryComponent implements OnInit {
   }
 
   viewDetails(ingredient: Ingredient): void {
-    console.log('View details for:', ingredient);
-    // TODO: Implement view details modal or navigation
+    console.log('View details for:', ingredient.name);
   }
 
   editIngredient(ingredient: Ingredient): void {
-    console.log('Edit ingredient:', ingredient);
-    // TODO: Implement edit functionality
+    console.log('Edit ingredient:', ingredient.name);
   }
 
   deleteIngredient(ingredient: Ingredient): void {
     if (confirm(`Are you sure you want to delete ${ingredient.name}?`)) {
-      console.log('Delete ingredient:', ingredient);
-      // TODO: Implement delete functionality
+      this.ingredientService.deleteIngredient(ingredient.id).subscribe({
+        next: () => {
+          this.ingredients = this.ingredients.filter(item => item.id !== ingredient.id);
+          this.searchInventory();
+        },
+        error: (err) => console.error('Failed to delete:', err)
+      });
     }
   }
 
   filterData(): void {
     console.log('Open filter dialog');
-    // TODO: Implement filter functionality
   }
 
   getStatusClass(status: string): string {
@@ -129,10 +158,5 @@ export class InventoryComponent implements OnInit {
       default:
         return '';
     }
-  }
-
-  formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
   }
 }

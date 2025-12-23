@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HeaderComponent } from '../header/header';
+import { HeaderComponent } from '../../shared/components/header/header';
 
 interface DashboardStats {
   itemsNearExpiry: {
