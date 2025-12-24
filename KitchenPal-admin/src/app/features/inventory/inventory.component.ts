@@ -11,6 +11,7 @@ interface Ingredient {
   quantity: number;
   unit: string;
   location: string;
+  manufactureDate?: string;
   expiryDate: string;
   cost: number;
   lastScanned: string;
@@ -123,12 +124,61 @@ export class InventoryComponent implements OnInit {
     );
   }
 
+  // Modal State
+  selectedIngredient: Ingredient | null = null;
+  showViewModal: boolean = false;
+  showEditModal: boolean = false;
+  editData: Partial<Ingredient> = {};
+
   viewDetails(ingredient: Ingredient): void {
-    console.log('View details for:', ingredient.name);
+    this.selectedIngredient = ingredient;
+    this.showViewModal = true;
   }
 
   editIngredient(ingredient: Ingredient): void {
-    console.log('Edit ingredient:', ingredient.name);
+    this.selectedIngredient = ingredient;
+    // Create a copy for editing
+    this.editData = { ...ingredient };
+    this.showEditModal = true;
+  }
+
+  closeModals(): void {
+    this.showViewModal = false;
+    this.showEditModal = false;
+    this.selectedIngredient = null;
+    this.editData = {};
+  }
+
+  saveEdit(): void {
+    if (!this.selectedIngredient || !this.editData.id) return;
+
+    // Convert UI model back to partial backend model if needed, 
+    // or just pass what we changed if the service handles it.
+    // The service expects Partial<IngredientResponse>.
+    // We need to map our UI 'Ingredient' back to 'IngredientResponse' format roughly,
+    // or at least the fields that changed.
+
+    const updatePayload: Partial<IngredientResponse> = {
+      name: this.editData.name,
+      quantity: this.editData.quantity,
+      price: this.editData.cost, // mapped from cost
+      // storageType ... needs ID, skipping for simple demo or handling if needed
+    };
+
+    this.ingredientService.updateIngredient(this.editData.id, updatePayload).subscribe({
+      next: (updated) => {
+        // Update local list
+        const index = this.ingredients.findIndex(i => i.id === this.editData.id);
+        if (index !== -1) {
+          // We can either re-fetch or update locally. 
+          // Simplest is generic update locally:
+          this.ingredients[index] = { ...this.ingredients[index], ...this.editData } as Ingredient;
+          this.filterData(); // re-apply filter if any
+        }
+        this.closeModals();
+      },
+      error: (err) => console.error('Failed to update:', err)
+    });
   }
 
   deleteIngredient(ingredient: Ingredient): void {

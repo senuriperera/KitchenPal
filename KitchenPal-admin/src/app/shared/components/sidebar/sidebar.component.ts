@@ -24,6 +24,6 @@ export class SidebarComponent {
     { label: 'Recipes', icon: 'recipes', route: '/recipes' },
     { label: 'Discount Approvals', icon: 'discount', route: '/discount-approvals' },
     { label: 'Reports', icon: 'reports', route: '/reports' },
-    { label: 'Settings', icon: 'settings', route: '/settings' }
+    { label: 'User Management', icon: 'users', route: '/user-management' }
   ];
 }

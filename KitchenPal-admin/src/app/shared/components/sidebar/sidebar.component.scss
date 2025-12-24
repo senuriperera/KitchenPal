@@ -37,12 +37,12 @@
 
 .menu-item {
   margin: 4px 0;
-  
+
   &.active {
     .menu-link {
       background: #fff7ed;
       color: #f97316;
-      
+
       &::before {
         content: '';
         position: absolute;
@@ -64,7 +64,7 @@
   text-decoration: none;
   position: relative;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background: #f9fafb;
     color: #374151;
@@ -78,38 +78,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &::before {
     font-size: 20px;
   }
-  
+
   &[data-icon="home"]::before {
     content: '🏠';
   }
-  
+
   &[data-icon="inventory"]::before {
     content: '📦';
   }
-  
+
   &[data-icon="alert"]::before {
     content: 'ℹ️';
   }
-  
+
   &[data-icon="recipes"]::before {
     content: '📖';
   }
-  
+
   &[data-icon="discount"]::before {
     content: '%';
     font-weight: 600;
   }
-  
+
   &[data-icon="reports"]::before {
     content: '📊';
   }
-  
-  &[data-icon="settings"]::before {
-    content: '⚙️';
+
+  &[data-icon="users"]::before {
+    content: '👥';
   }
 }
 

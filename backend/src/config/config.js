@@ -14,7 +14,8 @@ module.exports = {
 
     jwt: {
         secret: process.env.JWT_SECRET || 'your-secret-key',
-        expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+        accessTokenExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
+        refreshTokenExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     },
 
     session: {
@@ -35,7 +36,7 @@ module.exports = {
     },
 
     frontend: {
-        url: process.env.FRONTEND_URL || 'http://localhost:3001',
+        url: process.env.FRONTEND_URL || 'http://localhost:4200',
     },
 
     upload: {

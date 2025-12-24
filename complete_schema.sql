@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS public.sessions (
     session_id integer NOT NULL,
     user_id integer,
     jwt_token text NOT NULL,
+    refresh_token text,
     created_at timestamp with time zone DEFAULT now(),
     expires_at timestamp with time zone,
     is_active boolean DEFAULT true,
