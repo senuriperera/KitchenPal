@@ -1,7 +1,12 @@
 // @import '../../dashboard/dashboard.component.scss'; // Removed invalid import
 
 .inventory-container {
-  padding: 24px;
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.inventory-content {
+  padding: 32px 40px;
 }
 
 // ... logic from dashboard or mixins if available, otherwise defining specific table styles
