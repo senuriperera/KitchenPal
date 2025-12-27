@@ -30,7 +30,7 @@ class AuthController {
 
             // Generate access and refresh tokens
             const accessToken = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
                 { expiresIn: config.jwt.accessTokenExpiresIn }
             );
@@ -62,6 +62,7 @@ class AuthController {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    branch_id: user.branch_id
                 },
                 accessToken,
                 refreshToken,
@@ -94,7 +95,7 @@ class AuthController {
 
             // Generate access and refresh tokens
             const accessToken = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
                 { expiresIn: config.jwt.accessTokenExpiresIn }
             );
@@ -126,6 +127,7 @@ class AuthController {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    branch_id: user.branch_id
                 },
                 accessToken,
                 refreshToken,
@@ -179,7 +181,7 @@ class AuthController {
 
             // Generate access and refresh tokens
             const accessToken = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
                 { expiresIn: config.jwt.accessTokenExpiresIn }
             );
@@ -248,7 +250,7 @@ class AuthController {
 
             // Generate new access token
             const newAccessToken = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
                 { expiresIn: config.jwt.accessTokenExpiresIn }
             );

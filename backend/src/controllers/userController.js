@@ -5,7 +5,31 @@ class UserController {
     // Get all users
     static async getAllUsers(req, res) {
         try {
-            const users = await UserModel.getAll();
+            let users;
+
+            // Debug logging
+            console.log('=== GET ALL USERS REQUEST ===');
+            console.log('User making request:', {
+                user_id: req.user.user_id,
+                role: req.user.role,
+                branch_id: req.user.branch_id
+            });
+
+            // If user is a manager or staff, only get users from their branch
+            if (req.user.role === 'manager' || req.user.role === 'staff') {
+                if (!req.user.branch_id) {
+                    console.error('ERROR: User without branch_id');
+                    return res.status(400).json({ error: 'User must be assigned to a branch' });
+                }
+                console.log('Fetching users for branch_id:', req.user.branch_id);
+                users = await UserModel.getAllByBranch(req.user.branch_id);
+                console.log('Users found for branch:', users.length);
+            } else {
+                // Admin can see all users
+                console.log('Admin - fetching all users');
+                users = await UserModel.getAll();
+                console.log('Total users found:', users.length);
+            }
 
             // Format the response to match frontend expectations
             const formattedUsers = users.map(user => ({
@@ -13,7 +37,7 @@ class UserController {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                branch: 'N/A', // TODO: Add branch relationship when needed
+                branch: user.branch_name || 'N/A',
                 lastLogin: user.last_login ? new Date(user.last_login).toLocaleString('en-US', {
                     year: 'numeric',
                     month: '2-digit',
@@ -34,7 +58,7 @@ class UserController {
     // Create new user
     static async createUser(req, res) {
         try {
-            const { name, email, role, password } = req.body;
+            const { name, email, role, password, branch_id } = req.body;
 
             // Validate required fields
             if (!name || !email || !role || !password) {
@@ -56,7 +80,8 @@ class UserController {
                 email,
                 password_hash,
                 google_id: null,
-                role
+                role,
+                branch_id
             });
 
             res.status(201).json({
@@ -65,7 +90,8 @@ class UserController {
                     id: user.user_id,
                     name: user.name,
                     email: user.email,
-                    role: user.role
+                    role: user.role,
+                    branch_id: user.branch_id
                 }
             });
         } catch (error) {

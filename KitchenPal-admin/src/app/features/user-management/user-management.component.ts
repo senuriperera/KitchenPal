@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { UserService, User as ApiUser, CreateUserRequest } from '../../core/services/user.service';
 import { BranchService, CreateBranchRequest } from '../../core/services/branch.service';
+import { AuthService } from '../../core/services/auth.service';
 
 interface User {
     id: number;
@@ -18,6 +19,7 @@ interface User {
 interface UserFormData {
     name: string;
     email: string;
+    branch_id: number | null;
     role: string;
     password: string;
 }
@@ -51,7 +53,12 @@ export class UserManagementComponent implements OnInit {
     showAddUserModal = false;
     showAddBranchModal = false;
     isLoading = false;
-    
+
+    // Role-based access control
+    isAdmin = false;
+    isManager = false;
+    currentUserBranchId: number | null = null;
+
     // Separate messages for each tab
     userErrorMessage = '';
     userSuccessMessage = '';
@@ -60,13 +67,14 @@ export class UserManagementComponent implements OnInit {
 
     roles = [
         { value: 'admin', label: 'Admin' },
-        { value: 'branch-manager', label: 'Branch Manager' },
+        { value: 'manager', label: 'Branch Manager' },
         { value: 'staff', label: 'Staff' }
     ];
 
     userFormData: UserFormData = {
         name: '',
         email: '',
+        branch_id: null,
         role: '',
         password: ''
     };
@@ -83,12 +91,23 @@ export class UserManagementComponent implements OnInit {
 
     constructor(
         private userService: UserService,
-        private branchService: BranchService
+        private branchService: BranchService,
+        private authService: AuthService
     ) { }
 
     ngOnInit(): void {
+        // Check user role
+        this.isAdmin = this.authService.isAdmin();
+        this.isManager = this.authService.isManager();
+        this.currentUserBranchId = this.authService.getUserBranchId();
+
+        // Load data based on role
         this.loadUsers();
-        this.loadBranches();
+
+        // Only load branches for admins
+        if (this.isAdmin) {
+            this.loadBranches();
+        }
     }
 
     loadUsers(): void {
@@ -127,7 +146,7 @@ export class UserManagementComponent implements OnInit {
 
     setActiveTab(tab: 'users' | 'branches'): void {
         this.activeTab = tab;
-        
+
         // Clear messages for the active tab
         if (tab === 'users') {
             this.userErrorMessage = '';
@@ -136,7 +155,7 @@ export class UserManagementComponent implements OnInit {
             this.branchErrorMessage = '';
             this.branchSuccessMessage = '';
         }
-        
+
         // Load data for the active tab
         if (tab === 'branches' && this.branches.length === 0) {
             this.loadBranches();
@@ -148,6 +167,11 @@ export class UserManagementComponent implements OnInit {
         this.resetForm();
         this.userErrorMessage = '';
         this.userSuccessMessage = '';
+
+        // Load branches if not already loaded
+        if (this.branches.length === 0) {
+            this.loadBranches();
+        }
     }
 
     closeModal(): void {
@@ -161,6 +185,7 @@ export class UserManagementComponent implements OnInit {
         this.userFormData = {
             name: '',
             email: '',
+            branch_id: null,
             role: '',
             password: ''
         };
@@ -171,9 +196,10 @@ export class UserManagementComponent implements OnInit {
         this.userErrorMessage = '';
         this.userSuccessMessage = '';
 
-        const userData: CreateUserRequest = {
+        const userData: any = {
             name: this.userFormData.name,
             email: this.userFormData.email,
+            branch_id: this.userFormData.branch_id,
             role: this.userFormData.role,
             password: this.userFormData.password
         };

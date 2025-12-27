@@ -18,6 +18,7 @@
       </button>
       <button
         class="tab"
+        *ngIf="isAdmin"
         [class.active]="activeTab === 'branches'"
         (click)="setActiveTab('branches')"
       >
@@ -30,7 +31,7 @@
     <div class="section" *ngIf="activeTab === 'users'">
       <div class="section-header">
         <h2 class="section-title">Manage Users</h2>
-        <button class="add-button" (click)="addUser()">
+        <button class="add-button" *ngIf="isAdmin" (click)="addUser()">
           <span class="add-icon">+</span>
           <span>Add User</span>
         </button>
@@ -79,7 +80,7 @@
                 <span
                   class="role-badge"
                   [class.admin]="user.role === 'admin'"
-                  [class.manager]="user.role === 'branch-manager'"
+                  [class.manager]="user.role === 'manager'"
                   [class.staff]="user.role === 'staff'"
                 >
                   {{ user.role }}
@@ -89,12 +90,13 @@
               <td>{{ user.lastLogin }}</td>
               <td>
                 <div class="actions">
-                  <button class="action-btn edit" (click)="editUser(user)">
+                  <button class="action-btn edit" *ngIf="isAdmin" (click)="editUser(user)">
                     Edit
                   </button>
-                  <button class="action-btn delete" (click)="deleteUser(user)">
+                  <button class="action-btn delete" *ngIf="isAdmin" (click)="deleteUser(user)">
                     Delete
                   </button>
+                  <span *ngIf="!isAdmin" class="no-actions">View Only</span>
                 </div>
               </td>
             </tr>
@@ -219,6 +221,22 @@
             class="form-input"
             required
           />
+        </div>
+
+        <div class="form-group">
+          <label for="branch">Branch</label>
+          <select
+            id="branch"
+            [(ngModel)]="userFormData.branch_id"
+            name="branch"
+            class="form-select"
+            required
+          >
+            <option [value]="null" disabled selected>Select branch</option>
+            <option *ngFor="let branch of branches" [value]="branch.id">
+              {{ branch.name }}
+            </option>
+          </select>
         </div>
 
         <div class="form-group">

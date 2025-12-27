@@ -181,7 +181,7 @@
     align-items: center;
     justify-content: center;
     font-size: 20px;
-    
+
     .icon {
         font-size: 20px;
     }
@@ -199,6 +199,11 @@
     font-size: 12px;
     font-weight: 500;
 
+    &.admin {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
     &.manager {
         background: #dbeafe;
         color: #1e40af;
@@ -213,6 +218,7 @@
 .actions {
     display: flex;
     gap: 8px;
+    align-items: center;
 }
 
 .action-btn {
@@ -241,6 +247,12 @@
             background: #fef2f2;
         }
     }
+}
+
+.no-actions {
+    font-size: 13px;
+    color: #9ca3af;
+    font-style: italic;
 }
 
 .placeholder {
@@ -277,6 +289,7 @@
         justify-content: center;
     }
 }
+
 // Modal Styles
 .modal-overlay {
     position: fixed;
@@ -293,8 +306,13 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modal-content {
@@ -307,8 +325,15 @@
 }
 
 @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .modal-header {
@@ -340,7 +365,11 @@
     justify-content: center;
     border-radius: 6px;
     transition: all 0.2s;
-    &:hover { background: #f3f4f6; color: #6b7280; }
+
+    &:hover {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
 }
 
 .modal-form {
@@ -349,7 +378,11 @@
 
 .form-group {
     margin-bottom: 20px;
-    &:last-of-type { margin-bottom: 24px; }
+
+    &:last-of-type {
+        margin-bottom: 24px;
+    }
+
     label {
         display: block;
         font-size: 14px;
@@ -359,7 +392,8 @@
     }
 }
 
-.form-input, .form-select {
+.form-input,
+.form-select {
     width: 100%;
     padding: 10px 14px;
     border: 1px solid #d1d5db;
@@ -368,12 +402,16 @@
     color: #111827;
     transition: all 0.2s;
     font-family: inherit;
+
     &:focus {
         outline: none;
         border-color: #f97316;
         box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
     }
-    &::placeholder { color: #9ca3af; }
+
+    &::placeholder {
+        color: #9ca3af;
+    }
 }
 
 .form-textarea {
@@ -387,12 +425,16 @@
     font-family: inherit;
     resize: vertical;
     min-height: 80px;
+
     &:focus {
         outline: none;
         border-color: #f97316;
         box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
     }
-    &::placeholder { color: #9ca3af; }
+
+    &::placeholder {
+        color: #9ca3af;
+    }
 }
 
 .form-select {
@@ -402,8 +444,14 @@
     background-position: right 12px center;
     padding-right: 36px;
     cursor: pointer;
-    option { padding: 8px; }
-    option[disabled] { color: #9ca3af; }
+
+    option {
+        padding: 8px;
+    }
+
+    option[disabled] {
+        color: #9ca3af;
+    }
 }
 
 .modal-actions {
@@ -413,7 +461,8 @@
     padding-top: 8px;
 }
 
-.cancel-button, .submit-button {
+.cancel-button,
+.submit-button {
     padding: 10px 20px;
     border: none;
     border-radius: 8px;
@@ -427,18 +476,26 @@
     background: white;
     color: #6b7280;
     border: 1px solid #d1d5db;
-    &:hover { background: #f9fafb; border-color: #9ca3af; }
+
+    &:hover {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
 }
 
 .submit-button {
     background: #f97316;
     color: white;
+
     &:hover {
         background: #ea580c;
         transform: translateY(-1px);
         box-shadow: 0 4px 6px -1px rgba(249, 115, 22, 0.3);
     }
-    &:active { transform: translateY(0); }
+
+    &:active {
+        transform: translateY(0);
+    }
 }
 
 // Alert Messages
@@ -463,7 +520,8 @@
 }
 
 // Loading and Empty States
-.loading-state, .empty-state {
+.loading-state,
+.empty-state {
     padding: 60px 20px;
     text-align: center;
     color: #6b7280;
@@ -492,6 +550,7 @@
 button[disabled] {
     opacity: 0.6;
     cursor: not-allowed;
+
     &:hover {
         transform: none;
         box-shadow: none;

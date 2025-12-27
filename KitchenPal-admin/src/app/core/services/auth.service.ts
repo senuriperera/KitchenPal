@@ -10,6 +10,7 @@ export interface User {
     email: string;
     name: string;
     role: string;
+    branch_id?: number; // Branch ID for managers
 }
 
 export interface AuthResponse {
@@ -92,5 +93,33 @@ export class AuthService {
 
     getRefreshToken(): string | null {
         return localStorage.getItem('refreshToken');
+    }
+
+    /**
+     * Get the current user's branch ID
+     */
+    getUserBranchId(): number | null {
+        return this.currentUserValue?.branch_id || null;
+    }
+
+    /**
+     * Check if the current user has a specific role
+     */
+    hasRole(role: string): boolean {
+        return this.currentUserValue?.role === role;
+    }
+
+    /**
+     * Check if the current user is an admin
+     */
+    isAdmin(): boolean {
+        return this.hasRole('admin');
+    }
+
+    /**
+     * Check if the current user is a manager
+     */
+    isManager(): boolean {
+        return this.hasRole('manager');
     }
 }
