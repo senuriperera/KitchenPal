@@ -165,6 +165,33 @@
     color: #111827;
 }
 
+// Branch cell styling
+.branch-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.branch-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #fff7ed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    
+    .icon {
+        font-size: 20px;
+    }
+}
+
+.branch-name {
+    font-weight: 500;
+    color: #111827;
+}
+
 .role-badge {
     display: inline-block;
     padding: 4px 12px;
@@ -341,6 +368,25 @@
     color: #111827;
     transition: all 0.2s;
     font-family: inherit;
+    &:focus {
+        outline: none;
+        border-color: #f97316;
+        box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+    &::placeholder { color: #9ca3af; }
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111827;
+    transition: all 0.2s;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
     &:focus {
         outline: none;
         border-color: #f97316;

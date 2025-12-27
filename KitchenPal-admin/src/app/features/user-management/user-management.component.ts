@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { UserService, User as ApiUser, CreateUserRequest } from '../../core/services/user.service';
+import { BranchService, CreateBranchRequest } from '../../core/services/branch.service';
 
 interface User {
     id: number;
@@ -21,6 +22,23 @@ interface UserFormData {
     password: string;
 }
 
+interface Branch {
+    id: number;
+    name: string;
+    address: string;
+    contact_email: string;
+    contact_number: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+interface BranchFormData {
+    name: string;
+    address: string;
+    contact_email: string;
+    contact_number: string;
+}
+
 @Component({
     selector: 'app-user-management',
     standalone: true,
@@ -31,9 +49,14 @@ interface UserFormData {
 export class UserManagementComponent implements OnInit {
     activeTab: 'users' | 'branches' = 'users';
     showAddUserModal = false;
+    showAddBranchModal = false;
     isLoading = false;
-    errorMessage = '';
-    successMessage = '';
+    
+    // Separate messages for each tab
+    userErrorMessage = '';
+    userSuccessMessage = '';
+    branchErrorMessage = '';
+    branchSuccessMessage = '';
 
     roles = [
         { value: 'admin', label: 'Admin' },
@@ -48,17 +71,29 @@ export class UserManagementComponent implements OnInit {
         password: ''
     };
 
-    users: User[] = [];
+    branchFormData: BranchFormData = {
+        name: '',
+        address: '',
+        contact_email: '',
+        contact_number: ''
+    };
 
-    constructor(private userService: UserService) { }
+    users: User[] = [];
+    branches: Branch[] = [];
+
+    constructor(
+        private userService: UserService,
+        private branchService: BranchService
+    ) { }
 
     ngOnInit(): void {
         this.loadUsers();
+        this.loadBranches();
     }
 
     loadUsers(): void {
         this.isLoading = true;
-        this.errorMessage = '';
+        this.userErrorMessage = '';
 
         this.userService.getUsers().subscribe({
             next: (users) => {
@@ -67,7 +102,24 @@ export class UserManagementComponent implements OnInit {
             },
             error: (error) => {
                 console.error('Error loading users:', error);
-                this.errorMessage = 'Failed to load users. Please try again.';
+                this.userErrorMessage = 'Failed to load users. Please try again.';
+                this.isLoading = false;
+            }
+        });
+    }
+
+    loadBranches(): void {
+        this.isLoading = true;
+        this.branchErrorMessage = '';
+
+        this.branchService.getBranches().subscribe({
+            next: (branches) => {
+                this.branches = branches;
+                this.isLoading = false;
+            },
+            error: (error) => {
+                console.error('Error loading branches:', error);
+                this.branchErrorMessage = 'Failed to load branches. Please try again.';
                 this.isLoading = false;
             }
         });
@@ -75,18 +127,34 @@ export class UserManagementComponent implements OnInit {
 
     setActiveTab(tab: 'users' | 'branches'): void {
         this.activeTab = tab;
+        
+        // Clear messages for the active tab
+        if (tab === 'users') {
+            this.userErrorMessage = '';
+            this.userSuccessMessage = '';
+        } else {
+            this.branchErrorMessage = '';
+            this.branchSuccessMessage = '';
+        }
+        
+        // Load data for the active tab
+        if (tab === 'branches' && this.branches.length === 0) {
+            this.loadBranches();
+        }
     }
 
     addUser(): void {
         this.showAddUserModal = true;
         this.resetForm();
-        this.clearMessages();
+        this.userErrorMessage = '';
+        this.userSuccessMessage = '';
     }
 
     closeModal(): void {
         this.showAddUserModal = false;
         this.resetForm();
-        this.clearMessages();
+        this.userErrorMessage = '';
+        this.userSuccessMessage = '';
     }
 
     resetForm(): void {
@@ -98,14 +166,10 @@ export class UserManagementComponent implements OnInit {
         };
     }
 
-    clearMessages(): void {
-        this.errorMessage = '';
-        this.successMessage = '';
-    }
-
     submitUser(): void {
         this.isLoading = true;
-        this.clearMessages();
+        this.userErrorMessage = '';
+        this.userSuccessMessage = '';
 
         const userData: CreateUserRequest = {
             name: this.userFormData.name,
@@ -117,14 +181,14 @@ export class UserManagementComponent implements OnInit {
         this.userService.createUser(userData).subscribe({
             next: (response) => {
                 console.log('User created successfully:', response);
-                this.successMessage = 'User created successfully!';
+                this.userSuccessMessage = 'User created successfully!';
                 this.isLoading = false;
                 this.closeModal();
                 this.loadUsers(); // Refresh the user list
             },
             error: (error) => {
                 console.error('Error creating user:', error);
-                this.errorMessage = error.error?.error || 'Failed to create user. Please try again.';
+                this.userErrorMessage = error.error?.error || 'Failed to create user. Please try again.';
                 this.isLoading = false;
             }
         });
@@ -142,18 +206,100 @@ export class UserManagementComponent implements OnInit {
         }
 
         this.isLoading = true;
-        this.clearMessages();
+        this.userErrorMessage = '';
+        this.userSuccessMessage = '';
 
         this.userService.deleteUser(user.id).subscribe({
             next: (response) => {
                 console.log('User deleted successfully:', response);
-                this.successMessage = 'User deleted successfully!';
+                this.userSuccessMessage = 'User deleted successfully!';
                 this.isLoading = false;
                 this.loadUsers(); // Refresh the user list
             },
             error: (error) => {
                 console.error('Error deleting user:', error);
-                this.errorMessage = error.error?.error || 'Failed to delete user. Please try again.';
+                this.userErrorMessage = error.error?.error || 'Failed to delete user. Please try again.';
+                this.isLoading = false;
+            }
+        });
+    }
+
+    // Branch Management Methods
+    addBranch(): void {
+        this.showAddBranchModal = true;
+        this.resetBranchForm();
+        this.branchErrorMessage = '';
+        this.branchSuccessMessage = '';
+    }
+
+    closeBranchModal(): void {
+        this.showAddBranchModal = false;
+        this.resetBranchForm();
+        this.branchErrorMessage = '';
+        this.branchSuccessMessage = '';
+    }
+
+    resetBranchForm(): void {
+        this.branchFormData = {
+            name: '',
+            address: '',
+            contact_email: '',
+            contact_number: ''
+        };
+    }
+
+    submitBranch(): void {
+        this.isLoading = true;
+        this.branchErrorMessage = '';
+        this.branchSuccessMessage = '';
+
+        const branchData: CreateBranchRequest = {
+            name: this.branchFormData.name,
+            address: this.branchFormData.address,
+            contact_email: this.branchFormData.contact_email,
+            contact_number: this.branchFormData.contact_number
+        };
+
+        this.branchService.createBranch(branchData).subscribe({
+            next: (response) => {
+                console.log('Branch created successfully:', response);
+                this.branchSuccessMessage = 'Branch created successfully!';
+                this.isLoading = false;
+                this.closeBranchModal();
+                this.loadBranches(); // Refresh the branches list
+            },
+            error: (error) => {
+                console.error('Error creating branch:', error);
+                this.branchErrorMessage = error.error?.error || 'Failed to create branch. Please try again.';
+                this.isLoading = false;
+            }
+        });
+    }
+
+    editBranch(branch: Branch): void {
+        console.log('Edit branch:', branch);
+        alert('Edit functionality coming soon!');
+    }
+
+    deleteBranch(branch: Branch): void {
+        if (!confirm(`Are you sure you want to delete ${branch.name}?`)) {
+            return;
+        }
+
+        this.isLoading = true;
+        this.branchErrorMessage = '';
+        this.branchSuccessMessage = '';
+
+        this.branchService.deleteBranch(branch.id).subscribe({
+            next: (response) => {
+                console.log('Branch deleted successfully:', response);
+                this.branchSuccessMessage = 'Branch deleted successfully!';
+                this.isLoading = false;
+                this.loadBranches(); // Refresh the branches list
+            },
+            error: (error) => {
+                console.error('Error deleting branch:', error);
+                this.branchErrorMessage = error.error?.error || 'Failed to delete branch. Please try again.';
                 this.isLoading = false;
             }
         });
