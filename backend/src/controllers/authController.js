@@ -41,6 +41,9 @@ class AuthController {
                 { expiresIn: config.jwt.refreshTokenExpiresIn }
             );
 
+            // Delete all existing sessions for this user
+            await SessionModel.deleteAllUserSessions(user.user_id);
+
             // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
             await SessionModel.create({
@@ -101,6 +104,9 @@ class AuthController {
                 config.jwt.secret,
                 { expiresIn: config.jwt.refreshTokenExpiresIn }
             );
+
+            // Delete all existing sessions for this user
+            await SessionModel.deleteAllUserSessions(user.user_id);
 
             // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -183,6 +189,9 @@ class AuthController {
                 config.jwt.secret,
                 { expiresIn: config.jwt.refreshTokenExpiresIn }
             );
+
+            // Delete all existing sessions for this user
+            await SessionModel.deleteAllUserSessions(user.user_id);
 
             // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);

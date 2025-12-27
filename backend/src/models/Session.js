@@ -53,6 +53,13 @@ class SessionModel {
         await db.query(query, [user_id]);
     }
 
+    // Delete all user sessions (permanently remove from database)
+    static async deleteAllUserSessions(user_id) {
+        const query = 'DELETE FROM sessions WHERE user_id = $1';
+        const result = await db.query(query, [user_id]);
+        return result.rowCount;
+    }
+
     // Clean expired sessions
     static async cleanExpired() {
         const query = 'DELETE FROM sessions WHERE expires_at < NOW()';
