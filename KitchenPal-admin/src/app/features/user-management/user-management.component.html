@@ -1,0 +1,203 @@
+<div class="user-management">
+  <app-header
+    title="Settings"
+    subtitle="Manage your account, users, and application settings"
+  >
+  </app-header>
+
+  <div class="user-management-content">
+    <!-- Tabs -->
+    <div class="tabs">
+      <button
+        class="tab"
+        [class.active]="activeTab === 'users'"
+        (click)="setActiveTab('users')"
+      >
+        <span class="tab-icon">👤</span>
+        <span class="tab-label">Users</span>
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab === 'branches'"
+        (click)="setActiveTab('branches')"
+      >
+        <span class="tab-icon">🏢</span>
+        <span class="tab-label">Branches</span>
+      </button>
+    </div>
+
+    <!-- Manage Users Section -->
+    <div class="section" *ngIf="activeTab === 'users'">
+      <div class="section-header">
+        <h2 class="section-title">Manage Users</h2>
+        <button class="add-button" (click)="addUser()">
+          <span class="add-icon">+</span>
+          <span>Add User</span>
+        </button>
+      </div>
+
+      <!-- Success Message -->
+      <div class="alert alert-success" *ngIf="successMessage">
+        {{ successMessage }}
+      </div>
+
+      <!-- Error Message -->
+      <div class="alert alert-error" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="isLoading && users.length === 0">
+        <p>Loading users...</p>
+      </div>
+
+      <!-- Users Table -->
+      <div class="table-container" *ngIf="!isLoading || users.length > 0">
+        <table class="users-table" *ngIf="users.length > 0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Branch</th>
+              <th>Last Login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of users">
+              <td>
+                <div class="user-cell">
+                  <div class="user-avatar">
+                    <span class="avatar-icon">👤</span>
+                  </div>
+                  <span class="user-name">{{ user.name }}</span>
+                </div>
+              </td>
+              <td>{{ user.email }}</td>
+              <td>
+                <span
+                  class="role-badge"
+                  [class.admin]="user.role === 'admin'"
+                  [class.manager]="user.role === 'branch-manager'"
+                  [class.staff]="user.role === 'staff'"
+                >
+                  {{ user.role }}
+                </span>
+              </td>
+              <td>{{ user.branch }}</td>
+              <td>{{ user.lastLogin }}</td>
+              <td>
+                <div class="actions">
+                  <button class="action-btn edit" (click)="editUser(user)">
+                    Edit
+                  </button>
+                  <button class="action-btn delete" (click)="deleteUser(user)">
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="users.length === 0 && !isLoading">
+          <p>No users found. Click "Add User" to create one.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Branches Section (Placeholder) -->
+    <div class="section" *ngIf="activeTab === 'branches'">
+      <div class="section-header">
+        <h2 class="section-title">Manage Branches</h2>
+        <button class="add-button">
+          <span class="add-icon">+</span>
+          <span>Add Branch</span>
+        </button>
+      </div>
+      <div class="placeholder">
+        <p>Branches management coming soon...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add User Modal -->
+  <div class="modal-overlay" *ngIf="showAddUserModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Add New User</h3>
+        <button class="close-button" (click)="closeModal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="submitUser()">
+        <!-- Error Message in Modal -->
+        <div class="alert alert-error" *ngIf="errorMessage">
+          {{ errorMessage }}
+        </div>
+
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input
+            type="text"
+            id="name"
+            [(ngModel)]="userFormData.name"
+            name="name"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            [(ngModel)]="userFormData.email"
+            name="email"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="role">Role</label>
+          <select
+            id="role"
+            [(ngModel)]="userFormData.role"
+            name="role"
+            class="form-select"
+            required
+          >
+            <option value="" disabled selected>Select role</option>
+            <option *ngFor="let role of roles" [value]="role.value">
+              {{ role.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            [(ngModel)]="userFormData.password"
+            name="password"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="cancel-button" (click)="closeModal()" [disabled]="isLoading">
+            Cancel
+          </button>
+          <button type="submit" class="submit-button" [disabled]="isLoading">
+            {{ isLoading ? 'Adding...' : 'Add User' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

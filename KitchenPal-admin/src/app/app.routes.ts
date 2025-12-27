@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { InventoryComponent } from './features/inventory/inventory.component';
+import { UserManagementComponent } from './features/user-management/user-management.component';
 import { LoginComponent } from './features/auth/login/login.component';
 import { authGuard } from './core/guards/auth.guard';
 
@@ -13,5 +14,6 @@ export const routes: Routes = [
   { path: 'recipes', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
   { path: 'discount-approvals', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
   { path: 'reports', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
+  { path: 'user-management', component: UserManagementComponent, canActivate: [authGuard] },
   { path: 'settings', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
 ];
