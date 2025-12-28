@@ -14,8 +14,15 @@ describe('LoginComponent', () => {
 
     beforeEach(async () => {
         authServiceSpy = jasmine.createSpyObj('AuthService', ['login']);
-        // Default success return
-        authServiceSpy.login.and.returnValue(of({ token: 'fake-token' }));
+        // Default success return matching User interface
+        authServiceSpy.login.and.returnValue(of({
+            user_id: 1,
+            email: 'test@example.com',
+            name: 'Test User',
+            role: 'admin',
+            branch_id: 1,
+            token: 'fake-token'
+        } as any));
 
         await TestBed.configureTestingModule({
             imports: [LoginComponent, ReactiveFormsModule, CommonModule],

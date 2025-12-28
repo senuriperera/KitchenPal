@@ -8,24 +8,33 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { ActivatedRoute } from '@angular/router';
 
+import { AuthService } from '../../core/services/auth.service';
+
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+
 describe('InventoryComponent', () => {
     let component: InventoryComponent;
     let fixture: ComponentFixture<InventoryComponent>;
     let ingredientServiceSpy: jasmine.SpyObj<IngredientService>;
+    let authServiceSpy: jasmine.SpyObj<AuthService>;
 
     beforeEach(async () => {
         ingredientServiceSpy = jasmine.createSpyObj('IngredientService', ['getIngredientsByBranch', 'updateIngredient', 'deleteIngredient']);
-        ingredientServiceSpy.getIngredientsByBranch.and.returnValue(of({ ingredients: [] }));
+        ingredientServiceSpy.getIngredientsByBranch.and.returnValue(of([] as any));
+
+        authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUserValue: { id: 1, role: 'admin' } });
 
         await TestBed.configureTestingModule({
             imports: [InventoryComponent, CommonModule, FormsModule, HttpClientTestingModule, HeaderComponent],
             providers: [
                 { provide: IngredientService, useValue: ingredientServiceSpy },
+                { provide: AuthService, useValue: authServiceSpy },
                 {
                     provide: ActivatedRoute,
                     useValue: { snapshot: { paramMap: { get: () => '1' } } }
                 }
-            ]
+            ],
+            schemas: [NO_ERRORS_SCHEMA]
         })
             .compileComponents();
 
