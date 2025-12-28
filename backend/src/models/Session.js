@@ -2,13 +2,13 @@ const db = require('../config/database');
 
 class SessionModel {
     // Create a new session
-    static async create({ user_id, jwt_token, expires_at, user_agent, ip_address }) {
+    static async create({ user_id, jwt_token, refresh_token, expires_at, user_agent, ip_address }) {
         const query = `
-      INSERT INTO sessions (user_id, jwt_token, expires_at, user_agent, ip_address)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO sessions (user_id, jwt_token, refresh_token, expires_at, user_agent, ip_address)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `;
-        const values = [user_id, jwt_token, expires_at, user_agent, ip_address];
+        const values = [user_id, jwt_token, refresh_token, expires_at, user_agent, ip_address];
         const result = await db.query(query, values);
         return result.rows[0];
     }
@@ -17,6 +17,20 @@ class SessionModel {
     static async findByToken(jwt_token) {
         const query = 'SELECT * FROM sessions WHERE jwt_token = $1 AND is_active = true AND expires_at > NOW()';
         const result = await db.query(query, [jwt_token]);
+        return result.rows[0];
+    }
+
+    // Find session by refresh token
+    static async findByRefreshToken(refresh_token) {
+        const query = 'SELECT * FROM sessions WHERE refresh_token = $1 AND is_active = true AND expires_at > NOW()';
+        const result = await db.query(query, [refresh_token]);
+        return result.rows[0];
+    }
+
+    // Update access token
+    static async updateAccessToken(session_id, jwt_token) {
+        const query = 'UPDATE sessions SET jwt_token = $1 WHERE session_id = $2 RETURNING *';
+        const result = await db.query(query, [jwt_token, session_id]);
         return result.rows[0];
     }
 
@@ -37,6 +51,13 @@ class SessionModel {
     static async invalidateAllUserSessions(user_id) {
         const query = 'UPDATE sessions SET is_active = false WHERE user_id = $1';
         await db.query(query, [user_id]);
+    }
+
+    // Delete all user sessions (permanently remove from database)
+    static async deleteAllUserSessions(user_id) {
+        const query = 'DELETE FROM sessions WHERE user_id = $1';
+        const result = await db.query(query, [user_id]);
+        return result.rowCount;
     }
 
     // Clean expired sessions

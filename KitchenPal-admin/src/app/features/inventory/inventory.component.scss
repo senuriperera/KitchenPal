@@ -1,0 +1,291 @@
+// @import '../../dashboard/dashboard.component.scss'; // Removed invalid import
+
+.inventory-container {
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.inventory-content {
+  padding: 32px 40px;
+}
+
+// ... logic from dashboard or mixins if available, otherwise defining specific table styles
+// Copied structure from dashboard usually, but ensuring table specific styles for inventory
+
+.inventory-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-top: 24px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.search-input {
+  padding: 10px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 300px;
+  outline: none;
+
+  &:focus {
+    border-color: #fbbf24;
+  }
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &.btn-secondary {
+    background: white;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+
+    &:hover {
+      background: #f9fafb;
+    }
+  }
+
+  &.btn-primary {
+    background: #fbbf24;
+    color: white;
+
+    &:hover {
+      background: #f59e0b;
+    }
+  }
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  th {
+    background: #f9fafb;
+    color: #6b7280;
+    font-weight: 500;
+    font-size: 14px;
+  }
+
+  td {
+    color: #111827;
+    font-size: 14px;
+  }
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+
+  &.status-ok {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  &.status-warning {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &.status-danger {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+}
+
+.actions-col {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+}
+
+// Modal Styles
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #6b7280;
+  }
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+// View Modal Specifics
+.view-modal {
+  .image-container {
+    text-align: center;
+    margin-bottom: 20px;
+    background: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+
+    .item-large-image {
+      max-width: 150px;
+      max-height: 150px;
+      object-fit: contain;
+      font-size: 4rem; // fall back for emoji
+    }
+  }
+
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .detail-item {
+    margin-bottom: 12px;
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    span {
+      font-weight: 500;
+      color: #111827;
+    }
+  }
+}
+
+// Edit Modal Specifics
+.form-group {
+  margin-bottom: 16px;
+
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #fbbf24;
+      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.2);
+    }
+
+    &:disabled {
+      background-color: #f3f4f6;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+
+  .form-group {
+    flex: 1;
+  }
+}
