@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 4200
 
 # Default command
-CMD ["npm", "start", "--", "--host", "0.0.0.0", "--disable-host-check"]
+CMD ["npm", "start", "--", "--host", "0.0.0.0"]
