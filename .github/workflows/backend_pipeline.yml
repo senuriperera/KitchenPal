@@ -2,11 +2,11 @@ name: Backend Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "KitchenPal-admin" ]
     paths:
       - 'backend/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "KitchenPal-admin" ]
     paths:
       - 'backend/**'
 
