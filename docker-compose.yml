@@ -59,6 +59,21 @@ services:
     depends_on:
       - postgres
 
+  kitchenpal_admin:
+    build:
+      context: ./KitchenPal-admin
+      dockerfile: Dockerfile
+      target: development
+    container_name: kitchenpal_admin
+    restart: always
+    ports:
+      - "4200:4200"
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./KitchenPal-admin/src:/app/src
+    command: npm start -- --host 0.0.0.0 --disable-host-check --poll 2000
+
 volumes:
   postgres_data:
   pgadmin_data:
