@@ -258,6 +258,9 @@ ALTER TABLE ONLY public.sales
 ALTER COLUMN sale_id
 SET DEFAULT nextval('public.sales_sale_id_seq'::regclass);
 -- Add Foreign Key Constraints
+ALTER TABLE ONLY public.users
+ADD CONSTRAINT users_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE
+SET NULL;
 ALTER TABLE ONLY public.ingredients
 ADD CONSTRAINT ingredients_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.sessions
