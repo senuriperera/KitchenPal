@@ -153,7 +153,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildExpiryItemCard() {
     return Container(
-      width: 280,
+      width: 200,
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -173,8 +173,8 @@ class _HomePageState extends State<HomePage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text('Expires in:  8 hours', style: TextStyle(color: Colors.grey)),
                     Text('2023-06-08', style: TextStyle(color: Colors.grey)),
