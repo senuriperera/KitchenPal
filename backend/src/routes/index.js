@@ -9,6 +9,7 @@ const notificationRoutes = require('./notificationRoutes');
 const recipeSuggestionRoutes = require('./recipeSuggestionRoutes');
 const saleRoutes = require('./saleRoutes');
 const commonRoutes = require('./commonRoutes');
+const userRoutes = require('./userRoutes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -23,5 +24,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/suggestions', recipeSuggestionRoutes);
 router.use('/sales', saleRoutes);
 router.use('/common', commonRoutes);
+router.use('/users', userRoutes);
 
 module.exports = router;

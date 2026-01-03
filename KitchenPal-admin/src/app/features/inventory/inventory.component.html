@@ -1,0 +1,191 @@
+<div class="inventory-container">
+  <app-header
+    title="Inventory Management"
+    subtitle="Manage your food inventory and track expiry dates"
+  >
+  </app-header>
+
+  <div class="inventory-content">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-container">
+        <input
+          type="text"
+          placeholder="Search inventory..."
+          [(ngModel)]="searchQuery"
+          (input)="searchInventory()"
+          class="search-input"
+        />
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn btn-secondary">
+          <span class="btn-icon">⚡</span> Filter
+        </button>
+        <button class="btn btn-secondary">
+          <span class="btn-icon">📥</span> Export
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="inventory-table-container">
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th class="checkbox-col"><input type="checkbox" /></th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+            <th>Storage Type</th>
+            <th>Manufacture Date</th>
+            <th>Expiry Date</th>
+            <th>Cost</th>
+            <th>Last Scanned</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of filteredIngredients">
+            <td class="checkbox-col"><input type="checkbox" /></td>
+
+            <!-- Item Name -->
+            <td>
+              <span class="item-name">{{ item.name }}</span>
+            </td>
+
+            <td>{{ item.quantity }} {{ item.unit }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.manufactureDate }}</td>
+            <td>{{ item.expiryDate }}</td>
+            <td>${{ item.cost | number : "1.2-2" }}</td>
+            <td>{{ item.lastScanned }}</td>
+
+            <!-- Status Badge -->
+            <td>
+              <span
+                class="status-badge"
+                [ngClass]="getStatusClass(item.status)"
+              >
+                {{ item.status }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="actions-col">
+              <button
+                class="action-btn view-btn"
+                (click)="viewDetails(item)"
+                title="View"
+              >
+                👁️
+              </button>
+              <button
+                class="action-btn edit-btn"
+                (click)="editIngredient(item)"
+                title="Edit"
+              >
+                ✏️
+              </button>
+              <button
+                class="action-btn delete-btn"
+                (click)="deleteIngredient(item)"
+                title="Delete"
+              >
+                🗑️
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Empty State -->
+      <div *ngIf="filteredIngredients.length === 0" class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h2>No items found</h2>
+        <p>Try adjusting your search query</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- View Modal -->
+  <div class="modal-overlay" *ngIf="showViewModal" (click)="closeModals()">
+    <div class="modal-content view-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ selectedIngredient?.name }}</h3>
+        <button class="close-btn" (click)="closeModals()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="image-container">
+            <img [src]="selectedIngredient?.image" alt="{{ selectedIngredient?.name }}" class="item-large-image">
+        </div>
+        <div class="details-grid">
+            <div class="detail-item">
+                <label>Status</label>
+                <span class="status-badge" [ngClass]="getStatusClass(selectedIngredient?.status || '')">
+                    {{ selectedIngredient?.status }}
+                </span>
+            </div>
+            <div class="detail-item">
+                <label>Quantity</label>
+                <span>{{ selectedIngredient?.quantity }} {{ selectedIngredient?.unit }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Storage</label>
+                <span>{{ selectedIngredient?.location }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Expiry Date</label>
+                <span>{{ selectedIngredient?.expiryDate }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Cost</label>
+                <span>${{ selectedIngredient?.cost | number:'1.2-2' }}</span>
+            </div>
+            <div class="detail-item">
+                <label>Last Scanned</label>
+                <span>{{ selectedIngredient?.lastScanned }}</span>
+            </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModals()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div class="modal-overlay" *ngIf="showEditModal" (click)="closeModals()">
+    <div class="modal-content edit-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Edit Item</h3>
+        <button class="close-btn" (click)="closeModals()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" [(ngModel)]="editData.name" class="form-control">
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" [(ngModel)]="editData.quantity" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Unit</label>
+                <input type="text" [(ngModel)]="editData.unit" class="form-control" disabled> 
+                <!-- Unit usually fixed or select list, keeping disabled for specific edit -->
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Cost ($)</label>
+            <input type="number" [(ngModel)]="editData.cost" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>

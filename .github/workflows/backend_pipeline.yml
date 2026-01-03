@@ -1,0 +1,62 @@
+name: Backend Pipeline
+
+on:
+  push:
+    branches: [ "main", "KitchenPal-admin" ]
+    paths:
+      - 'backend/**'
+  pull_request:
+    branches: [ "main", "KitchenPal-admin" ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: kitchenpal_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: './backend/package-lock.json'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Tests
+      env:
+        # Use the service container credentials
+        DATABASE_HOST: localhost
+        DATABASE_PORT: 5432
+        DATABASE_NAME: kitchenpal_test
+        DATABASE_USER: postgres
+        DATABASE_PASSWORD: postgres_password
+        NODE_ENV: test
+        JWT_SECRET: test_jwt_secret
+        SESSION_SECRET: test_session_secret
+      run: npm test

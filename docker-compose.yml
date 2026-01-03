@@ -13,7 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./complete_schema.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,6 +58,21 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
       - postgres
+
+  kitchenpal_admin:
+    build:
+      context: ./KitchenPal-admin
+      dockerfile: Dockerfile
+      target: development
+    container_name: kitchenpal_admin
+    restart: always
+    ports:
+      - "4200:4200"
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./KitchenPal-admin/src:/app/src
+    command: npm start -- --host 0.0.0.0 --poll 2000
 
 volumes:
   postgres_data:

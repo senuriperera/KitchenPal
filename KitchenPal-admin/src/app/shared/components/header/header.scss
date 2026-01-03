@@ -1,0 +1,104 @@
+.page-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 24px 40px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-text {
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 4px 0;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f9fafb;
+  }
+
+  .icon {
+    font-size: 20px;
+  }
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+
+  .icon {
+    font-size: 20px;
+  }
+
+  .user-name {
+    font-size: 14px;
+    color: #374151;
+    font-weight: 500;
+  }
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+
+  .logout-text {
+    font-size: 14px;
+    color: #dc2626;
+    font-weight: 500;
+  }
+}

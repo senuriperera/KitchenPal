@@ -20,10 +20,16 @@ const loginValidation = [
     validate,
 ];
 
+const refreshTokenValidation = [
+    body('refreshToken').notEmpty().withMessage('Refresh token is required'),
+    validate,
+];
+
 // Routes
 router.post('/register', registerValidation, AuthController.register);
 router.post('/login', loginValidation, AuthController.login);
 router.post('/logout', authenticate, AuthController.logout);
+router.post('/refresh', refreshTokenValidation, AuthController.refreshToken);
 router.get('/me', authenticate, AuthController.getCurrentUser);
 
 // Google OAuth routes

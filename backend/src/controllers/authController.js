@@ -28,18 +28,28 @@ class AuthController {
                 role: role || 'user',
             });
 
-            // Generate JWT
-            const token = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+            // Generate access and refresh tokens
+            const accessToken = jwt.sign(
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
-                { expiresIn: config.jwt.expiresIn }
+                { expiresIn: config.jwt.accessTokenExpiresIn }
             );
+
+            const refreshToken = jwt.sign(
+                { user_id: user.user_id, type: 'refresh' },
+                config.jwt.secret,
+                { expiresIn: config.jwt.refreshTokenExpiresIn }
+            );
+
+            // Delete all existing sessions for this user
+            await SessionModel.deleteAllUserSessions(user.user_id);
 
             // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
             await SessionModel.create({
                 user_id: user.user_id,
-                jwt_token: token,
+                jwt_token: accessToken,
+                refresh_token: refreshToken,
                 expires_at: expiresAt,
                 user_agent: req.headers['user-agent'],
                 ip_address: req.ip,
@@ -52,8 +62,10 @@ class AuthController {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    branch_id: user.branch_id
                 },
-                token,
+                accessToken,
+                refreshToken,
             });
         } catch (error) {
             console.error('Register error:', error);
@@ -81,18 +93,28 @@ class AuthController {
             // Update last login
             await UserModel.updateLastLogin(user.user_id);
 
-            // Generate JWT
-            const token = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+            // Generate access and refresh tokens
+            const accessToken = jwt.sign(
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
-                { expiresIn: config.jwt.expiresIn }
+                { expiresIn: config.jwt.accessTokenExpiresIn }
             );
+
+            const refreshToken = jwt.sign(
+                { user_id: user.user_id, type: 'refresh' },
+                config.jwt.secret,
+                { expiresIn: config.jwt.refreshTokenExpiresIn }
+            );
+
+            // Delete all existing sessions for this user
+            await SessionModel.deleteAllUserSessions(user.user_id);
 
             // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             await SessionModel.create({
                 user_id: user.user_id,
-                jwt_token: token,
+                jwt_token: accessToken,
+                refresh_token: refreshToken,
                 expires_at: expiresAt,
                 user_agent: req.headers['user-agent'],
                 ip_address: req.ip,
@@ -105,8 +127,10 @@ class AuthController {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    branch_id: user.branch_id
                 },
-                token,
+                accessToken,
+                refreshToken,
             });
         } catch (error) {
             console.error('Login error:', error);
@@ -155,28 +179,91 @@ class AuthController {
             // User is already authenticated via passport
             const user = req.user;
 
-            // Generate JWT
-            const token = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role },
+            // Generate access and refresh tokens
+            const accessToken = jwt.sign(
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
-                { expiresIn: config.jwt.expiresIn }
+                { expiresIn: config.jwt.accessTokenExpiresIn }
             );
+
+            const refreshToken = jwt.sign(
+                { user_id: user.user_id, type: 'refresh' },
+                config.jwt.secret,
+                { expiresIn: config.jwt.refreshTokenExpiresIn }
+            );
+
+            // Delete all existing sessions for this user
+            await SessionModel.deleteAllUserSessions(user.user_id);
 
             // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             await SessionModel.create({
                 user_id: user.user_id,
-                jwt_token: token,
+                jwt_token: accessToken,
+                refresh_token: refreshToken,
                 expires_at: expiresAt,
                 user_agent: req.headers['user-agent'],
                 ip_address: req.ip,
             });
 
-            // Redirect to frontend with token
-            res.redirect(`${config.frontend.url}/auth/callback?token=${token}`);
+            // Redirect to frontend with tokens
+            res.redirect(`${config.frontend.url}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`);
         } catch (error) {
             console.error('Google callback error:', error);
             res.redirect(`${config.frontend.url}/auth/error`);
+        }
+    }
+
+    // Refresh access token
+    static async refreshToken(req, res) {
+        try {
+            const { refreshToken } = req.body;
+
+            if (!refreshToken) {
+                return res.status(400).json({ error: 'Refresh token required' });
+            }
+
+            // Verify refresh token
+            let decoded;
+            try {
+                decoded = jwt.verify(refreshToken, config.jwt.secret);
+            } catch (error) {
+                return res.status(401).json({ error: 'Invalid refresh token' });
+            }
+
+            // Check if it's a refresh token
+            if (decoded.type !== 'refresh') {
+                return res.status(401).json({ error: 'Invalid token type' });
+            }
+
+            // Find session by refresh token
+            const session = await SessionModel.findByRefreshToken(refreshToken);
+            if (!session) {
+                return res.status(401).json({ error: 'Session not found or expired' });
+            }
+
+            // Get user details
+            const user = await UserModel.findById(decoded.user_id);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+
+            // Generate new access token
+            const newAccessToken = jwt.sign(
+                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
+                config.jwt.secret,
+                { expiresIn: config.jwt.accessTokenExpiresIn }
+            );
+
+            // Update session with new access token
+            await SessionModel.updateAccessToken(session.session_id, newAccessToken);
+
+            res.json({
+                accessToken: newAccessToken,
+            });
+        } catch (error) {
+            console.error('Refresh token error:', error);
+            res.status(500).json({ error: 'Token refresh failed' });
         }
     }
 }
