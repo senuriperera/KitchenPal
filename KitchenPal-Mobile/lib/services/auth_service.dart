@@ -5,8 +5,9 @@ import 'storage_service.dart';
 
 class AuthService {
   // Update this URL to match your backend server
-  static const String baseUrl = 'http://localhost:3000/api/auth';
-  
+  // For Android Emulator, use 10.0.2.2 instead of localhost
+  static const String baseUrl = 'http://192.168.1.61:3000/api/auth';
+
   // For Android emulator, use: http://10.0.2.2:3000/api/auth
   // For iOS simulator, use: http://localhost:3000/api/auth
   // For real device, use your computer's IP: http://192.168.x.x:3000/api/auth
@@ -17,15 +18,12 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
       if (response.statusCode == 200) {
         final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
-        
+
         // Save auth data to secure storage
         await StorageService.saveAuthData(
           token: authResponse.token,
@@ -34,7 +32,7 @@ class AuthService {
           email: authResponse.user.email,
           role: authResponse.user.role,
         );
-        
+
         return authResponse;
       } else {
         final error = jsonDecode(response.body);
@@ -55,16 +53,12 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'password': password,
-        }),
+        body: jsonEncode({'name': name, 'email': email, 'password': password}),
       );
 
       if (response.statusCode == 201) {
         final authResponse = AuthResponse.fromJson(jsonDecode(response.body));
-        
+
         // Save auth data to secure storage
         await StorageService.saveAuthData(
           token: authResponse.token,
@@ -73,7 +67,7 @@ class AuthService {
           email: authResponse.user.email,
           role: authResponse.user.role,
         );
-        
+
         return authResponse;
       } else {
         final error = jsonDecode(response.body);
@@ -88,7 +82,7 @@ class AuthService {
   static Future<void> logout() async {
     try {
       final token = await StorageService.getToken();
-      
+
       if (token != null) {
         await http.post(
           Uri.parse('$baseUrl/logout'),
@@ -110,12 +104,12 @@ class AuthService {
   // Get current user profile
   static Future<Map<String, dynamic>?> getCurrentUser() async {
     final token = await StorageService.getToken();
-    
+
     if (token == null) return null;
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:3000/api/users/me'),
+        Uri.parse('http://10.0.2.2:3000/api/users/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
