@@ -1,78 +1,68 @@
 import 'package:flutter/material.dart';
-import '../shared/bottom_navbar.dart';
-import 'add_ingredient_page.dart';
 import 'dart:math' as math;
 
-class HomePage extends StatefulWidget {
+// Main HomePage wrapper for backward compatibility
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
+      body: HomePageContent(),
+    );
+  }
 }
 
-class _HomePageState extends State<HomePage> {
-  int _currentIndex = 0;
+// Extracted content widget for use in MainContainer
+class HomePageContent extends StatefulWidget {
+  const HomePageContent({super.key});
 
   @override
+  State<HomePageContent> createState() => _HomePageContentState();
+}
+
+class _HomePageContentState extends State<HomePageContent> {
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                _buildWasteSummaryCard(),
-                const SizedBox(height: 20),
-                _buildNearingExpiryHeader(),
-                const SizedBox(height: 12),
-                _buildExpiryItem(
-                  'Almond Milk',
-                  '3 Cartons • Dairy Alt.',
-                  'Expires Tomorrow',
-                  'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=300',
-                  isUrgent: true,
-                ),
-                const SizedBox(height: 12),
-                _buildExpiryItem(
-                  'Hass Avocados',
-                  '5 Units • Produce',
-                  'Exp: 2 Days',
-                  'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&q=80&w=300',
-                ),
-                const SizedBox(height: 12),
-                _buildExpiryItem(
-                  'Heavy Cream',
-                  '2 Liters • Dairy',
-                  'Exp: 3 Days',
-                  'https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&q=80&w=300',
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 16),
+              _buildWasteSummaryCard(),
+              const SizedBox(height: 20),
+              _buildNearingExpiryHeader(),
+              const SizedBox(height: 12),
+              _buildExpiryItem(
+                'Almond Milk',
+                '3 Cartons • Dairy Alt.',
+                'Expires Tomorrow',
+                'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=300',
+                isUrgent: true,
+              ),
+              const SizedBox(height: 12),
+              _buildExpiryItem(
+                'Hass Avocados',
+                '5 Units • Produce',
+                'Exp: 2 Days',
+                'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&q=80&w=300',
+              ),
+              const SizedBox(height: 12),
+              _buildExpiryItem(
+                'Heavy Cream',
+                '2 Liters • Dairy',
+                'Exp: 3 Days',
+                'https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&q=80&w=300',
+              ),
+              const SizedBox(height: 16),
+            ],
           ),
         ),
-      ),
-      bottomNavigationBar: KitchenPalBottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AddIngredientPage(),
-              ),
-            );
-          } else {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
-        },
       ),
     );
   }
@@ -95,7 +85,7 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               Text(
-                'Good Morning,',
+                'Hello there,',
                 style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
               Text(

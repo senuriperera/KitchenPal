@@ -1,16 +1,32 @@
 import 'package:flutter/material.dart';
-import '../shared/bottom_navbar.dart';
-import 'home_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import '../config/cloudinary_config.dart';
 
-class AddIngredientPage extends StatefulWidget {
+// Main AddIngredientPage wrapper for backward compatibility
+class AddIngredientPage extends StatelessWidget {
   const AddIngredientPage({super.key});
 
   @override
-  State<AddIngredientPage> createState() => _AddIngredientPageState();
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
+      body: AddIngredientPageContent(),
+    );
+  }
 }
 
-class _AddIngredientPageState extends State<AddIngredientPage> {
-  int _currentIndex = 2; // Index for Add Ingredient
+// Extracted content widget for use in MainContainer
+class AddIngredientPageContent extends StatefulWidget {
+  const AddIngredientPageContent({super.key});
+
+  @override
+  State<AddIngredientPageContent> createState() =>
+      _AddIngredientPageContentState();
+}
+
+class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _quantityController = TextEditingController();
@@ -18,8 +34,13 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
 
   String _selectedUnit = 'Grams (g)';
   String _selectedStorage = 'Pantry';
-  DateTime _manufactureDate = DateTime(2023, 10, 24);
-  DateTime _expiryDate = DateTime(2023, 12, 15);
+  DateTime _manufactureDate = DateTime(2025, 11, 24);
+  DateTime _expiryDate = DateTime(2025, 12, 15);
+
+  File? _selectedImage;
+  String? _cloudinaryImageUrl;
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
 
   final List<String> _units = [
     'Grams (g)',
@@ -29,19 +50,6 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
     'Pieces',
   ];
   final List<String> _storageTypes = ['Pantry', 'Fridge', 'Freezer'];
-
-  void _handleNavTap(int index) {
-    if (index == 0) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } else if (index != 2) {
-      setState(() {
-        _currentIndex = index;
-      });
-    }
-  }
 
   Future<void> _selectManufactureDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -109,51 +117,156 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
-            );
-          },
-        ),
-        title: const Text(
-          'Add Ingredient',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomePage()),
-              );
-            },
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: Color(0xFF00C853),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+  Future<void> _pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+        await _uploadToCloudinary(File(pickedFile.path));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImage = File(pickedFile.path);
+        });
+        await _uploadToCloudinary(File(pickedFile.path));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error taking photo: $e')));
+    }
+  }
+
+  Future<void> _uploadToCloudinary(File imageFile) async {
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final url = Uri.parse(
+        'https://api.cloudinary.com/v1_1/${CloudinaryConfig.cloudName}/image/upload',
+      );
+
+      var request = http.MultipartRequest('POST', url);
+      request.fields['upload_preset'] = CloudinaryConfig.uploadPreset;
+      request.fields['folder'] = 'kitchenpal/ingredients';
+
+      request.files.add(
+        await http.MultipartFile.fromPath('file', imageFile.path),
+      );
+
+      var response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final jsonResponse = responseData;
+
+        // Parse the response to get the secure_url
+        final urlPattern = RegExp(r'"secure_url":"([^"]+)"');
+        final match = urlPattern.firstMatch(jsonResponse);
+
+        if (match != null) {
+          setState(() {
+            _cloudinaryImageUrl = match.group(1);
+            _isUploading = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image uploaded successfully!')),
+          );
+        }
+      } else {
+        throw Exception('Upload failed with status: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _isUploading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.photo_library,
+                    color: Color(0xFF00C853),
+                  ),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.camera_alt,
+                    color: Color(0xFF00C853),
+                  ),
+                  title: const Text('Take a Photo'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _takePhoto();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.cancel, color: Colors.grey),
+                  title: const Text('Cancel'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(
@@ -172,9 +285,7 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
                 ),
                 const SizedBox(height: 12),
                 GestureDetector(
-                  onTap: () {
-                    // Handle image upload
-                  },
+                  onTap: _showImageSourceDialog,
                   child: Container(
                     height: 180,
                     decoration: BoxDecoration(
@@ -186,38 +297,98 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
                         style: BorderStyle.solid,
                       ),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(30),
+                    child: _isUploading
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(
+                                  color: Color(0xFF00C853),
+                                ),
+                                SizedBox(height: 12),
+                                Text(
+                                  'Uploading...',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : _selectedImage != null
+                        ? Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(
+                                  _selectedImage!,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedImage = null;
+                                      _cloudinaryImageUrl = null;
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: const Icon(
+                                  Icons.add_a_photo,
+                                  color: Color(0xFF00C853),
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Tap to upload photo',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'JPG, PNG or HEIC up to 10MB',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            ],
                           ),
-                          child: const Icon(
-                            Icons.add_a_photo,
-                            color: Color(0xFF00C853),
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Tap to upload photo',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'JPG, PNG or HEIC up to 10MB',
-                          style: TextStyle(fontSize: 12, color: Colors.black45),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -688,9 +859,20 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
                 // Add Ingredient Button
                 ElevatedButton(
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ingredient Added!')),
-                    );
+                    if (_cloudinaryImageUrl != null) {
+                      // You can now use _cloudinaryImageUrl to save to your backend
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Ingredient Added! Image URL: $_cloudinaryImageUrl',
+                          ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Ingredient Added!')),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
