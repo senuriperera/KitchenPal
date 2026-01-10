@@ -30,7 +30,11 @@ class KitchenPalBottomNavBar extends StatelessWidget {
               _buildNavItem(1, Icons.list_alt_outlined, Icons.list_alt),
               _buildNavItem(2, Icons.add_box_outlined, Icons.add_box),
               _buildNavItem(3, Icons.menu_book_outlined, Icons.menu_book),
-              _buildNavItem(4, Icons.notifications_outlined, Icons.notifications),
+              _buildNavItem(
+                4,
+                Icons.notifications_outlined,
+                Icons.notifications,
+              ),
             ],
           ),
         ),

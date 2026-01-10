@@ -14,15 +14,21 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _quantityController = TextEditingController();
-  final _weightController = TextEditingController();
   final _priceController = TextEditingController();
-  final _dateController = TextEditingController();
-  
-  String _selectedUnit = 'kg';
-  String _selectedStorage = 'Fridge';
-  
-  final List<String> _units = ['kg', 'g', 'L', 'ml', 'pcs'];
-  final List<String> _storageTypes = ['Fridge', 'Freezer', 'Pantry'];
+
+  String _selectedUnit = 'Grams (g)';
+  String _selectedStorage = 'Pantry';
+  DateTime _manufactureDate = DateTime(2023, 10, 24);
+  DateTime _expiryDate = DateTime(2023, 12, 15);
+
+  final List<String> _units = [
+    'Grams (g)',
+    'Kilograms (kg)',
+    'Liters (L)',
+    'Milliliters (ml)',
+    'Pieces',
+  ];
+  final List<String> _storageTypes = ['Pantry', 'Fridge', 'Freezer'];
 
   void _handleNavTap(int index) {
     if (index == 0) {
@@ -31,233 +37,689 @@ class _AddIngredientPageState extends State<AddIngredientPage> {
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } else if (index != 2) {
-      // For now only Home and Add are connected. 
-      // Other indices could be implemented similarly.
       setState(() {
         _currentIndex = index;
       });
     }
   }
 
-  Future<void> _selectDate(BuildContext context) async {
+  Future<void> _selectManufactureDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
+      initialDate: _manufactureDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _manufactureDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectExpiryDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _expiryDate.isBefore(_manufactureDate)
+          ? _manufactureDate
+          : _expiryDate,
+      firstDate: _manufactureDate,
       lastDate: DateTime(2101),
     );
     if (picked != null) {
       setState(() {
-        _dateController.text = "${picked.month}/${picked.day}/${picked.year}";
+        _expiryDate = picked;
       });
     }
+  }
+
+  void _incrementQuantity() {
+    setState(() {
+      double currentValue = double.tryParse(_quantityController.text) ?? 0.0;
+      currentValue += 1.0;
+      _quantityController.text = currentValue.toStringAsFixed(2);
+    });
+  }
+
+  void _decrementQuantity() {
+    setState(() {
+      double currentValue = double.tryParse(_quantityController.text) ?? 0.0;
+      if (currentValue > 0) {
+        currentValue -= 1.0;
+        _quantityController.text = currentValue.toStringAsFixed(2);
+      }
+    });
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('9:41', style: TextStyle(color: Colors.black, fontSize: 14)), 
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          },
+        ),
+        title: const Text(
+          'Add Ingredient',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle: false,
-        automaticallyImplyLeading: false, // Hide back button as we use navbar
         actions: [
-           IconButton(
-             icon: const Icon(Icons.battery_full, color: Colors.black), 
-             onPressed: () {},
-           ),
+          TextButton(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomePage()),
+              );
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF00C853),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Image Placeholder
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.grey.shade400),
+                // Ingredient Visual Section
+                const Text(
+                  'INGREDIENT VISUAL',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    letterSpacing: 0.5,
                   ),
-                  child: Center(
-                    child: Icon(Icons.image_outlined, size: 48, color: Colors.grey.shade500),
+                ),
+                const SizedBox(height: 12),
+                GestureDetector(
+                  onTap: () {
+                    // Handle image upload
+                  },
+                  child: Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        width: 2,
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: const Icon(
+                            Icons.add_a_photo,
+                            color: Color(0xFF00C853),
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Tap to upload photo',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'JPG, PNG or HEIC up to 10MB',
+                          style: TextStyle(fontSize: 12, color: Colors.black45),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
 
-                // Ingredient Name
-                _buildLabel('Ingredient Name'),
-                _buildTextField(controller: _nameController),
-                const SizedBox(height: 16),
+                // Basic Information Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'BASIC INFORMATION',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
 
-                // Quantity, Weight, Unit
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Quantity'),
-                          _buildTextField(controller: _quantityController),
-                        ],
+                      // Ingredient Name
+                      const Text(
+                        'Ingredient Name',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Weight'),
-                          _buildTextField(controller: _weightController),
-                        ],
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g. Whole Milk, Arabica Beans',
+                          hintStyle: const TextStyle(
+                            color: Colors.black38,
+                            fontSize: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                     Expanded(
-                      flex: 1,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 16),
+
+                      // Quantity and Price Row
+                      Row(
                         children: [
-                          _buildLabel('Unit'),
-                          _buildDropdown(
-                            value: _selectedUnit, 
-                            items: _units, 
-                            onChanged: (val) => setState(() => _selectedUnit = val!),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Quantity',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _quantityController,
+                                          keyboardType: TextInputType.number,
+                                          textAlign: TextAlign.center,
+                                          decoration: const InputDecoration(
+                                            hintText: '0.00',
+                                            hintStyle: TextStyle(
+                                              color: Colors.black38,
+                                              fontSize: 14,
+                                            ),
+                                            border: InputBorder.none,
+                                            contentPadding:
+                                                EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 14,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          InkWell(
+                                            onTap: _incrementQuantity,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                border: Border(
+                                                  left: BorderSide(
+                                                    color: Colors.grey.shade300,
+                                                  ),
+                                                  bottom: BorderSide(
+                                                    color: Colors.grey.shade300,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: const Icon(
+                                                Icons.keyboard_arrow_up,
+                                                size: 16,
+                                              ),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: _decrementQuantity,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                border: Border(
+                                                  left: BorderSide(
+                                                    color: Colors.grey.shade300,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: const Icon(
+                                                Icons.keyboard_arrow_down,
+                                                size: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Price',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _priceController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: '\$ 0.00',
+                                    hintStyle: const TextStyle(
+                                      color: Colors.black38,
+                                      fontSize: 14,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                // Price
-                _buildLabel('Price'),
-                _buildTextField(controller: _priceController),
-                const SizedBox(height: 16),
-
-                // Expire Date
-                _buildLabel('Expire Date'),
-                GestureDetector(
-                  onTap: () => _selectDate(context),
-                  child: AbsorbPointer(
-                    child: TextField(
-                      controller: _dateController,
-                      decoration: InputDecoration(
-                        hintText: 'MM / DD / YYYY',
-                        suffixIcon: const Icon(Icons.calendar_today_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFF79747E)),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      // Unit and Storage Type Row
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Unit',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedUnit,
+                                      isExpanded: true,
+                                      icon: const Icon(Icons.arrow_drop_down),
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          _selectedUnit = newValue!;
+                                        });
+                                      },
+                                      items: _units
+                                          .map<DropdownMenuItem<String>>((
+                                            String value,
+                                          ) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(
+                                                value,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            );
+                                          })
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Storage Type',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedStorage,
+                                      isExpanded: true,
+                                      icon: const Icon(Icons.arrow_drop_down),
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          _selectedStorage = newValue!;
+                                        });
+                                      },
+                                      items: _storageTypes
+                                          .map<DropdownMenuItem<String>>((
+                                            String value,
+                                          ) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(
+                                                value,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            );
+                                          })
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                // Storage Type
-                _buildLabel('Storage Type'),
-                _buildDropdown(
-                  value: _selectedStorage, 
-                  items: _storageTypes, 
-                  onChanged: (val) => setState(() => _selectedStorage = val!),
-                  isFullWidth: true,
+                // Inventory Dates Section
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'INVENTORY DATES',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Manufacture Date
+                      GestureDetector(
+                        onTap: () => _selectManufactureDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE3F2FD),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.factory,
+                                  color: Color(0xFF2196F3),
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Manufacture Date',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _formatDate(_manufactureDate),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.calendar_month,
+                                color: Color(0xFF00C853),
+                                size: 24,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Expiry Date
+                      GestureDetector(
+                        onTap: () => _selectExpiryDate(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFEBEE),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.calendar_today,
+                                  color: Colors.red,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Expiry Date',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      _formatDate(_expiryDate),
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.calendar_month,
+                                color: Color(0xFF00C853),
+                                size: 24,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-                // Add Button
+                // Add Ingredient Button
                 ElevatedButton(
                   onPressed: () {
-                    // Start verification or backend logic
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ingredient Added! (Mock)')),
+                      const SnackBar(content: Text('Ingredient Added!')),
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF59E0B),
+                    backgroundColor: const Color(0xFF00C853),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     elevation: 0,
                   ),
-                  child: const Text('Add', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.add, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Add Ingredient',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: KitchenPalBottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: _handleNavTap,
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
-      ),
-    );
-  }
-
-  Widget _buildTextField({required TextEditingController controller}) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF79747E)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFF79747E)),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String value, 
-    required List<String> items, 
-    required ValueChanged<String?> onChanged,
-    bool isFullWidth = false,
-  }) {
-    return Container(
-      height: 50, // Match text field height roughly
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFF79747E)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true, 
-          icon: const Icon(Icons.unfold_more),
-          onChanged: onChanged,
-          items: items.map<DropdownMenuItem<String>>((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
         ),
       ),
     );

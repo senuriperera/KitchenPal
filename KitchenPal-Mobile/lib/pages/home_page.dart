@@ -30,11 +30,27 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 20),
                 _buildNearingExpiryHeader(),
                 const SizedBox(height: 12),
-                _buildExpiryItem('Almond Milk', '3 Cartons • Dairy Alt.', 'Expires Tomorrow', 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=300', isUrgent: true),
+                _buildExpiryItem(
+                  'Almond Milk',
+                  '3 Cartons • Dairy Alt.',
+                  'Expires Tomorrow',
+                  'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=300',
+                  isUrgent: true,
+                ),
                 const SizedBox(height: 12),
-                _buildExpiryItem('Hass Avocados', '5 Units • Produce', 'Exp: 2 Days', 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&q=80&w=300'),
+                _buildExpiryItem(
+                  'Hass Avocados',
+                  '5 Units • Produce',
+                  'Exp: 2 Days',
+                  'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&q=80&w=300',
+                ),
                 const SizedBox(height: 12),
-                _buildExpiryItem('Heavy Cream', '2 Liters • Dairy', 'Exp: 3 Days', 'https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&q=80&w=300'),
+                _buildExpiryItem(
+                  'Heavy Cream',
+                  '2 Liters • Dairy',
+                  'Exp: 3 Days',
+                  'https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&q=80&w=300',
+                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -47,10 +63,12 @@ class _HomePageState extends State<HomePage> {
           if (index == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const AddIngredientPage()),
+              MaterialPageRoute(
+                builder: (context) => const AddIngredientPage(),
+              ),
             );
           } else {
-             setState(() {
+            setState(() {
               _currentIndex = index;
             });
           }
@@ -134,11 +152,18 @@ class _HomePageState extends State<HomePage> {
               const Flexible(
                 child: Text(
                   'October Waste Summary',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F5F5),
                   borderRadius: BorderRadius.circular(16),
@@ -159,7 +184,11 @@ class _HomePageState extends State<HomePage> {
               ),
               const Text(
                 'Saved',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF00C853)),
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF00C853),
+                ),
               ),
             ],
           ),
@@ -179,7 +208,11 @@ class _HomePageState extends State<HomePage> {
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(Icons.eco, color: Color(0xFF00C853), size: 22),
+                      child: const Icon(
+                        Icons.eco,
+                        color: Color(0xFF00C853),
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
@@ -200,9 +233,18 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text('Saved Food', style: TextStyle(fontSize: 13)),
+                        const Text(
+                          'Saved Food',
+                          style: TextStyle(fontSize: 13),
+                        ),
                         const Spacer(),
-                        const Text('420 kg', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        const Text(
+                          '420 kg',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -219,7 +261,13 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(width: 8),
                         const Text('Wasted', style: TextStyle(fontSize: 13)),
                         const Spacer(),
-                        const Text('140 kg', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        const Text(
+                          '140 kg',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -251,7 +299,11 @@ class _HomePageState extends State<HomePage> {
             children: const [
               Text(
                 'View All',
-                style: TextStyle(fontSize: 14, color: Color(0xFF00C853), fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF00C853),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               SizedBox(width: 4),
               Icon(Icons.arrow_forward, size: 16, color: Color(0xFF00C853)),
@@ -262,7 +314,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildExpiryItem(String name, String details, String expiry, String imageUrl, {bool isUrgent = false}) {
+  Widget _buildExpiryItem(
+    String name,
+    String details,
+    String expiry,
+    String imageUrl, {
+    bool isUrgent = false,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -284,7 +342,10 @@ class _HomePageState extends State<HomePage> {
               children: [
                 if (isUrgent)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFEBEE),
@@ -297,14 +358,21 @@ class _HomePageState extends State<HomePage> {
                         SizedBox(width: 4),
                         Text(
                           'Expires Tomorrow',
-                          style: TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                   )
                 else
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     margin: const EdgeInsets.only(bottom: 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF3E0),
@@ -313,18 +381,29 @@ class _HomePageState extends State<HomePage> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.access_time, size: 12, color: Color(0xFFFF9800)),
+                        const Icon(
+                          Icons.access_time,
+                          size: 12,
+                          color: Color(0xFFFF9800),
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           expiry,
-                          style: const TextStyle(fontSize: 11, color: Color(0xFFFF9800), fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFFF9800),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
                   ),
                 Text(
                   name,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -340,7 +419,9 @@ class _HomePageState extends State<HomePage> {
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           side: const BorderSide(color: Colors.black12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                         child: const Text(
                           'Acknowledge',
@@ -356,7 +437,9 @@ class _HomePageState extends State<HomePage> {
                           backgroundColor: const Color(0xFF00C853),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           elevation: 0,
                         ),
                         child: Row(
@@ -387,7 +470,11 @@ class _HomePageState extends State<HomePage> {
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     color: const Color(0xFFFFE0B2),
-                    child: const Icon(Icons.image, size: 35, color: Colors.grey),
+                    child: const Icon(
+                      Icons.image,
+                      size: 35,
+                      color: Colors.grey,
+                    ),
                   );
                 },
               ),
@@ -408,23 +495,23 @@ class CircularProgressPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-    
+
     // Background circle (gray)
     final backgroundPaint = Paint()
       ..color = const Color(0xFFE0E0E0)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeCap = StrokeCap.round;
-    
+
     canvas.drawCircle(center, radius - 5, backgroundPaint);
-    
+
     // Progress arc (green)
     final progressPaint = Paint()
       ..color = const Color(0xFF00C853)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10
       ..strokeCap = StrokeCap.round;
-    
+
     final sweepAngle = 2 * math.pi * (percentage / 100);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius - 5),
