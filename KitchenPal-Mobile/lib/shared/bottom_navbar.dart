@@ -46,11 +46,9 @@ class KitchenPalBottomNavBar extends StatelessWidget {
         padding: const EdgeInsets.all(8),
         child: Icon(
           isSelected ? activeIcon : icon,
-          color: isSelected ? const Color(0xFFF59E0B) : Colors.white70,
+          color: isSelected ? const Color(0xFF00C853) : Colors.white70,
           size: 28,
         ),
-        // Add more styling if needed to match exact design (e.g. underline or background)
-        // For now, color change is the main indicator.
       ),
     );
   }
