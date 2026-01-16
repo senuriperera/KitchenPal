@@ -8,3 +8,5 @@ npm-debug.log*
 .vscode/
 coverage/
 dist/
+google-credentials.json
+

@@ -35,12 +35,14 @@ services:
       DATABASE_NAME: kitchenpal
       DATABASE_USER: postgres
       DATABASE_PASSWORD: postgres123
+      GOOGLE_APPLICATION_CREDENTIALS: /app/google-credentials.json
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
       - ./backend/uploads:/app/uploads
+      - ./backend/google-credentials.json:/app/google-credentials.json
     command: npm run dev
 
   pgadmin:

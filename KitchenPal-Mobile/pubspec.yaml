@@ -49,6 +49,9 @@ dependencies:
 
   # Image picker
   image_picker: ^1.0.7
+  cloudinary_public: ^0.23.1
+  intl: ^0.18.1
+
 
 dev_dependencies:
   flutter_test:

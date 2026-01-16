@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../services/auth_service.dart';
+import 'login.dart';
 
 // Main HomePage wrapper for backward compatibility
 class HomePage extends StatelessWidget {
@@ -67,17 +69,54 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
+  Future<void> _showLogoutDialog() async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                await AuthService.logout();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildHeader() {
     return Row(
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFE0B2),
-            borderRadius: BorderRadius.circular(24),
+        GestureDetector(
+          onTap: _showLogoutDialog,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE0B2),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Icon(Icons.person, size: 28, color: Color(0xFFFF9800)),
           ),
-          child: const Icon(Icons.person, size: 28, color: Color(0xFFFF9800)),
         ),
         const SizedBox(width: 10),
         Expanded(

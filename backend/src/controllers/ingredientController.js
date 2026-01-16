@@ -1,4 +1,6 @@
 const IngredientModel = require('../models/Ingredient');
+const OCRService = require('../services/ocrService');
+
 
 class IngredientController {
     // Get all ingredients for a branch
@@ -44,6 +46,8 @@ class IngredientController {
                 manufacture_date,
                 storage_type_id,
                 image_url,
+                weight,
+                weight_unit_id
             } = req.body;
 
             const ingredient = await IngredientModel.create({
@@ -56,6 +60,8 @@ class IngredientController {
                 manufacture_date,
                 storage_type_id,
                 image_url,
+                weight,
+                weight_unit_id
             });
 
             res.status(201).json({
@@ -134,6 +140,23 @@ class IngredientController {
         } catch (error) {
             console.error('Get monthly stats error:', error);
             res.status(500).json({ error: 'Failed to fetch statistics' });
+        }
+    }
+
+    // Scan ingredient for dates
+    static async scanIngredient(req, res) {
+        try {
+            const { imageUrl } = req.body;
+
+            if (!imageUrl) {
+                return res.status(400).json({ error: 'Image URL is required' });
+            }
+
+            const dates = await OCRService.extractDatesFromUrl(imageUrl);
+            res.json(dates);
+        } catch (error) {
+            console.error('Scan ingredient error:', error);
+            res.status(500).json({ error: 'Failed to scan ingredient' });
         }
     }
 }

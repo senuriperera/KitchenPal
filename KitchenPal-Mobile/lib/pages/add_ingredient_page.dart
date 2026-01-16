@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/cloudinary_config.dart';
+import '../services/ocr_service.dart';
+import '../services/storage_service.dart';
+import 'login.dart';
 
 // Main AddIngredientPage wrapper for backward compatibility
 class AddIngredientPage extends StatelessWidget {
@@ -31,16 +35,19 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   final _nameController = TextEditingController();
   final _quantityController = TextEditingController();
   final _priceController = TextEditingController();
+  final _weightController = TextEditingController();
 
-  String _selectedUnit = 'Grams (g)';
+  String _selectedWeightUnit = 'Grams (g)';
   String _selectedStorage = 'Pantry';
-  DateTime _manufactureDate = DateTime(2025, 11, 24);
-  DateTime _expiryDate = DateTime(2025, 12, 15);
+  DateTime _manufactureDate = DateTime(2025, 01, 01);
+  DateTime _expiryDate = DateTime(2025, 01, 01);
 
   File? _selectedImage;
   String? _cloudinaryImageUrl;
   bool _isUploading = false;
+  bool _isScanning = false;
   final ImagePicker _picker = ImagePicker();
+  final OCRService _ocrService = OCRService();
 
   final List<String> _units = [
     'Grams (g)',
@@ -52,11 +59,22 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   final List<String> _storageTypes = ['Pantry', 'Fridge', 'Freezer'];
 
   Future<void> _selectManufactureDate(BuildContext context) async {
+    final now = DateTime.now();
+    DateTime initialDate = _manufactureDate;
+    
+    // Safety check: if current date is invalid (e.g. from bad scan), fix it for the picker
+    if (initialDate.isAfter(now)) {
+      initialDate = now;
+    }
+    if (initialDate.isBefore(DateTime(2000))) {
+      initialDate = DateTime(2000);
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _manufactureDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      initialDate: initialDate,
+      firstDate: DateTime(2000),
+      lastDate: now,
     );
     if (picked != null) {
       setState(() {
@@ -210,6 +228,217 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+    }
+  }
+
+  Future<void> _scanDates() async {
+    setState(() {
+      _isScanning = true;
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final dates = await _ocrService.pickAndScanImage(token);
+
+      if (dates != null) {
+        bool dateFound = false;
+
+        setState(() {
+          if (dates['manufactureDate'] != null) {
+            _manufactureDate = dates['manufactureDate']!;
+            dateFound = true;
+          }
+          if (dates['expiryDate'] != null) {
+            _expiryDate = dates['expiryDate']!;
+            dateFound = true;
+          }
+        });
+
+        if (dateFound) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dates scanned and updated!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unclear dates. Please enter manually.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No dates found or scan cancelled')),
+        );
+      }
+    } catch (e) {
+      if (e.toString().contains('401')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          // Clear auth data
+          await StorageService.saveAuthData(
+            token: '',
+            userId: 0,
+            name: '',
+            email: '',
+            role: '',
+          ); // Or better: create a clear method in StorageService
+
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Scan failed: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+        });
+      }
+    }
+  }
+
+  int _getUnitId(String unitName) {
+    switch (unitName) {
+      case 'Grams (g)':
+        return 2;
+      case 'Kilograms (kg)':
+        return 1;
+      case 'Liters (L)':
+        return 3;
+      case 'Milliliters (ml)':
+        return 4;
+      case 'Pieces':
+        return 5;
+      default:
+        return 5;
+    }
+  }
+
+  int _getStorageId(String storageName) {
+    switch (storageName) {
+      case 'Pantry':
+        return 3;
+      case 'Fridge':
+        return 1;
+      case 'Freezer':
+        return 2;
+      default:
+        return 3;
+    }
+  }
+
+  void _clearForm() {
+    _nameController.clear();
+    _quantityController.clear();
+    _priceController.clear();
+    _weightController.clear();
+    setState(() {
+      _selectedWeightUnit = 'Grams (g)';
+      _selectedStorage = 'Pantry';
+      _manufactureDate = DateTime(2025, 11, 24);
+      _expiryDate = DateTime(2025, 12, 15);
+      _selectedImage = null;
+      _cloudinaryImageUrl = null;
+    });
+  }
+
+  Future<void> _submitIngredient() async {
+    if (_nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an ingredient name')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isUploading = true;
+    });
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // TODO: Get real branch_id from user profile
+      final int branchId = 1;
+
+      final Map<String, dynamic> ingredientData = {
+        'branch_id': branchId,
+        'name': _nameController.text,
+        'quantity': double.tryParse(_quantityController.text) ?? 0.0,
+        'unit_id': 5, // Default to Pieces (5) since Unit field is removed
+        'price': double.tryParse(_priceController.text) ?? 0.0,
+        'storage_type_id': _getStorageId(_selectedStorage),
+        'expiry_date': _expiryDate.toIso8601String(),
+        'manufacture_date': _manufactureDate.toIso8601String(),
+        'image_url': _cloudinaryImageUrl,
+        'weight': double.tryParse(_weightController.text) ?? 0.0,
+        'weight_unit_id': _getUnitId(_selectedWeightUnit),
+      };
+
+      final response = await http.post(
+        Uri.parse('http://192.168.1.61:3000/api/ingredients'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(ingredientData),
+      );
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ingredient added successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _clearForm();
+      } else {
+        throw Exception('Failed to add ingredient: ${response.body}');
+      }
+    } catch (e) {
+      if (e.toString().contains('401')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Session expired. Please login again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
     }
   }
 
@@ -596,64 +825,9 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Unit and Storage Type Row
+                      // Storage Type
                       Row(
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Unit',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedUnit,
-                                      isExpanded: true,
-                                      icon: const Icon(Icons.arrow_drop_down),
-                                      onChanged: (String? newValue) {
-                                        setState(() {
-                                          _selectedUnit = newValue!;
-                                        });
-                                      },
-                                      items: _units
-                                          .map<DropdownMenuItem<String>>((
-                                            String value,
-                                          ) {
-                                            return DropdownMenuItem<String>(
-                                              value: value,
-                                              child: Text(
-                                                value,
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            );
-                                          })
-                                          .toList(),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -710,6 +884,111 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 16),
+
+                      // Weight and Weight Unit Row (New)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Weight',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _weightController,
+                                  keyboardType: TextInputType.number,
+                                  decoration: InputDecoration(
+                                    hintText: '0.00',
+                                    hintStyle: const TextStyle(
+                                      color: Colors.black38,
+                                      fontSize: 14,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Weight Unit',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _selectedWeightUnit,
+                                      isExpanded: true,
+                                      icon: const Icon(Icons.arrow_drop_down),
+                                      onChanged: (String? newValue) {
+                                        setState(() {
+                                          _selectedWeightUnit = newValue!;
+                                        });
+                                      },
+                                      items: _units
+                                          .map<DropdownMenuItem<String>>((
+                                            String value,
+                                          ) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(
+                                                value,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            );
+                                          })
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -731,6 +1010,40 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                           fontSize: 12,
                           color: Colors.black54,
                           letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Scan Button
+                      Center(
+                        child: ElevatedButton.icon(
+                          onPressed: _isScanning ? null : _scanDates,
+                          icon: _isScanning
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.document_scanner),
+                          label: Text(
+                            _isScanning
+                                ? 'Scanning...'
+                                : 'Scan Dates from Image',
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2196F3),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -858,22 +1171,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
                 // Add Ingredient Button
                 ElevatedButton(
-                  onPressed: () {
-                    if (_cloudinaryImageUrl != null) {
-                      // You can now use _cloudinaryImageUrl to save to your backend
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Ingredient Added! Image URL: $_cloudinaryImageUrl',
-                          ),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Ingredient Added!')),
-                      );
-                    }
-                  },
+                  onPressed: _isUploading ? null : _submitIngredient,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
                     foregroundColor: Colors.white,
@@ -883,20 +1181,29 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                     ),
                     elevation: 0,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.add, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Add Ingredient',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  child: _isUploading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.add, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Add Ingredient',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
                 ),
                 const SizedBox(height: 20),
               ],
