@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS public.ingredients (
     cost_per_unit numeric(10, 4),
     reorder_level numeric(12, 4),
     image_url text,
+    weight numeric(12, 4),
+    weight_unit_id integer,
     added_at timestamp with time zone DEFAULT now(),
     last_updated timestamp with time zone DEFAULT now(),
     CONSTRAINT ingredients_pkey PRIMARY KEY (ingredient_id)
@@ -271,6 +273,8 @@ ALTER TABLE ONLY public.ingredients
 ADD CONSTRAINT ingredients_unit_id_fkey FOREIGN KEY (unit_id) REFERENCES public.units(unit_id);
 ALTER TABLE ONLY public.ingredients
 ADD CONSTRAINT ingredients_storage_type_id_fkey FOREIGN KEY (storage_type_id) REFERENCES public.storage_types(storage_type_id);
+ALTER TABLE ONLY public.ingredients
+ADD CONSTRAINT ingredients_weight_unit_id_fkey FOREIGN KEY (weight_unit_id) REFERENCES public.units(unit_id);
 ALTER TABLE ONLY public.recipes
 ADD CONSTRAINT recipes_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.recipes

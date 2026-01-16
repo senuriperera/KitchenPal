@@ -61,7 +61,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   Future<void> _selectManufactureDate(BuildContext context) async {
     final now = DateTime.now();
     DateTime initialDate = _manufactureDate;
-    
+
     // Safety check: if current date is invalid (e.g. from bad scan), fix it for the picker
     if (initialDate.isAfter(now)) {
       initialDate = now;
