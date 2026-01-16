@@ -15,49 +15,36 @@
 }
 
 .stat-card {
-  background: white;
   border-radius: 16px;
-  padding: 24px;
-  border: 1px solid #e5e7eb;
+  padding: 24px 20px;
   position: relative;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   }
 
-  &::after {
-    content: '';
-    position: absolute;
-    right: -30px;
-    bottom: -30px;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    opacity: 0.15;
-    z-index: 0;
+  &.yellow {
+    background: linear-gradient(135deg, #fef9e7 0%, #fef5d9 100%);
   }
 
-  &.yellow::after {
-    background: #fbbf24;
+  &.red {
+    background: linear-gradient(135deg, #ffe8e8 0%, #ffd6d6 100%);
   }
 
-  &.red::after {
-    background: #f87171;
+  &.green {
+    background: linear-gradient(135deg, #fef9e7 0%, #fef5d9 100%);
   }
 
-  &.green::after {
-    background: #fbbf24;
+  &.purple {
+    background: linear-gradient(135deg, #f3f0ff 0%, #ebe5ff 100%);
   }
 
-  &.purple::after {
-    background: #a78bfa;
-  }
-
-  &.blue::after {
-    background: #60a5fa;
+  &.blue {
+    background: linear-gradient(135deg, #e8f4ff 0%, #d6ebff 100%);
   }
 }
 
@@ -65,9 +52,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
-  position: relative;
-  z-index: 1;
+  margin-bottom: 20px;
 }
 
 .stat-label {
@@ -75,69 +60,76 @@
   color: #6b7280;
   font-weight: 500;
   line-height: 1.4;
-  max-width: 60%;
+  flex: 1;
 }
 
-.stat-icon {
-  width: 48px;
-  height: 48px;
+.stat-icon-wrapper {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
-  position: relative;
-  z-index: 1;
+  flex-shrink: 0;
 
-  &.warning {
-    background: #fef3c7;
+  svg {
+    width: 20px;
+    height: 20px;
   }
 
-  &.trash {
-    background: #ffe4e6;
+  &.yellow-icon {
+    background: rgba(251, 191, 36, 0.15);
+    color: #f59e0b;
   }
 
-  &.check {
-    background: #fef3c7;
+  &.red-icon {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
   }
 
-  &.thumbs {
-    background: #ede9fe;
+  &.green-icon {
+    background: rgba(251, 191, 36, 0.15);
+    color: #f59e0b;
   }
 
-  &.chart {
-    background: #dbeafe;
+  &.purple-icon {
+    background: rgba(167, 139, 250, 0.15);
+    color: #8b5cf6;
+  }
+
+  &.blue-icon {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
   }
 }
 
 .stat-value {
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 700;
   color: #111827;
   margin-bottom: 12px;
-  position: relative;
-  z-index: 1;
+  line-height: 1;
 }
 
-.stat-change {
+.stat-trend {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  position: relative;
-  z-index: 1;
+  font-size: 12px;
+  color: #f59e0b;
 
-  &.increase {
-    color: #f97316;
-  }
+  .trend-arrow {
+    width: 16px;
+    height: 16px;
+    
+    &.up {
+      color: #f59e0b;
+    }
 
-  &.decrease {
-    color: #ef4444;
-  }
-
-  .trend-icon {
-    font-size: 14px;
+    &.down {
+      color: #ef4444;
+      transform: rotate(180deg);
+    }
   }
 
   .trend-text {
