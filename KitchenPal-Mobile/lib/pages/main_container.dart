@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../shared/bottom_navbar.dart';
 import 'home_page.dart';
 import 'add_ingredient_page.dart';
+import 'inventory_page.dart';
 
 class MainContainer extends StatefulWidget {
   const MainContainer({super.key});
@@ -15,7 +16,7 @@ class _MainContainerState extends State<MainContainer> {
 
   final List<Widget> _pages = [
     const HomePageContent(),
-    const Center(child: Text('Stock')), // Placeholder for Stock page
+    const InventoryPageContent(),
     const AddIngredientPageContent(),
     const Center(child: Text('Recipes')), // Placeholder for Recipes page
     const Center(child: Text('Analytics')), // Placeholder for Analytics page

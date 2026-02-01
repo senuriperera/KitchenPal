@@ -420,20 +420,29 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         throw Exception('Failed to add ingredient: ${response.body}');
       }
     } catch (e) {
-      if (e.toString().contains('401')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Session expired. Please login again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
+      String errorMessage = e.toString();
+      if (errorMessage.contains('401') || 
+          errorMessage.toLowerCase().contains('token expired') ||
+          errorMessage.toLowerCase().contains('unauthorized')) {
+        await StorageService.clearAuthData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (route) => false,
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          );
+        }
       }
     } finally {
       setState(() {
