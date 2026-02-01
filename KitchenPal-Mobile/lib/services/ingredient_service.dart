@@ -40,7 +40,9 @@ class IngredientService {
 
   // Get expiring ingredients
   static Future<List<Ingredient>> getExpiringIngredients(
-      int branchId, int days) async {
+    int branchId,
+    int days,
+  ) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) {
@@ -63,7 +65,8 @@ class IngredientService {
             .toList();
       } else {
         throw Exception(
-            'Failed to load expiring ingredients: ${response.statusCode}');
+          'Failed to load expiring ingredients: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching expiring ingredients: $e');
@@ -100,7 +103,9 @@ class IngredientService {
 
   // Update ingredient
   static Future<Ingredient> updateIngredient(
-      int ingredientId, Map<String, dynamic> ingredientData) async {
+    int ingredientId,
+    Map<String, dynamic> ingredientData,
+  ) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) {
@@ -131,7 +136,9 @@ class IngredientService {
 
   // Search ingredients by name (client-side filtering)
   static List<Ingredient> searchIngredients(
-      List<Ingredient> ingredients, String query) {
+    List<Ingredient> ingredients,
+    String query,
+  ) {
     if (query.isEmpty) return ingredients;
 
     final lowerQuery = query.toLowerCase();
@@ -142,7 +149,9 @@ class IngredientService {
 
   // Filter ingredients by storage type (client-side filtering)
   static List<Ingredient> filterByStorageType(
-      List<Ingredient> ingredients, String storageType) {
+    List<Ingredient> ingredients,
+    String storageType,
+  ) {
     if (storageType.isEmpty) return ingredients;
 
     return ingredients.where((ingredient) {

@@ -30,13 +30,18 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
   late DateTime _manufactureDate;
   late String _selectedStorage;
   late String _selectedWeightUnit;
-  
+
   String? _cloudinaryImageUrl;
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   final List<String> _storageTypes = ['Pantry', 'Fridge', 'Freezer'];
-  final List<String> _weightUnits = ['Grams (g)', 'Kilograms (kg)', 'Liters (L)', 'Milliliters (ml)'];
+  final List<String> _weightUnits = [
+    'Grams (g)',
+    'Kilograms (kg)',
+    'Liters (L)',
+    'Milliliters (ml)',
+  ];
 
   @override
   void initState() {
@@ -46,55 +51,81 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
 
   void _initializeControllers() {
     _nameController = TextEditingController(text: widget.ingredient.name);
-    _quantityController = TextEditingController(text: widget.ingredient.quantityInStock.toString());
-    _priceController = TextEditingController(text: widget.ingredient.costPerUnit.toString());
-    _weightController = TextEditingController(text: widget.ingredient.weight?.toString() ?? '0');
+    _quantityController = TextEditingController(
+      text: widget.ingredient.quantityInStock.toString(),
+    );
+    _priceController = TextEditingController(
+      text: widget.ingredient.costPerUnit.toString(),
+    );
+    _weightController = TextEditingController(
+      text: widget.ingredient.weight?.toString() ?? '0',
+    );
     _expiryDate = widget.ingredient.expiryDate;
     _manufactureDate = widget.ingredient.manufactureDate ?? DateTime.now();
     _cloudinaryImageUrl = widget.ingredient.imageUrl;
-    
+
     // Map storage type
     _selectedStorage = _mapStorageTypeIdToName(widget.ingredient.storageTypeId);
-    
+
     // Map weight unit
-    _selectedWeightUnit = _mapWeightUnitIdToName(widget.ingredient.weightUnitId ?? 2);
+    _selectedWeightUnit = _mapWeightUnitIdToName(
+      widget.ingredient.weightUnitId ?? 2,
+    );
   }
 
   String _mapStorageTypeIdToName(int id) {
     switch (id) {
-      case 1: return 'Fridge';
-      case 2: return 'Freezer';
-      case 3: return 'Pantry';
-      default: return 'Pantry';
+      case 1:
+        return 'Fridge';
+      case 2:
+        return 'Freezer';
+      case 3:
+        return 'Pantry';
+      default:
+        return 'Pantry';
     }
   }
 
   int _getStorageId(String storageName) {
     switch (storageName) {
-      case 'Fridge': return 1;
-      case 'Freezer': return 2;
-      case 'Pantry': return 3;
-      default: return 3;
+      case 'Fridge':
+        return 1;
+      case 'Freezer':
+        return 2;
+      case 'Pantry':
+        return 3;
+      default:
+        return 3;
     }
   }
 
   String _mapWeightUnitIdToName(int id) {
     switch (id) {
-      case 1: return 'Kilograms (kg)';
-      case 2: return 'Grams (g)';
-      case 3: return 'Liters (L)';
-      case 4: return 'Milliliters (ml)';
-      default: return 'Grams (g)';
+      case 1:
+        return 'Kilograms (kg)';
+      case 2:
+        return 'Grams (g)';
+      case 3:
+        return 'Liters (L)';
+      case 4:
+        return 'Milliliters (ml)';
+      default:
+        return 'Grams (g)';
     }
   }
 
   int _getUnitId(String unitName) {
     switch (unitName) {
-      case 'Kilograms (kg)': return 1;
-      case 'Grams (g)': return 2;
-      case 'Liters (L)': return 3;
-      case 'Milliliters (ml)': return 4;
-      default: return 2;
+      case 'Kilograms (kg)':
+        return 1;
+      case 'Grams (g)':
+        return 2;
+      case 'Liters (L)':
+        return 3;
+      case 'Milliliters (ml)':
+        return 4;
+      default:
+        return 2;
     }
   }
 
@@ -149,7 +180,10 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         setState(() {
           _isEditMode = false;
         });
-        Navigator.pop(context, true); // Return true to indicate changes were made
+        Navigator.pop(
+          context,
+          true,
+        ); // Return true to indicate changes were made
       }
     } catch (e) {
       if (mounted) {
@@ -174,7 +208,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Ingredient'),
-        content: Text('Are you sure you want to delete ${widget.ingredient.name}?'),
+        content: Text(
+          'Are you sure you want to delete ${widget.ingredient.name}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -191,7 +227,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
 
     if (confirmed == true) {
       try {
-        await IngredientService.deleteIngredient(widget.ingredient.ingredientId);
+        await IngredientService.deleteIngredient(
+          widget.ingredient.ingredientId,
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ingredient deleted successfully')),
@@ -224,9 +262,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         await _uploadToCloudinary(File(pickedFile.path));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
     }
   }
 
@@ -270,9 +308,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         _isUploading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
     }
   }
 
@@ -298,9 +336,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       ),
       body: _isSaving
           ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF2C2C54),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF2C2C54)),
             )
           : SafeArea(
               child: SingleChildScrollView(
@@ -346,147 +382,137 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.grey.shade300,
-                width: 2,
-              ),
+              border: Border.all(color: Colors.grey.shade300, width: 2),
             ),
             child: _isUploading
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(
-                          color: Color(0xFF00C853),
-                        ),
+                        CircularProgressIndicator(color: Color(0xFF00C853)),
                         SizedBox(height: 12),
                         Text(
                           'Uploading...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                       ],
                     ),
                   )
                 : _selectedImage != null
-                    ? Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              _selectedImage!,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
+                ? Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          _selectedImage!,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      if (_isEditMode)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedImage = null;
+                                _cloudinaryImageUrl = null;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
-                          if (_isEditMode)
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedImage = null;
-                                    _cloudinaryImageUrl = null;
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                ),
+                        ),
+                    ],
+                  )
+                : (_cloudinaryImageUrl != null &&
+                      _cloudinaryImageUrl!.isNotEmpty)
+                ? Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          _cloudinaryImageUrl!,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildPlaceholderImage();
+                          },
+                        ),
+                      ),
+                      if (_isEditMode)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _cloudinaryImageUrl = null;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 18,
                               ),
                             ),
-                        ],
-                      )
-                    : (_cloudinaryImageUrl != null && _cloudinaryImageUrl!.isNotEmpty)
-                        ? Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  _cloudinaryImageUrl!,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return _buildPlaceholderImage();
-                                  },
-                                ),
-                              ),
-                              if (_isEditMode)
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      setState(() {
-                                        _cloudinaryImageUrl = null;
-                                      });
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black54,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 18,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          )
-                        : _isEditMode
-                            ? Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE8F5E9),
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: const Icon(
-                                      Icons.add_a_photo,
-                                      color: Color(0xFF00C853),
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const Text(
-                                    'Tap to upload photo',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'JPG, PNG or HEIC up to 10MB',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black45,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : _buildPlaceholderImage(),
+                          ),
+                        ),
+                    ],
+                  )
+                : _isEditMode
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Icon(
+                          Icons.add_a_photo,
+                          color: Color(0xFF00C853),
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Tap to upload photo',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'JPG, PNG or HEIC up to 10MB',
+                        style: TextStyle(fontSize: 12, color: Colors.black45),
+                      ),
+                    ],
+                  )
+                : _buildPlaceholderImage(),
           ),
         ),
       ],
@@ -504,19 +530,12 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             color: Colors.grey[300],
             borderRadius: BorderRadius.circular(30),
           ),
-          child: const Icon(
-            Icons.restaurant,
-            size: 28,
-            color: Colors.grey,
-          ),
+          child: const Icon(Icons.restaurant, size: 28, color: Colors.grey),
         ),
         const SizedBox(height: 12),
         const Text(
           'No image available',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.black45,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.black45),
         ),
       ],
     );
@@ -541,20 +560,25 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildTextField('Ingredient Name', _nameController,
-              hint: 'e.g. Whole Milk, Arabica Beans', enabled: _isEditMode),
+          _buildTextField(
+            'Ingredient Name',
+            _nameController,
+            hint: 'e.g. Whole Milk, Arabica Beans',
+            enabled: _isEditMode,
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                child: _buildQuantityField(),
-              ),
+              Expanded(child: _buildQuantityField()),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildTextField('Price', _priceController,
-                    hint: '\$ 0.00',
-                    enabled: _isEditMode,
-                    keyboardType: TextInputType.number),
+                child: _buildTextField(
+                  'Price',
+                  _priceController,
+                  hint: '\$ 0.00',
+                  enabled: _isEditMode,
+                  keyboardType: TextInputType.number,
+                ),
               ),
             ],
           ),
@@ -564,15 +588,21 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
           Row(
             children: [
               Expanded(
-                child: _buildTextField('Weight', _weightController,
-                    hint: '0.00',
-                    enabled: _isEditMode,
-                    keyboardType: TextInputType.number),
+                child: _buildTextField(
+                  'Weight',
+                  _weightController,
+                  hint: '0.00',
+                  enabled: _isEditMode,
+                  keyboardType: TextInputType.number,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildDropdownField(
-                    'Weight Unit', _selectedWeightUnit, _weightUnits),
+                  'Weight Unit',
+                  _selectedWeightUnit,
+                  _weightUnits,
+                ),
               ),
             ],
           ),
@@ -581,7 +611,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             _buildInfoRow('Unit', widget.ingredient.unitName ?? 'N/A'),
             const SizedBox(height: 8),
             _buildInfoRow(
-                'Days Until Expiry', '${widget.ingredient.daysUntilExpiry} days'),
+              'Days Until Expiry',
+              '${widget.ingredient.daysUntilExpiry} days',
+            ),
           ],
         ],
       ),
@@ -607,32 +639,47 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildDateField('Manufacture Date', _manufactureDate, Icons.factory,
-              const Color(0xFF2196F3), const Color(0xFFE3F2FD), (date) {
-            if (_isEditMode) {
-              setState(() {
-                _manufactureDate = date;
-              });
-            }
-          }),
+          _buildDateField(
+            'Manufacture Date',
+            _manufactureDate,
+            Icons.factory,
+            const Color(0xFF2196F3),
+            const Color(0xFFE3F2FD),
+            (date) {
+              if (_isEditMode) {
+                setState(() {
+                  _manufactureDate = date;
+                });
+              }
+            },
+          ),
           const SizedBox(height: 12),
-          _buildDateField('Expiry Date', _expiryDate, Icons.event_busy,
-              const Color(0xFFF44336), const Color(0xFFFFEBEE), (date) {
-            if (_isEditMode) {
-              setState(() {
-                _expiryDate = date;
-              });
-            }
-          }),
+          _buildDateField(
+            'Expiry Date',
+            _expiryDate,
+            Icons.event_busy,
+            const Color(0xFFF44336),
+            const Color(0xFFFFEBEE),
+            (date) {
+              if (_isEditMode) {
+                setState(() {
+                  _expiryDate = date;
+                });
+              }
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller,
-      {bool enabled = true,
-      TextInputType? keyboardType,
-      String hint = ''}) {
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+    TextInputType? keyboardType,
+    String hint = '',
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -651,10 +698,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(
-              color: Colors.black38,
-              fontSize: 14,
-            ),
+            hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
             filled: true,
             fillColor: enabled ? Colors.white : Colors.grey[100],
             border: OutlineInputBorder(
@@ -674,8 +718,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
               borderSide: const BorderSide(color: Color(0xFF2C2C54)),
             ),
             contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+              horizontal: 12,
+              vertical: 10,
             ),
           ),
         ),
@@ -712,14 +756,11 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(
                     hintText: '0.00',
-                    hintStyle: TextStyle(
-                      color: Colors.black38,
-                      fontSize: 14,
-                    ),
+                    hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 14,
+                      vertical: 10,
                     ),
                   ),
                 ),
@@ -732,8 +773,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                       onTap: () {
                         double current =
                             double.tryParse(_quantityController.text) ?? 0.0;
-                        _quantityController.text =
-                            (current + 1.0).toStringAsFixed(2);
+                        _quantityController.text = (current + 1.0)
+                            .toStringAsFixed(2);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -746,10 +787,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                             bottom: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.keyboard_arrow_up,
-                          size: 16,
-                        ),
+                        child: const Icon(Icons.keyboard_arrow_up, size: 16),
                       ),
                     ),
                     InkWell(
@@ -757,8 +795,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                         double current =
                             double.tryParse(_quantityController.text) ?? 0.0;
                         if (current > 0) {
-                          _quantityController.text =
-                              (current - 1.0).toStringAsFixed(2);
+                          _quantityController.text = (current - 1.0)
+                              .toStringAsFixed(2);
                         }
                       },
                       child: Container(
@@ -771,10 +809,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                             left: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        child: const Icon(
-                          Icons.keyboard_arrow_down,
-                          size: 16,
-                        ),
+                        child: const Icon(Icons.keyboard_arrow_down, size: 16),
                       ),
                     ),
                   ],
@@ -825,10 +860,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
               items: items.map<DropdownMenuItem<String>>((String item) {
                 return DropdownMenuItem<String>(
                   value: item,
-                  child: Text(
-                    item,
-                    style: const TextStyle(fontSize: 14),
-                  ),
+                  child: Text(item, style: const TextStyle(fontSize: 14)),
                 );
               }).toList(),
             ),
@@ -838,8 +870,14 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     );
   }
 
-  Widget _buildDateField(String label, DateTime date, IconData icon,
-      Color iconColor, Color bgColor, Function(DateTime) onDateSelected) {
+  Widget _buildDateField(
+    String label,
+    DateTime date,
+    IconData icon,
+    Color iconColor,
+    Color bgColor,
+    Function(DateTime) onDateSelected,
+  ) {
     return GestureDetector(
       onTap: _isEditMode
           ? () async {
@@ -851,9 +889,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 builder: (context, child) {
                   return Theme(
                     data: Theme.of(context).copyWith(
-                      colorScheme: ColorScheme.light(
-                        primary: iconColor,
-                      ),
+                      colorScheme: ColorScheme.light(primary: iconColor),
                     ),
                     child: child!,
                   );
@@ -865,7 +901,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             }
           : null,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade300),
           borderRadius: BorderRadius.circular(8),
@@ -874,17 +910,13 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 24,
-              ),
+              child: Icon(icon, color: iconColor, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -893,16 +925,13 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${_formatDate(date)}',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
                     ),
@@ -948,13 +977,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             color: Color(0xFF2C2C54),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[700],
-          ),
-        ),
+        Text(value, style: TextStyle(fontSize: 14, color: Colors.grey[700])),
       ],
     );
   }
@@ -971,7 +994,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
               });
             },
             style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               side: const BorderSide(color: Color(0xFF2C2C54)),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -980,8 +1003,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             child: const Text(
               'Cancel',
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
                 color: Color(0xFF2C2C54),
               ),
             ),
@@ -994,17 +1017,14 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00C853),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
             child: const Text(
               'Save Changes',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
         ),
@@ -1020,18 +1040,13 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         icon: const Icon(Icons.delete_outline),
         label: const Text(
           'Delete Ingredient',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );

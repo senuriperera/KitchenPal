@@ -13,7 +13,7 @@ class Ingredient {
   final int? weightUnitId;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Joined data
   final String? unitCode;
   final String? unitName;
@@ -61,8 +61,12 @@ class Ingredient {
       imageUrl: json['image_url'],
       weight: json['weight'] != null ? _parseDouble(json['weight']) : null,
       weightUnitId: json['weight_unit_id'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updated_at'] ?? DateTime.now().toIso8601String(),
+      ),
       unitCode: json['unit']?['code'],
       unitName: json['unit']?['name'],
       storageCode: json['storageType']?['code'],

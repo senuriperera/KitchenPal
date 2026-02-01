@@ -68,7 +68,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
       });
     } catch (e) {
       String errorMessage = e.toString();
-      if (errorMessage.contains('401') || 
+      if (errorMessage.contains('401') ||
           errorMessage.toLowerCase().contains('token expired') ||
           errorMessage.toLowerCase().contains('unauthorized')) {
         await StorageService.clearAuthData();
@@ -98,7 +98,9 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     // Apply keyword filter
     if (_selectedKeyword != null) {
       filtered = filtered.where((ingredient) {
-        return ingredient.name.toLowerCase().contains(_selectedKeyword!.toLowerCase());
+        return ingredient.name.toLowerCase().contains(
+          _selectedKeyword!.toLowerCase(),
+        );
       }).toList();
     }
 
@@ -132,9 +134,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         children: [
           _buildSearchBar(),
           if (_keywords.isNotEmpty) _buildKeywordFilters(),
-          Expanded(
-            child: _buildContent(),
-          ),
+          Expanded(child: _buildContent()),
         ],
       ),
     );
@@ -160,10 +160,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
             hintText: 'Enter search terms',
-            hintStyle: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 16,
-            ),
+            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 16),
             prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
@@ -224,9 +221,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   Widget _buildContent() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF2C2C54),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF2C2C54)),
       );
     }
 
@@ -325,7 +320,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
             builder: (context) => IngredientDetailPage(ingredient: ingredient),
           ),
         );
-        
+
         // Reload ingredients if changes were made
         if (result == true) {
           _loadIngredients();
@@ -356,7 +351,9 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                 width: 80,
                 height: 80,
                 color: Colors.grey[200],
-                child: ingredient.imageUrl != null && ingredient.imageUrl!.isNotEmpty
+                child:
+                    ingredient.imageUrl != null &&
+                        ingredient.imageUrl!.isNotEmpty
                     ? Image.network(
                         ingredient.imageUrl!,
                         fit: BoxFit.cover,
@@ -400,10 +397,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                     const SizedBox(height: 4),
                     Text(
                       '${ingredient.quantityInStock} ${ingredient.unitName ?? 'units'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -427,11 +421,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   Widget _buildPlaceholderImage() {
     return Container(
       color: Colors.grey[300],
-      child: const Icon(
-        Icons.restaurant,
-        size: 40,
-        color: Colors.grey,
-      ),
+      child: const Icon(Icons.restaurant, size: 40, color: Colors.grey),
     );
   }
 }

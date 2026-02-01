@@ -421,7 +421,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       }
     } catch (e) {
       String errorMessage = e.toString();
-      if (errorMessage.contains('401') || 
+      if (errorMessage.contains('401') ||
           errorMessage.toLowerCase().contains('token expired') ||
           errorMessage.toLowerCase().contains('unauthorized')) {
         await StorageService.clearAuthData();
@@ -678,8 +678,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
+                            horizontal: 12,
+                            vertical: 10,
                           ),
                         ),
                       ),
@@ -725,7 +725,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                             contentPadding:
                                                 EdgeInsets.symmetric(
                                                   horizontal: 8,
-                                                  vertical: 14,
+                                                  vertical: 10,
                                                 ),
                                           ),
                                         ),
@@ -822,8 +822,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                       ),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 14,
+                                      horizontal: 12,
+                                      vertical: 10,
                                     ),
                                   ),
                                 ),
@@ -933,8 +933,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                       ),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 14,
+                                      horizontal: 12,
+                                      vertical: 10,
                                     ),
                                   ),
                                 ),
@@ -1046,8 +1046,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                             backgroundColor: const Color(0xFF2196F3),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
+                              horizontal: 20,
+                              vertical: 10,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -1078,7 +1078,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                 child: const Icon(
                                   Icons.factory,
                                   color: Color(0xFF2196F3),
-                                  size: 24,
+                                  size: 20,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -1184,9 +1184,9 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00C853),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
@@ -1207,8 +1207,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                             Text(
                               'Add Ingredient',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
