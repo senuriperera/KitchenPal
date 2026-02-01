@@ -412,7 +412,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ingredient added successfully!'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFFF59E0B),
           ),
         );
         _clearForm();
@@ -478,7 +478,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                 ListTile(
                   leading: const Icon(
                     Icons.camera_alt,
-                    color: Color(0xFF00C853),
+                    color: Color(0xFFF59E0B),
                   ),
                   title: const Text('Take a Photo'),
                   onTap: () {
@@ -541,7 +541,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 CircularProgressIndicator(
-                                  color: Color(0xFF00C853),
+                                  color: Color(0xFFF59E0B),
                                 ),
                                 SizedBox(height: 12),
                                 Text(
@@ -599,12 +599,17 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F5E9),
+                                  color: const Color.fromARGB(
+                                    255,
+                                    245,
+                                    242,
+                                    232,
+                                  ),
                                   borderRadius: BorderRadius.circular(30),
                                 ),
                                 child: const Icon(
                                   Icons.add_a_photo,
-                                  color: Color(0xFF00C853),
+                                  color: Color(0xFFF59E0B),
                                   size: 28,
                                 ),
                               ),
@@ -1182,7 +1187,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                 ElevatedButton(
                   onPressed: _isUploading ? null : _submitIngredient,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C853),
+                    backgroundColor: const Color(0xFFF59E0B),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
