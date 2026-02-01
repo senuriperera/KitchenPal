@@ -36,7 +36,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   String? _errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
-  final int _branchId = 1; // Default branch, adjust as needed
+  int _branchId = 1; // Default branch, will be loaded from storage
 
   @override
   void initState() {
@@ -57,6 +57,12 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     });
 
     try {
+      // Load branch ID from storage
+      final branchId = await StorageService.getBranchId();
+      if (branchId != null) {
+        _branchId = branchId;
+      }
+
       final ingredients = await IngredientService.getAllIngredients(_branchId);
       final keywords = IngredientService.extractKeywords(ingredients);
 

@@ -66,6 +66,7 @@ class AuthService {
           name: authResponse.user.name,
           email: authResponse.user.email,
           role: authResponse.user.role,
+          branchId: authResponse.user.branchId,
         );
 
         return authResponse;

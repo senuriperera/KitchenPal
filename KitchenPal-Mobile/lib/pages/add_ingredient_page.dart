@@ -382,8 +382,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         throw Exception('User not authenticated');
       }
 
-      // TODO: Get real branch_id from user profile
-      final int branchId = 1;
+      // Get branch_id from storage, default to 1 if not found
+      int branchId = await StorageService.getBranchId() ?? 1;
 
       final Map<String, dynamic> ingredientData = {
         'branch_id': branchId,
