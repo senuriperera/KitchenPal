@@ -203,7 +203,10 @@ class _LoginPageState extends State<LoginPage> {
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
-                                decoration: const InputDecoration(hintText: ''),
+                                decoration: const InputDecoration(
+                                  hintText: '',
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Please enter your email';
@@ -236,6 +239,7 @@ class _LoginPageState extends State<LoginPage> {
                                 obscureText: _obscurePassword,
                                 decoration: InputDecoration(
                                   hintText: '',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscurePassword
@@ -286,8 +290,8 @@ class _LoginPageState extends State<LoginPage> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF59E0B),
                               foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                vertical: screenHeight * 0.02,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -306,7 +310,7 @@ class _LoginPageState extends State<LoginPage> {
                                 : const Text(
                                     'Login',
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 15,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),

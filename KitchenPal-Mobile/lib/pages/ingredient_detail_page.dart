@@ -154,9 +154,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       final Map<String, dynamic> ingredientData = {
         'branch_id': widget.ingredient.branchId,
         'name': _nameController.text,
-        'quantity': double.tryParse(_quantityController.text) ?? 0.0,
+        'quantity_in_stock': double.tryParse(_quantityController.text) ?? 0.0,
         'unit_id': widget.ingredient.unitId,
-        'price': double.tryParse(_priceController.text) ?? 0.0,
+        'cost_per_unit': double.tryParse(_priceController.text) ?? 0.0,
         'storage_type_id': _getStorageId(_selectedStorage),
         'expiry_date': _expiryDate.toIso8601String(),
         'manufacture_date': _manufactureDate.toIso8601String(),
