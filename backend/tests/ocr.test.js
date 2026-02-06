@@ -6,24 +6,33 @@ jest.mock('@google-cloud/vision', () => {
         ImageAnnotatorClient: jest.fn().mockImplementation(() => {
             return {
                 textDetection: jest.fn().mockImplementation((imageUrl) => {
-                    // Simulate different responses based on imageUrl or just return a standard one
+                    // Simulate different responses based on imageUrl
+                    // Return format: [{ textAnnotations: [...] }]
                     if (imageUrl === 'valid_dates_url') {
-                        return [[
-                            {
-                                description: "Product Name\nEXP 25/12/2025\nMFG 01 Jan 2025\nNet Wt 500g"
-                            }
-                        ]];
+                        return [{
+                            textAnnotations: [
+                                {
+                                    description: "Product Name\nEXP 25/12/2025\nMFG 01 Jan 2025\nNet Wt 500g"
+                                }
+                            ]
+                        }];
                     } else if (imageUrl === 'no_dates_url') {
-                        return [[{ description: "Just some random text without dates" }]];
+                        return [{
+                            textAnnotations: [
+                                { description: "Just some random text without dates" }
+                            ]
+                        }];
                     } else if (imageUrl === 'mixed_dates_url') {
-                        return [[
-                            {
-                                description: "Best Before: 2024-10-15\nPacked: 10.09.24"
-                            }
-                        ]];
+                        return [{
+                            textAnnotations: [
+                                {
+                                    description: "Best Before: 2024-10-15\nPacked: 10.09.24"
+                                }
+                            ]
+                        }];
                     }
                     else {
-                        return [[]]; // No text found
+                        return [{ textAnnotations: [] }]; // No text found
                     }
                 })
             };
