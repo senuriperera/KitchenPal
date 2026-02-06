@@ -19,8 +19,16 @@ describe('InventoryComponent', () => {
     let authServiceSpy: jasmine.SpyObj<AuthService>;
 
     beforeEach(async () => {
-        ingredientServiceSpy = jasmine.createSpyObj('IngredientService', ['getIngredientsByBranch', 'updateIngredient', 'deleteIngredient']);
+        ingredientServiceSpy = jasmine.createSpyObj('IngredientService', [
+            'getIngredientsByBranch', 
+            'updateIngredient', 
+            'deleteIngredient',
+            'getStorageTypes',
+            'getUnits'
+        ]);
         ingredientServiceSpy.getIngredientsByBranch.and.returnValue(of([] as any));
+        ingredientServiceSpy.getStorageTypes.and.returnValue(of([]));
+        ingredientServiceSpy.getUnits.and.returnValue(of([]));
 
         authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUserValue: { id: 1, role: 'admin' } });
 
