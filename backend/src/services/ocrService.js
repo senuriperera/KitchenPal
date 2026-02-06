@@ -100,17 +100,20 @@ const findClosestDate = (dates, text, keywords) => {
     let closestDate = null;
     let minDistance = Infinity;
 
+    // Normalize text for keyword search (case-insensitive)
+    const normalizedText = text.toLowerCase();
+
     keywords.forEach(keyword => {
-        const regex = new RegExp(keyword, 'gi');
+        const regex = new RegExp(keyword.toLowerCase(), 'gi');
         let match;
-        while ((match = regex.exec(text)) !== null) {
+        while ((match = regex.exec(normalizedText)) !== null) {
             const keywordIndex = match.index;
 
             dates.forEach(date => {
                 const distance = Math.abs(date.index - keywordIndex);
                 // Prefer dates that are AFTER the keyword within a reasonable range (e.g. 50 chars)
                 // But generally "closest" works well.
-                if (distance < minDistance) {
+                if (distance < minDistance && distance < 100) { // Added max distance check
                     minDistance = distance;
                     closestDate = parseDate(date.dateStr);
                 }
