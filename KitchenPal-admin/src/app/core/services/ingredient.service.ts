@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface IngredientResponse {
@@ -55,5 +56,17 @@ export class IngredientService {
 
   deleteIngredient(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  getStorageTypes(): Observable<any[]> {
+    return this.http.get<any>(`${environment.apiUrl}/common/storage-types`).pipe(
+      map(response => response.storageTypes || response)
+    );
+  }
+
+  getUnits(): Observable<any[]> {
+    return this.http.get<any>(`${environment.apiUrl}/common/units`).pipe(
+      map(response => response.units || response)
+    );
   }
 }

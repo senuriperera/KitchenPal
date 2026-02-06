@@ -17,6 +17,8 @@ interface Ingredient {
   lastScanned: string;
   status: 'OK' | 'Near expiry' | 'Expired';
   image: string;
+  storageTypeId?: number;
+  unitId?: number;
 }
 
 @Component({
@@ -36,10 +38,36 @@ export class InventoryComponent implements OnInit {
   // Hardcoded Branch ID for now
   private readonly BRANCH_ID = 1;
 
+  // Storage types and units for dropdowns
+  storageTypes: any[] = [];
+  units: any[] = [];
+
   constructor(private ingredientService: IngredientService) { }
 
   ngOnInit(): void {
     this.loadIngredients();
+    this.loadStorageTypes();
+    this.loadUnits();
+  }
+
+  loadStorageTypes(): void {
+    this.ingredientService.getStorageTypes().subscribe({
+      next: (types) => {
+        this.storageTypes = types;
+        console.log('Storage types loaded:', types);
+      },
+      error: (err) => console.error('Failed to load storage types:', err)
+    });
+  }
+
+  loadUnits(): void {
+    this.ingredientService.getUnits().subscribe({
+      next: (units) => {
+        this.units = units;
+        console.log('Units loaded:', units);
+      },
+      error: (err) => console.error('Failed to load units:', err)
+    });
   }
 
   loadIngredients(): void {
@@ -95,8 +123,10 @@ export class InventoryComponent implements OnInit {
       cost: Number(item.price) || 0,
       lastScanned: item.added_at ? new Date(item.added_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       status: status,
-      image: item.image_url || emoji
-    };
+      image: item.image_url || emoji,
+      storageTypeId: item.storage_type_id,
+      unitId: item.unit_id
+    } as any;
   }
 
   private getEmojiForIngredient(name: string): string {
@@ -138,8 +168,12 @@ export class InventoryComponent implements OnInit {
 
   editIngredient(ingredient: Ingredient): void {
     this.selectedIngredient = ingredient;
-    // Create a copy for editing
-    this.editData = { ...ingredient };
+    // Create a copy for editing with IDs
+    this.editData = { 
+      ...ingredient,
+      storageTypeId: ingredient.storageTypeId,
+      unitId: ingredient.unitId
+    };
     this.showEditModal = true;
   }
 
@@ -153,32 +187,27 @@ export class InventoryComponent implements OnInit {
   saveEdit(): void {
     if (!this.selectedIngredient || !this.editData.id) return;
 
-    // Convert UI model back to partial backend model if needed, 
-    // or just pass what we changed if the service handles it.
-    // The service expects Partial<IngredientResponse>.
-    // We need to map our UI 'Ingredient' back to 'IngredientResponse' format roughly,
-    // or at least the fields that changed.
-
-    const updatePayload: Partial<IngredientResponse> = {
+    // Map UI fields to database fields
+    const updatePayload: any = {
       name: this.editData.name,
-      quantity: this.editData.quantity,
-      price: this.editData.cost, // mapped from cost
-      // storageType ... needs ID, skipping for simple demo or handling if needed
+      quantity_in_stock: this.editData.quantity,
+      cost_per_unit: this.editData.cost,
+      expiry_date: this.editData.expiryDate,
+      manufacture_date: this.editData.manufactureDate || null,
+      storage_type_id: this.editData.storageTypeId,
+      unit_id: this.editData.unitId
     };
 
     this.ingredientService.updateIngredient(this.editData.id, updatePayload).subscribe({
       next: (updated) => {
-        // Update local list
-        const index = this.ingredients.findIndex(i => i.id === this.editData.id);
-        if (index !== -1) {
-          // We can either re-fetch or update locally. 
-          // Simplest is generic update locally:
-          this.ingredients[index] = { ...this.ingredients[index], ...this.editData } as Ingredient;
-          this.filterData(); // re-apply filter if any
-        }
+        // Reload ingredients to get fresh data
+        this.loadIngredients();
         this.closeModals();
       },
-      error: (err) => console.error('Failed to update:', err)
+      error: (err) => {
+        console.error('Failed to update:', err);
+        alert('Failed to update ingredient. Please try again.');
+      }
     });
   }
 
