@@ -92,10 +92,14 @@ CREATE TABLE IF NOT EXISTS public.ingredients (
     name character varying(200) NOT NULL,
     quantity_in_stock numeric(12, 4) NOT NULL,
     unit_id integer,
+    manufacture_date date,
     expiry_date date,
     storage_type_id integer,
     cost_per_unit numeric(10, 4),
     reorder_level numeric(12, 4),
+    image_url text,
+    weight numeric(12, 4),
+    weight_unit_id integer,
     added_at timestamp with time zone DEFAULT now(),
     last_updated timestamp with time zone DEFAULT now(),
     CONSTRAINT ingredients_pkey PRIMARY KEY (ingredient_id)
@@ -259,7 +263,8 @@ ALTER COLUMN sale_id
 SET DEFAULT nextval('public.sales_sale_id_seq'::regclass);
 -- Add Foreign Key Constraints
 ALTER TABLE ONLY public.users
-ADD CONSTRAINT users_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE SET NULL;
+ADD CONSTRAINT users_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE
+SET NULL;
 ALTER TABLE ONLY public.ingredients
 ADD CONSTRAINT ingredients_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.sessions
@@ -268,6 +273,8 @@ ALTER TABLE ONLY public.ingredients
 ADD CONSTRAINT ingredients_unit_id_fkey FOREIGN KEY (unit_id) REFERENCES public.units(unit_id);
 ALTER TABLE ONLY public.ingredients
 ADD CONSTRAINT ingredients_storage_type_id_fkey FOREIGN KEY (storage_type_id) REFERENCES public.storage_types(storage_type_id);
+ALTER TABLE ONLY public.ingredients
+ADD CONSTRAINT ingredients_weight_unit_id_fkey FOREIGN KEY (weight_unit_id) REFERENCES public.units(unit_id);
 ALTER TABLE ONLY public.recipes
 ADD CONSTRAINT recipes_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id) ON DELETE CASCADE;
 ALTER TABLE ONLY public.recipes
@@ -317,9 +324,7 @@ VALUES ('kg', 'Kilograms'),
     ('l', 'Liters'),
     ('ml', 'Milliliters'),
     ('pcs', 'Pieces'),
-    ('cups', 'Cups'),
-    ('tsp', 'Teaspoons'),
-    ('tbsp', 'Tablespoons') ON CONFLICT (code) DO NOTHING;
+    ('cups', 'Cups') ON CONFLICT (code) DO NOTHING;
 INSERT INTO public.storage_types (code, name)
 VALUES ('FRIDGE', 'Refrigerator'),
     ('FREEZER', 'Freezer'),

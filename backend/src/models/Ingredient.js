@@ -2,13 +2,13 @@ const db = require('../config/database');
 
 class IngredientModel {
   // Create ingredient
-  static async create({ branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url }) {
+  static async create({ branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id }) {
     const query = `
-      INSERT INTO ingredients (branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO ingredients (branch_id, name, quantity_in_stock, unit_id, cost_per_unit, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
-    const values = [branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url];
+    const values = [branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id];
     const result = await db.query(query, values);
     return result.rows[0];
   }
@@ -17,25 +17,29 @@ class IngredientModel {
   static async getAllByBranch(branch_id) {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name, 
-             st.code as storage_code, st.name as storage_name
+             st.code as storage_code, st.name as storage_name,
+             wu.code as weight_unit_code, wu.name as weight_unit_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       WHERE i.branch_id = $1
       ORDER BY i.expiry_date ASC
     `;
     const result = await db.query(query, [branch_id]);
-    return result.rows.map(this._mapRow);
+    return result.rows.map(row => this._mapRow(row));
   }
 
   // Get ingredient by ID
   static async findById(ingredient_id) {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name,
-             st.code as storage_code, st.name as storage_name
+             st.code as storage_code, st.name as storage_name,
+             wu.code as weight_unit_code, wu.name as weight_unit_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       WHERE i.ingredient_id = $1
     `;
     const result = await db.query(query, [ingredient_id]);
@@ -55,13 +59,17 @@ class IngredientModel {
       ORDER BY i.expiry_date ASC
     `;
     const result = await db.query(query, [branch_id, days]);
-    return result.rows.map(this._mapRow);
+    return result.rows.map(row => this._mapRow(row));
   }
 
   // Helper to map DB row to API response structure
   static _mapRow(row) {
     if (!row) return null;
     const result = { ...row };
+
+    // Map DB field names to API field names
+    result.quantity = row.quantity_in_stock;
+    result.price = row.cost_per_unit;
 
     if (row.unit_id) {
       result.unit = {
@@ -78,11 +86,23 @@ class IngredientModel {
       };
     }
 
+    // Handle weight unit if present
+    if (row.weight_unit_id && row.weight_unit_code) {
+      result.weightUnit = {
+        code: row.weight_unit_code,
+        name: row.weight_unit_name
+      };
+    }
+
     // Clean up flat fields to keep response clean (optional but good practice)
+    delete result.quantity_in_stock;
+    delete result.cost_per_unit;
     delete result.unit_code;
     delete result.unit_name;
     delete result.storage_code;
     delete result.storage_name;
+    delete result.weight_unit_code;
+    delete result.weight_unit_name;
 
     return result;
   }
