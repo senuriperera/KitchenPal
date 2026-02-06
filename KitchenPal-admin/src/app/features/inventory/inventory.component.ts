@@ -90,6 +90,7 @@ export class InventoryComponent implements OnInit {
       quantity: Number(item.quantity) || 0,
       unit: item.unit?.code || 'units',
       location: item.storageType?.name || 'Storage',
+      manufactureDate: item.manufacture_date ? new Date(item.manufacture_date).toISOString().split('T')[0] : undefined,
       expiryDate: item.expiry_date ? new Date(item.expiry_date).toISOString().split('T')[0] : 'N/A',
       cost: Number(item.price) || 0,
       lastScanned: item.added_at ? new Date(item.added_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],

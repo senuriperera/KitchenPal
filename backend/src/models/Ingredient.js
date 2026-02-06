@@ -27,7 +27,7 @@ class IngredientModel {
       ORDER BY i.expiry_date ASC
     `;
     const result = await db.query(query, [branch_id]);
-    return result.rows.map(this._mapRow);
+    return result.rows.map(row => this._mapRow(row));
   }
 
   // Get ingredient by ID
@@ -59,13 +59,17 @@ class IngredientModel {
       ORDER BY i.expiry_date ASC
     `;
     const result = await db.query(query, [branch_id, days]);
-    return result.rows.map(this._mapRow);
+    return result.rows.map(row => this._mapRow(row));
   }
 
   // Helper to map DB row to API response structure
   static _mapRow(row) {
     if (!row) return null;
     const result = { ...row };
+
+    // Map DB field names to API field names
+    result.quantity = row.quantity_in_stock;
+    result.price = row.cost_per_unit;
 
     if (row.unit_id) {
       result.unit = {
@@ -91,6 +95,8 @@ class IngredientModel {
     }
 
     // Clean up flat fields to keep response clean (optional but good practice)
+    delete result.quantity_in_stock;
+    delete result.cost_per_unit;
     delete result.unit_code;
     delete result.unit_name;
     delete result.storage_code;
