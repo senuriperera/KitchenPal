@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/auth_service.dart';
+import '../services/ingredient_service.dart';
+import '../services/storage_service.dart';
+import '../models/ingredient.dart';
 import 'login.dart';
 
 // Main HomePage wrapper for backward compatibility
@@ -18,13 +21,44 @@ class HomePage extends StatelessWidget {
 
 // Extracted content widget for use in MainContainer
 class HomePageContent extends StatefulWidget {
-  const HomePageContent({super.key});
+  final Function(int)? onNavigate;
+  
+  const HomePageContent({super.key, this.onNavigate});
 
   @override
   State<HomePageContent> createState() => _HomePageContentState();
 }
 
 class _HomePageContentState extends State<HomePageContent> {
+  List<Ingredient> _expiringIngredients = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExpiringIngredients();
+  }
+
+  Future<void> _loadExpiringIngredients() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final branchId = await StorageService.getBranchId();
+      final ingredients = await IngredientService.getExpiringIngredients(branchId, 7);
+      
+      setState(() {
+        _expiringIngredients = ingredients.take(3).toList(); // Show only first 3
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -40,27 +74,26 @@ class _HomePageContentState extends State<HomePageContent> {
               const SizedBox(height: 20),
               _buildNearingExpiryHeader(),
               const SizedBox(height: 12),
-              _buildExpiryItem(
-                'Almond Milk',
-                '3 Cartons • Dairy Alt.',
-                'Expires Tomorrow',
-                'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&q=80&w=300',
-                isUrgent: true,
-              ),
-              const SizedBox(height: 12),
-              _buildExpiryItem(
-                'Hass Avocados',
-                '5 Units • Produce',
-                'Exp: 2 Days',
-                'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&q=80&w=300',
-              ),
-              const SizedBox(height: 12),
-              _buildExpiryItem(
-                'Heavy Cream',
-                '2 Liters • Dairy',
-                'Exp: 3 Days',
-                'https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&q=80&w=300',
-              ),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _expiringIngredients.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: Text(
+                              'No items nearing expiry',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        )
+                      : Column(
+                          children: _expiringIngredients.map((ingredient) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildExpiryItemFromData(ingredient),
+                            );
+                          }).toList(),
+                        ),
               const SizedBox(height: 16),
             ],
           ),
@@ -333,7 +366,12 @@ class _HomePageContentState extends State<HomePageContent> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         TextButton(
-          onPressed: () {},
+          onPressed: () {
+            // Navigate to notifications page (index 4)
+            if (widget.onNavigate != null) {
+              widget.onNavigate!(4);
+            }
+          },
           child: Row(
             children: const [
               Text(
@@ -473,7 +511,7 @@ class _HomePageContentState extends State<HomePageContent> {
                       child: ElevatedButton(
                         onPressed: () {},
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00C853),
+                          backgroundColor: Colors.orange,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           shape: RoundedRectangleBorder(
@@ -521,6 +559,28 @@ class _HomePageContentState extends State<HomePageContent> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildExpiryItemFromData(Ingredient ingredient) {
+    final daysUntilExpiry = ingredient.daysUntilExpiry;
+    final isUrgent = daysUntilExpiry <= 1;
+    
+    String expiryText;
+    if (daysUntilExpiry == 0) {
+      expiryText = 'Expires Today';
+    } else if (daysUntilExpiry == 1) {
+      expiryText = 'Expires Tomorrow';
+    } else {
+      expiryText = 'Exp: $daysUntilExpiry Days';
+    }
+
+    return _buildExpiryItem(
+      ingredient.name,
+      '${ingredient.quantityInStock} ${ingredient.unitCode ?? ''} • ${ingredient.storageName ?? 'Storage'}',
+      expiryText,
+      ingredient.imageUrl ?? '',
+      isUrgent: isUrgent,
     );
   }
 }
