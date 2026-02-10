@@ -360,7 +360,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
               vertical: 6,
             ),
             decoration: BoxDecoration(
-              color: daysUntilExpiry <= 1
+              color: daysUntilExpiry <= 3
                   ? const Color(0xFFFFEBEE)
                   : const Color(0xFFFFF3E0),
               borderRadius: BorderRadius.circular(8),
@@ -372,7 +372,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: daysUntilExpiry <= 1
+                    color: daysUntilExpiry <= 3
                         ? Colors.red
                         : const Color(0xFFFF9800),
                   ),
@@ -381,7 +381,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                   daysUntilExpiry == 1 ? 'day' : 'days',
                   style: TextStyle(
                     fontSize: 10,
-                    color: daysUntilExpiry <= 1
+                    color: daysUntilExpiry <= 3
                         ? Colors.red
                         : const Color(0xFFFF9800),
                   ),
