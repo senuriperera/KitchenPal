@@ -3,6 +3,7 @@ import '../shared/bottom_navbar.dart';
 import 'home_page.dart';
 import 'add_ingredient_page.dart';
 import 'inventory_page.dart';
+import 'notifications_page.dart';
 
 class MainContainer extends StatefulWidget {
   const MainContainer({super.key});
@@ -19,7 +20,7 @@ class _MainContainerState extends State<MainContainer> {
     const InventoryPageContent(),
     const AddIngredientPageContent(),
     const Center(child: Text('Recipes')), // Placeholder for Recipes page
-    const Center(child: Text('Analytics')), // Placeholder for Analytics page
+    const NotificationsPageContent(),
   ];
 
   @override

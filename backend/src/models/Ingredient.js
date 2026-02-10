@@ -18,15 +18,35 @@ class IngredientModel {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name, 
              st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name
+             wu.code as weight_unit_code, wu.name as weight_unit_name,
+             b.name as branch_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
       LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
+      LEFT JOIN branches b ON i.branch_id = b.branch_id
       WHERE i.branch_id = $1
       ORDER BY i.expiry_date ASC
     `;
     const result = await db.query(query, [branch_id]);
+    return result.rows.map(row => this._mapRow(row));
+  }
+
+  // Get all ingredients across all branches (for admins)
+  static async getAll() {
+    const query = `
+      SELECT i.*, u.code as unit_code, u.name as unit_name, 
+             st.code as storage_code, st.name as storage_name,
+             wu.code as weight_unit_code, wu.name as weight_unit_name,
+             b.name as branch_name
+      FROM ingredients i
+      LEFT JOIN units u ON i.unit_id = u.unit_id
+      LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
+      LEFT JOIN branches b ON i.branch_id = b.branch_id
+      ORDER BY i.branch_id ASC, i.expiry_date ASC
+    `;
+    const result = await db.query(query);
     return result.rows.map(row => this._mapRow(row));
   }
 
@@ -48,17 +68,44 @@ class IngredientModel {
 
   // Get expiring ingredients (within days)
   static async getExpiringIngredients(branch_id, days = 7) {
-    const query = `
-      SELECT i.*, u.code as unit_code, u.name as unit_name
-      FROM ingredients i
-      LEFT JOIN units u ON i.unit_id = u.unit_id
-      WHERE i.branch_id = $1 
-        AND i.expiry_date <= CURRENT_DATE + INTERVAL '1 day' * $2
-        AND i.expiry_date >= CURRENT_DATE
-        AND i.quantity > 0
-      ORDER BY i.expiry_date ASC
-    `;
-    const result = await db.query(query, [branch_id, days]);
+    let query, params;
+
+    if (branch_id === null || branch_id === undefined) {
+      // Admin: Get expiring ingredients from all branches
+      query = `
+        SELECT i.*, u.code as unit_code, u.name as unit_name,
+               st.code as storage_code, st.name as storage_name,
+               b.name as branch_name
+        FROM ingredients i
+        LEFT JOIN units u ON i.unit_id = u.unit_id
+        LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+        LEFT JOIN branches b ON i.branch_id = b.branch_id
+        WHERE i.expiry_date <= CURRENT_DATE + INTERVAL '1 day' * $1
+          AND i.expiry_date >= CURRENT_DATE
+          AND i.quantity_in_stock > 0
+        ORDER BY i.expiry_date ASC, i.branch_id ASC
+      `;
+      params = [days];
+    } else {
+      // Regular user: Get expiring ingredients for specific branch
+      query = `
+        SELECT i.*, u.code as unit_code, u.name as unit_name,
+               st.code as storage_code, st.name as storage_name,
+               b.name as branch_name
+        FROM ingredients i
+        LEFT JOIN units u ON i.unit_id = u.unit_id
+        LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+        LEFT JOIN branches b ON i.branch_id = b.branch_id
+        WHERE i.branch_id = $1 
+          AND i.expiry_date <= CURRENT_DATE + INTERVAL '1 day' * $2
+          AND i.expiry_date >= CURRENT_DATE
+          AND i.quantity_in_stock > 0
+        ORDER BY i.expiry_date ASC
+      `;
+      params = [branch_id, days];
+    }
+
+    const result = await db.query(query, params);
     return result.rows.map(row => this._mapRow(row));
   }
 
@@ -95,8 +142,9 @@ class IngredientModel {
     }
 
     // Clean up flat fields to keep response clean (optional but good practice)
-    delete result.quantity_in_stock;
-    delete result.cost_per_unit;
+    // NOTE: Keep quantity_in_stock and cost_per_unit for mobile app compatibility
+    // delete result.quantity_in_stock;
+    // delete result.cost_per_unit;
     delete result.unit_code;
     delete result.unit_name;
     delete result.storage_code;

@@ -57,13 +57,14 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     });
 
     try {
-      // Load branch ID from storage
+      // Load branch ID from storage (can be null for admin)
       final branchId = await StorageService.getBranchId();
       if (branchId != null) {
         _branchId = branchId;
       }
 
-      final ingredients = await IngredientService.getAllIngredients(_branchId);
+      // Admin with null branch_id will get all ingredients
+      final ingredients = await IngredientService.getAllIngredients(branchId);
       final keywords = IngredientService.extractKeywords(ingredients);
 
       setState(() {

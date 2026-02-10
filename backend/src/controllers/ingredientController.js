@@ -4,7 +4,7 @@ const OCRService = require('../services/ocrService');
 
 class IngredientController {
     // Get all ingredients for a branch
-    static async getAllIngredients(req, res) {
+    static async getIngredientsByBranch(req, res) {
         try {
             const { branch_id } = req.params;
             const ingredients = await IngredientModel.getAllByBranch(branch_id);
@@ -115,12 +115,26 @@ class IngredientController {
             const { branch_id } = req.params;
             const { days = 7 } = req.query;
 
-            const ingredients = await IngredientModel.getExpiringIngredients(branch_id, days);
+            // Convert branch_id to number or null for admin
+            const branchIdParam = branch_id === 'all' ? null : parseInt(branch_id);
+
+            const ingredients = await IngredientModel.getExpiringIngredients(branchIdParam, days);
 
             res.json({ ingredients });
         } catch (error) {
             console.error('Get expiring ingredients error:', error);
             res.status(500).json({ error: 'Failed to fetch expiring ingredients' });
+        }
+    }
+
+    // Get all ingredients (for admins)
+    static async getAllIngredients(req, res) {
+        try {
+            const ingredients = await IngredientModel.getAll();
+            res.json({ ingredients });
+        } catch (error) {
+            console.error('Get all ingredients error:', error);
+            res.status(500).json({ error: 'Failed to fetch all ingredients' });
         }
     }
 

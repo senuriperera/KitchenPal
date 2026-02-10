@@ -6,16 +6,21 @@ import 'storage_service.dart';
 class IngredientService {
   static const String _baseUrl = 'http://192.168.1.61:3000/api/ingredients';
 
-  // Get all ingredients for a branch
-  static Future<List<Ingredient>> getAllIngredients(int branchId) async {
+  // Get all ingredients for a branch (or all branches for admin)
+  static Future<List<Ingredient>> getAllIngredients(int? branchId) async {
     try {
       final token = await StorageService.getToken();
       if (token == null) {
         throw Exception('No authentication token found');
       }
 
+      // Admin with null branch_id gets all ingredients
+      final uri = branchId == null
+          ? Uri.parse('$_baseUrl/all')
+          : Uri.parse('$_baseUrl/branch/$branchId');
+
       final response = await http.get(
-        Uri.parse('$_baseUrl/branch/$branchId'),
+        uri,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -38,9 +43,9 @@ class IngredientService {
     }
   }
 
-  // Get expiring ingredients
+  // Get expiring ingredients (for a branch or all branches for admin)
   static Future<List<Ingredient>> getExpiringIngredients(
-    int branchId,
+    int? branchId,
     int days,
   ) async {
     try {
@@ -49,8 +54,13 @@ class IngredientService {
         throw Exception('No authentication token found');
       }
 
+      // Admin with null branch_id gets expiring ingredients from all branches
+      final uri = branchId == null
+          ? Uri.parse('$_baseUrl/branch/all/expiring?days=$days')
+          : Uri.parse('$_baseUrl/branch/$branchId/expiring?days=$days');
+
       final response = await http.get(
-        Uri.parse('$_baseUrl/branch/$branchId/expiring?days=$days'),
+        uri,
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
