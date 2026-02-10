@@ -15,19 +15,20 @@ const createIngredientValidation = [
     body('weight').optional().isFloat({ min: 0 }).withMessage('Weight must be a positive number'),
     body('weight_unit_id').optional().isInt().withMessage('Valid weight_unit_id is required'),
     body('expiry_date').isISO8601().withMessage('Valid expiry date is required'),
+    body('manufacture_date').optional().isISO8601().withMessage('Valid manufacture date is required'),
+    body('image_url').optional().isString().withMessage('Image URL must be a string'),
     body('storage_type_id').isInt().withMessage('Valid storage_type_id is required'),
     validate,
 ];
 
 // Routes
-router.get('/branch/:branch_id', authenticate, IngredientController.getAllIngredients);
-router.get('/branch/:branch_id/expiring', authenticate, IngredientController.getExpiringIngredients);
-router.get('/branch/:branch_id/stats', authenticate, IngredientController.getMonthlyStats);
-router.get('/:id', authenticate, IngredientController.getIngredientById);
 router.post('/', authenticate, createIngredientValidation, IngredientController.createIngredient);
-router.post('/scan', authenticate, IngredientController.scanIngredient);
-
+router.get('/all', authenticate, IngredientController.getAllIngredients); // Admin: Get all ingredients
+router.get('/branch/:branch_id', authenticate, IngredientController.getIngredientsByBranch);
+router.get('/branch/:branch_id/expiring', authenticate, IngredientController.getExpiringIngredients);
+router.get('/:id', authenticate, IngredientController.getIngredientById);
 router.put('/:id', authenticate, IngredientController.updateIngredient);
 router.delete('/:id', authenticate, IngredientController.deleteIngredient);
+router.post('/scan', authenticate, IngredientController.scanIngredient);
 
 module.exports = router;
