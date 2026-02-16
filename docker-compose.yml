@@ -35,7 +35,16 @@ services:
       DATABASE_NAME: kitchenpal
       DATABASE_USER: postgres
       DATABASE_PASSWORD: postgres123
+      JWT_SECRET: 74e95878962fe55e6c935982b829bad8d64eca38ec0a0de6c532ec49483a70f47a8324d17caee6f74bcb8db87f60754da269954a39c75b6ff68802a77
+      JWT_EXPIRES_IN: 7d
+      SESSION_SECRET: kitchenpal-session-secret-2025-change-in-production
+      FRONTEND_URL: http://localhost:4200
+      MAX_FILE_SIZE: 5242880
+      UPLOAD_PATH: ./uploads
       GOOGLE_APPLICATION_CREDENTIALS: /app/google-credentials.json
+      CLOUDINARY_CLOUD_NAME: dzf4mceyk
+      CLOUDINARY_API_KEY: 957344136853476
+      CLOUDINARY_API_SECRET: lpMuqxt-JRBk-x2a-b1YL_tyBOk
     depends_on:
       postgres:
         condition: service_healthy

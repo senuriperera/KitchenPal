@@ -140,7 +140,8 @@
             <div class="image-preview" *ngIf="newRecipeForm.imageUrl">
               <img [src]="newRecipeForm.imageUrl" alt="Recipe preview" />
               <div class="upload-overlay" *ngIf="isUploadingImage">
-                <span>Uploading...</span>
+                <div class="spinner"></div>
+                <p>Uploading...</p>
               </div>
             </div>
             <input
@@ -151,11 +152,13 @@
               [disabled]="isUploadingImage"
               style="display: none"
             />
-            <label 
-              for="recipeImage" 
+            <label
+              for="recipeImage"
               class="btn btn-secondary upload-btn"
-              [class.disabled]="isUploadingImage">
-              {{ isUploadingImage ? '⏳ Uploading...' : '📷 Upload Image' }}
+              [class.disabled]="isUploadingImage"
+            >
+              <span *ngIf="!isUploadingImage">📷 Upload Image</span>
+              <span *ngIf="isUploadingImage">⏳ Uploading...</span>
             </label>
           </div>
         </div>
@@ -236,19 +239,13 @@
                 let i = index
               "
             >
-              <select
+              <input
+                type="text"
                 class="form-control"
-                [(ngModel)]="ingredient.ingredientId"
+                [(ngModel)]="ingredient.name"
                 [name]="'ingredient_' + i"
-              >
-                <option value="0">Select ingredient</option>
-                <option
-                  *ngFor="let ing of availableIngredients"
-                  [value]="ing.ingredient_id"
-                >
-                  {{ ing.name }}
-                </option>
-              </select>
+                placeholder="Ingredient name"
+              />
               <input
                 type="number"
                 class="form-control"
@@ -291,9 +288,15 @@
       <button
         class="btn btn-primary"
         (click)="saveNewRecipe()"
-        [disabled]="isLoading"
+        [disabled]="isLoading || isUploadingImage"
       >
-        {{ isLoading ? "Creating..." : "Create Recipe" }}
+        {{
+          isUploadingImage
+            ? "Uploading Image..."
+            : isLoading
+              ? "Creating..."
+              : "Create Recipe"
+        }}
       </button>
     </div>
   </div>

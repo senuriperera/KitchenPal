@@ -1,40 +1,60 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+
+export interface UploadResponse {
+  imageUrl: string;
+  publicId: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class UploadService {
-  // Configure these with your Cloudinary account details
-  private cloudName = 'your-cloud-name'; // Replace with your cloud name
-  private uploadPreset = 'your-upload-preset'; // Replace with your upload preset
-  private cloudinaryUrl = `https://api.cloudinary.com/v1_1/${this.cloudName}/image/upload`;
+  private apiUrl = `${environment.apiUrl}/upload`;
 
   constructor(private http: HttpClient) {}
 
   /**
-   * Upload an image file to Cloudinary
+   * Upload an image file to backend (which uploads to Cloudinary)
    * @param file The image file to upload
-   * @returns Observable with the Cloudinary response containing the image URL
+   * @returns Observable with the image URL
    */
-  uploadImage(file: File): Observable<any> {
+  uploadImage(file: File): Observable<string> {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', this.uploadPreset);
-    formData.append('folder', 'recipes'); // Organize images in a 'recipes' folder
+    formData.append('image', file);
 
-    return this.http.post(this.cloudinaryUrl, formData);
+    return this.http.post<any>(`${this.apiUrl}/image`, formData).pipe(
+      map(response => response.imageUrl)
+    );
   }
 
   /**
-   * Set Cloudinary configuration
-   * @param cloudName Your Cloudinary cloud name
-   * @param uploadPreset Your upload preset name
+   * Upload multiple images to backend
+   * @param files Array of image files to upload
+   * @returns Observable with array of image URLs
    */
-  setConfig(cloudName: string, uploadPreset: string): void {
-    this.cloudName = cloudName;
-    this.uploadPreset = uploadPreset;
-    this.cloudinaryUrl = `https://api.cloudinary.com/v1_1/${this.cloudName}/image/upload`;
+  uploadMultipleImages(files: File[]): Observable<string[]> {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('images', file);
+    });
+
+    return this.http.post<any>(`${this.apiUrl}/images`, formData).pipe(
+      map(response => response.images.map((img: any) => img.imageUrl))
+    );
+  }
+
+  /**
+   * Delete an image from Cloudinary
+   * @param imageUrl The Cloudinary image URL
+   * @returns Observable
+   */
+  deleteImage(imageUrl: string): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/image`, {
+      body: { imageUrl }
+    });
   }
 }

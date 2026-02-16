@@ -5,6 +5,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { RecipeService, RecipeResponse } from '../../core/services/recipe.service';
 import { IngredientService, IngredientResponse } from '../../core/services/ingredient.service';
+import { UploadService } from '../../core/services/upload.service';
 
 interface Recipe {
   id: number;
@@ -31,7 +32,7 @@ interface NewRecipeForm {
   basePrice: number;
   imageUrl: string;
   ingredients: Array<{
-    ingredientId: number;
+    name: string;
     quantity: number;
     unitId: number;
   }>;
@@ -53,6 +54,7 @@ export class Recipes implements OnInit {
   showNewRecipeModal: boolean = false;
   availableIngredients: IngredientResponse[] = [];
   availableUnits: any[] = [];
+  isUploadingImage: boolean = false;
 
   // Hardcoded Branch ID for now
   private readonly BRANCH_ID = 1;
@@ -68,7 +70,8 @@ export class Recipes implements OnInit {
 
   constructor(
     private recipeService: RecipeService,
-    private ingredientService: IngredientService
+    private ingredientService: IngredientService,
+    private uploadService: UploadService
   ) {}
 
   ngOnInit(): void {
@@ -245,7 +248,7 @@ export class Recipes implements OnInit {
 
   addIngredientToForm(): void {
     this.newRecipeForm.ingredients.push({
-      ingredientId: 0,
+      name: '',
       quantity: 0,
       unitId: 0
     });
@@ -258,13 +261,41 @@ export class Recipes implements OnInit {
   onImageSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
-      // In a real app, you would upload to a server or cloud storage
-      // For now, we'll just use a placeholder
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Only image files (JPEG, PNG, GIF, WebP) are allowed');
+        return;
+      }
+
+      // Show preview using FileReader
       const reader = new FileReader();
       reader.onload = (e: any) => {
-        this.newRecipeForm.imageUrl = e.target.result;
+        this.newRecipeForm.imageUrl = e.target.result; // Preview
       };
       reader.readAsDataURL(file);
+
+      // Upload to backend/Cloudinary
+      this.isUploadingImage = true;
+      this.uploadService.uploadImage(file).subscribe({
+        next: (imageUrl) => {
+          this.newRecipeForm.imageUrl = imageUrl; // Replace preview with Cloudinary URL
+          this.isUploadingImage = false;
+          console.log('Image uploaded successfully:', imageUrl);
+        },
+        error: (err) => {
+          console.error('Error uploading image:', err);
+          alert('Failed to upload image. Please try again.');
+          this.isUploadingImage = false;
+          this.newRecipeForm.imageUrl = ''; // Clear preview on error
+        }
+      });
     }
   }
 
@@ -284,7 +315,7 @@ export class Recipes implements OnInit {
       base_price: this.newRecipeForm.basePrice,
       image_url: this.newRecipeForm.imageUrl,
       ingredients: this.newRecipeForm.ingredients.map(ing => ({
-        ingredient_id: ing.ingredientId,
+        ingredient_name: ing.name,
         quantity_required: ing.quantity,
         unit_id: ing.unitId
       }))

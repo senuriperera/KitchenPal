@@ -66,6 +66,23 @@ class IngredientModel {
     return this._mapRow(result.rows[0]);
   }
 
+  // Find ingredient by name and branch
+  static async findByNameAndBranch(name, branch_id) {
+    const query = `
+      SELECT i.*, u.code as unit_code, u.name as unit_name,
+             st.code as storage_code, st.name as storage_name,
+             wu.code as weight_unit_code, wu.name as weight_unit_name
+      FROM ingredients i
+      LEFT JOIN units u ON i.unit_id = u.unit_id
+      LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
+      WHERE LOWER(i.name) = LOWER($1) AND i.branch_id = $2
+      LIMIT 1
+    `;
+    const result = await db.query(query, [name, branch_id]);
+    return result.rows[0];
+  }
+
   // Get expiring ingredients (within days)
   static async getExpiringIngredients(branch_id, days = 7) {
     let query, params;

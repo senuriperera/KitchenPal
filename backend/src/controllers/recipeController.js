@@ -1,4 +1,5 @@
 const RecipeModel = require('../models/Recipe');
+const IngredientModel = require('../models/Ingredient');
 
 class RecipeController {
     // Get all recipes for a branch
@@ -69,12 +70,45 @@ class RecipeController {
             // Add ingredients
             if (ingredients && Array.isArray(ingredients)) {
                 for (const ingredient of ingredients) {
-                    await RecipeModel.addIngredient({
-                        recipe_id: recipe.recipe_id,
-                        ingredient_id: ingredient.ingredient_id,
-                        quantity_required: ingredient.quantity_required,
-                        unit_id: ingredient.unit_id,
-                    });
+                    let ingredientId = ingredient.ingredient_id;
+
+                    // If ingredient_name is provided instead of ingredient_id, find or create the ingredient
+                    if (!ingredientId && ingredient.ingredient_name) {
+                        // Try to find existing ingredient by name
+                        const existingIngredient = await IngredientModel.findByNameAndBranch(
+                            ingredient.ingredient_name,
+                            branch_id
+                        );
+
+                        if (existingIngredient) {
+                            ingredientId = existingIngredient.ingredient_id;
+                        } else {
+                            // Create new ingredient with minimal data
+                            const newIngredient = await IngredientModel.create({
+                                branch_id,
+                                name: ingredient.ingredient_name,
+                                quantity: 0,
+                                unit_id: ingredient.unit_id || null,
+                                price: 0,
+                                expiry_date: null,
+                                manufacture_date: null,
+                                storage_type_id: null,
+                                image_url: null,
+                                weight: null,
+                                weight_unit_id: null,
+                            });
+                            ingredientId = newIngredient.ingredient_id;
+                        }
+                    }
+
+                    if (ingredientId) {
+                        await RecipeModel.addIngredient({
+                            recipe_id: recipe.recipe_id,
+                            ingredient_id: ingredientId,
+                            quantity_required: ingredient.quantity_required,
+                            unit_id: ingredient.unit_id,
+                        });
+                    }
                 }
             }
 

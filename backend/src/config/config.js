@@ -48,4 +48,10 @@ module.exports = {
         apiUrl: process.env.RAG_MODEL_API_URL || 'http://localhost:5000/api/rag',
         apiKey: process.env.RAG_MODEL_API_KEY,
     },
+
+    cloudinary: {
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+        apiKey: process.env.CLOUDINARY_API_KEY,
+        apiSecret: process.env.CLOUDINARY_API_SECRET,
+    },
 };
