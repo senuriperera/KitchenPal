@@ -45,7 +45,8 @@ export interface CreateRecipeRequest {
   description?: string;
   base_price: number;
   ingredients?: Array<{
-    ingredient_id: number;
+    ingredient_id?: number;        // For existing ingredients
+    ingredient_name?: string;      // For new ingredients to be created
     quantity_required: number;
     unit_id: number;
   }>;
