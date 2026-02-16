@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { InventoryComponent } from './inventory.component';
+import { InventoryComponent } from './inventory';
 import { IngredientService } from '../../core/services/ingredient.service';
 import { of } from 'rxjs';
 import { CommonModule } from '@angular/common';

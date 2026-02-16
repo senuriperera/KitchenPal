@@ -25,8 +25,8 @@ interface Ingredient {
   selector: 'app-inventory',
   standalone: true,
   imports: [CommonModule, FormsModule, HeaderComponent, HttpClientModule],
-  templateUrl: './inventory.component.html',
-  styleUrls: ['./inventory.component.scss']
+  templateUrl: './inventory.html',
+  styleUrls: ['./inventory.scss']
 })
 export class InventoryComponent implements OnInit {
   ingredients: Ingredient[] = [];

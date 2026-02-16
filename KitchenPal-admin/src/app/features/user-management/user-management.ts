@@ -45,8 +45,8 @@ interface BranchFormData {
     selector: 'app-user-management',
     standalone: true,
     imports: [CommonModule, FormsModule, HeaderComponent],
-    templateUrl: './user-management.component.html',
-    styleUrls: ['./user-management.component.scss']
+    templateUrl: './user-management.html',
+    styleUrls: ['./user-management.scss']
 })
 export class UserManagementComponent implements OnInit {
     activeTab: 'users' | 'branches' = 'users';
