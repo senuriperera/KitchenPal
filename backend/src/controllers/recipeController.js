@@ -94,8 +94,6 @@ class RecipeController {
                                 manufacture_date: null,
                                 storage_type_id: null,
                                 image_url: null,
-                                weight: null,
-                                weight_unit_id: null,
                             });
                             ingredientId = newIngredient.ingredient_id;
                         }
@@ -112,28 +110,6 @@ class RecipeController {
                 }
             }
 
-            // Add steps
-            if (steps && Array.isArray(steps)) {
-                for (let i = 0; i < steps.length; i++) {
-                    await RecipeModel.addStep({
-                        recipe_id: recipe.recipe_id,
-                        step_number: i + 1,
-                        instruction: steps[i],
-                    });
-                }
-            }
-
-            // Add additional images
-            if (images && Array.isArray(images)) {
-                for (const image of images) {
-                    await RecipeModel.addImage({
-                        recipe_id: recipe.recipe_id,
-                        image_url: image.url,
-                        caption: image.caption,
-                    });
-                }
-            }
-
             // Fetch complete recipe
             const completeRecipe = await RecipeModel.findById(recipe.recipe_id);
 
@@ -142,8 +118,11 @@ class RecipeController {
                 recipe: completeRecipe,
             });
         } catch (error) {
-            console.error('Create recipe error:', error);
-            res.status(500).json({ error: 'Failed to create recipe' });
+            console.error('Create recipe error:', error.message);
+            console.error('Error detail:', error.detail);
+            console.error('Error code:', error.code);
+            console.error('Error stack:', error.stack);
+            res.status(500).json({ error: 'Failed to create recipe', detail: error.message });
         }
     }
 

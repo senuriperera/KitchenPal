@@ -2,302 +2,100 @@
   <app-header
     title="Recipes & Discount Suggestions"
     subtitle="Manage recipes and create discount suggestions for items near expiry"
-  >
-  </app-header>
+  ></app-header>
 
   <div class="recipes-content">
+
     <!-- Toolbar -->
     <div class="toolbar">
-      <div class="toolbar-left">
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
         <input
           type="text"
-          class="search-input"
           placeholder="Search recipes..."
           [(ngModel)]="searchQuery"
-          (input)="searchRecipes()"
+          class="search-input"
         />
       </div>
-
       <div class="toolbar-actions">
         <button class="btn btn-secondary">
-          <span class="icon">🔍</span>
-          Filter
+          <span class="btn-icon">⚡</span> Filter
         </button>
-        <button class="btn btn-primary" (click)="openNewRecipeModal()">
-          <span class="icon">+</span>
-          New Recipe
+        <button class="btn btn-primary" (click)="openCreateModal()">
+          <span class="btn-icon">+</span> New Recipe
         </button>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div *ngIf="isLoading" class="loading-state">
-      <p>Loading recipes...</p>
-    </div>
-
-    <!-- Error State -->
-    <div *ngIf="error" class="error-state">
-      <p>{{ error }}</p>
-    </div>
-
-    <!-- Recipe Grid -->
-    <div class="recipe-grid" *ngIf="!isLoading && !error">
-      <div class="recipe-card" *ngFor="let recipe of filteredRecipes">
-        <div class="recipe-image-container">
-          <div class="recipe-image">{{ recipe.image }}</div>
-        </div>
-
-        <div class="recipe-info">
-          <div class="recipe-header">
-            <h3 class="recipe-name">{{ recipe.name }}</h3>
-            <div class="recipe-actions">
-              <button
-                class="action-btn"
-                (click)="editRecipe(recipe)"
-                title="Edit"
-              >
-                ✏️
-              </button>
-              <button
-                class="action-btn"
-                (click)="deleteRecipe(recipe)"
-                title="Delete"
-              >
-                🗑️
-              </button>
-            </div>
-          </div>
-
-          <div class="recipe-details">
-            <div class="detail-row">
-              <span class="label">Total Cost:</span>
-              <span class="value">${{ recipe.totalCost.toFixed(2) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Suggested Price:</span>
-              <span class="value">${{ recipe.suggestedPrice.toFixed(2) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Discount:</span>
-              <span class="discount-value">{{ recipe.discount }}%</span>
-            </div>
-          </div>
-
-          <button
-            class="btn-show-ingredients"
-            (click)="toggleIngredients(recipe)"
-          >
-            <span class="icon">{{
-              recipe.ingredientsExpanded ? "▲" : "▼"
-            }}</span>
-            Show Ingredients ( {{ recipe.ingredients.length }} )
-          </button>
-
-          <!-- Ingredients List -->
-          <div class="ingredients-list" *ngIf="recipe.ingredientsExpanded">
-            <div
-              class="ingredient-item"
-              *ngFor="let ingredient of recipe.ingredients"
-            >
-              <span class="ingredient-name">{{ ingredient.name }}</span>
-              <span class="ingredient-quantity"
-                >{{ ingredient.quantity }} {{ ingredient.unit }}</span
-              >
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
     <!-- Empty State -->
-    <div
-      class="empty-state"
-      *ngIf="!isLoading && !error && filteredRecipes.length === 0"
-    >
-      <p>No recipes found</p>
-    </div>
-  </div>
-</div>
-
-<!-- New Recipe Modal -->
-<div
-  class="modal-overlay"
-  *ngIf="showNewRecipeModal"
-  (click)="closeNewRecipeModal()"
->
-  <div class="modal-content" (click)="$event.stopPropagation()">
-    <div class="modal-header">
-      <h3>Create New Recipe</h3>
-      <button class="close-btn" (click)="closeNewRecipeModal()">&times;</button>
+    <div *ngIf="filteredRecipes.length === 0" class="empty-state">
+      <div class="empty-icon">🍽️</div>
+      <h2>No recipes found</h2>
+      <p>Click <strong>+ New Recipe</strong> to create your first recipe</p>
     </div>
 
-    <div class="modal-body">
-      <form>
-        <!-- Recipe Image Upload -->
-        <div class="form-group">
-          <label>Recipe Image</label>
-          <div class="image-upload-container">
-            <div class="image-preview" *ngIf="newRecipeForm.imageUrl">
-              <img [src]="newRecipeForm.imageUrl" alt="Recipe preview" />
-              <div class="upload-overlay" *ngIf="isUploadingImage">
-                <div class="spinner"></div>
-                <p>Uploading...</p>
-              </div>
+    <!-- Recipe Grid -->
+    <div class="recipe-grid" *ngIf="filteredRecipes.length > 0">
+      <div class="recipe-card" *ngFor="let recipe of filteredRecipes">
+
+        <!-- Card Image -->
+        <div class="card-image-wrapper">
+          <img [src]="recipe.image" [alt]="recipe.name" class="card-image" />
+        </div>
+
+        <!-- Card Body -->
+        <div class="card-body">
+          <div class="card-title-row">
+            <h3 class="card-title">{{ recipe.name }}</h3>
+            <div class="card-actions">
+              <button class="action-btn" (click)="editRecipe(recipe)" title="Edit">✏️</button>
+              <button class="action-btn" (click)="deleteRecipe(recipe)" title="Delete">🗑️</button>
             </div>
-            <input
-              type="file"
-              id="recipeImage"
-              accept="image/*"
-              (change)="onImageSelected($event)"
-              [disabled]="isUploadingImage"
-              style="display: none"
-            />
-            <label
-              for="recipeImage"
-              class="btn btn-secondary upload-btn"
-              [class.disabled]="isUploadingImage"
-            >
-              <span *ngIf="!isUploadingImage">📷 Upload Image</span>
-              <span *ngIf="isUploadingImage">⏳ Uploading...</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Recipe Name -->
-        <div class="form-group">
-          <label>Recipe Name *</label>
-          <input
-            type="text"
-            class="form-control"
-            [(ngModel)]="newRecipeForm.name"
-            name="name"
-            placeholder="Enter recipe name"
-            required
-          />
-        </div>
-
-        <!-- Cooking Time and Base Price -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>Cooking Time (minutes) *</label>
-            <input
-              type="number"
-              class="form-control"
-              [(ngModel)]="newRecipeForm.cookingTime"
-              name="cookingTime"
-              min="1"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Base Price ($) *</label>
-            <input
-              type="number"
-              class="form-control"
-              [(ngModel)]="newRecipeForm.basePrice"
-              name="basePrice"
-              step="0.01"
-              min="0"
-              required
-            />
-          </div>
-        </div>
-
-        <!-- Description -->
-        <div class="form-group">
-          <label>Description</label>
-          <textarea
-            class="form-control"
-            [(ngModel)]="newRecipeForm.description"
-            name="description"
-            rows="3"
-            placeholder="Enter recipe description"
-          ></textarea>
-        </div>
-
-        <!-- Ingredients Section -->
-        <div class="form-group">
-          <div class="section-header">
-            <label>Ingredients</label>
-            <button
-              type="button"
-              class="btn btn-sm btn-secondary"
-              (click)="addIngredientToForm()"
-            >
-              + Add Ingredient
-            </button>
           </div>
 
-          <div
-            class="ingredients-form-list"
-            *ngIf="newRecipeForm.ingredients.length > 0"
-          >
-            <div
-              class="ingredient-form-item"
-              *ngFor="
-                let ingredient of newRecipeForm.ingredients;
-                let i = index
-              "
-            >
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="ingredient.name"
-                [name]="'ingredient_' + i"
-                placeholder="Ingredient name"
-              />
-              <input
-                type="number"
-                class="form-control"
-                [(ngModel)]="ingredient.quantity"
-                [name]="'quantity_' + i"
-                placeholder="Quantity"
-                step="0.1"
-                min="0"
-              />
-              <select
-                class="form-control"
-                [(ngModel)]="ingredient.unitId"
-                [name]="'unit_' + i"
-              >
-                <option value="0">Select unit</option>
-                <option
-                  *ngFor="let unit of availableUnits"
-                  [value]="unit.unit_id"
-                >
-                  {{ unit.name || unit.code }}
-                </option>
-              </select>
-              <button
-                type="button"
-                class="btn-remove"
-                (click)="removeIngredientFromForm(i)"
-              >
-                ✕
-              </button>
+          <div class="card-meta">
+            <div class="meta-row">
+              <span class="meta-label">Total Cost:</span>
+              <span class="meta-value">${{ recipe.totalCost | number:'1.2-2' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Suggested Price:</span>
+              <span class="meta-value">${{ recipe.suggestedPrice | number:'1.2-2' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Discount:</span>
+              <span class="meta-value discount-value">{{ recipe.discount }}%</span>
+            </div>
+          </div>
+
+          <!-- Show Ingredients Toggle -->
+          <button class="toggle-ingredients-btn" (click)="toggleIngredients(recipe)">
+            <span>{{ recipe.showIngredients ? '▲' : '▼' }}</span>
+            Show Ingredients ({{ recipe.ingredients.length }})
+          </button>
+
+          <!-- Ingredients Accordion -->
+          <div class="ingredients-list" *ngIf="recipe.showIngredients">
+            <div class="ingredient-item" *ngFor="let ing of recipe.ingredients">
+              <span class="ing-name">{{ ing.name }}</span>
+              <span class="ing-qty">{{ ing.quantity }} {{ ing.unit }}</span>
+            </div>
+            <div class="ingredient-item no-ingredients" *ngIf="recipe.ingredients.length === 0">
+              <span>No ingredients listed</span>
             </div>
           </div>
         </div>
-      </form>
+
+      </div>
     </div>
 
-    <div class="modal-footer">
-      <button class="btn btn-secondary" (click)="closeNewRecipeModal()">
-        Cancel
-      </button>
-      <button
-        class="btn btn-primary"
-        (click)="saveNewRecipe()"
-        [disabled]="isLoading || isUploadingImage"
-      >
-        {{
-          isUploadingImage
-            ? "Uploading Image..."
-            : isLoading
-              ? "Creating..."
-              : "Create Recipe"
-        }}
-      </button>
-    </div>
   </div>
+
+  <!-- Create Recipe Modal -->
+  <app-recipe-modal
+    [show]="showCreateModal"
+    (closeModal)="closeModal()"
+    (saveRecipe)="onSaveRecipe($event)"
+  ></app-recipe-modal>
+
 </div>

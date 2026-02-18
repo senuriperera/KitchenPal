@@ -2,13 +2,13 @@ const db = require('../config/database');
 
 class IngredientModel {
   // Create ingredient
-  static async create({ branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id }) {
+  static async create({ branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url }) {
     const query = `
-      INSERT INTO ingredients (branch_id, name, quantity_in_stock, unit_id, cost_per_unit, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO ingredients (branch_id, name, quantity_in_stock, unit_id, cost_per_unit, expiry_date, manufacture_date, storage_type_id, image_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
-    const values = [branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id];
+    const values = [branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url];
     const result = await db.query(query, values);
     return result.rows[0];
   }
