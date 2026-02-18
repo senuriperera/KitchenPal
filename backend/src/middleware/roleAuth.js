@@ -13,7 +13,11 @@ const requireRole = (allowedRoles) => {
             return res.status(401).json({ error: 'Authentication required' });
         }
 
-        if (!allowedRoles.includes(req.user.role)) {
+        // Case-insensitive role comparison
+        const userRole = req.user.role?.toLowerCase();
+        const hasPermission = allowedRoles.some(role => role.toLowerCase() === userRole);
+
+        if (!hasPermission) {
             return res.status(403).json({ error: 'Access denied. Insufficient permissions.' });
         }
 
@@ -31,8 +35,8 @@ const filterByBranch = (req, res, next) => {
         return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // If user is a manager, attach their branch_id to the request
-    if (req.user.role === 'manager') {
+    // If user is a manager, attach their branch_id to the request (case-insensitive check)
+    if (req.user.role?.toLowerCase() === 'manager') {
         req.branchFilter = req.user.branch_id;
     }
     // If user is admin, no filter is applied (can access all branches)

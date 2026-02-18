@@ -106,7 +106,7 @@ export class AuthService {
      * Check if the current user has a specific role
      */
     hasRole(role: string): boolean {
-        return this.currentUserValue?.role === role;
+        return this.currentUserValue?.role?.toLowerCase() === role.toLowerCase();
     }
 
     /**
