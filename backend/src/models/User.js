@@ -2,13 +2,13 @@ const db = require('../config/database');
 
 class UserModel {
     // Create a new user
-    static async create({ name, email, password_hash, google_id, role = 'user', branch_id }) {
+    static async create({ name, email, password_hash, role = 'user', branch_id }) {
         const query = `
-      INSERT INTO users (name, email, password_hash, google_id, role, branch_id)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING user_id, name, email, role, branch_id, created_at
-    `;
-        const values = [name, email, password_hash, google_id, role, branch_id];
+            INSERT INTO users (name, email, password_hash, role, branch_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING user_id, name, email, role, branch_id, created_at
+        `;
+        const values = [name, email, password_hash, role, branch_id];
         const result = await db.query(query, values);
         return result.rows[0];
     }
@@ -24,13 +24,6 @@ class UserModel {
     static async findById(user_id) {
         const query = 'SELECT user_id, name, email, role, branch_id, created_at, last_login FROM users WHERE user_id = $1';
         const result = await db.query(query, [user_id]);
-        return result.rows[0];
-    }
-
-    // Find user by Google ID
-    static async findByGoogleId(google_id) {
-        const query = 'SELECT * FROM users WHERE google_id = $1';
-        const result = await db.query(query, [google_id]);
         return result.rows[0];
     }
 

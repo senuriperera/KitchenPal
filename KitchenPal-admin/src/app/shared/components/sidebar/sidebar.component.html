@@ -5,12 +5,13 @@
 
   <nav class="sidebar-nav">
     <ul class="menu-list">
-      <li
-        *ngFor="let item of menuItems"
-        class="menu-item"
-        routerLinkActive="active"
-      >
-        <a [routerLink]="item.route" class="menu-link">
+      <li *ngFor="let item of menuItems" class="menu-item">
+        <a
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="menu-link"
+        >
           <span class="menu-icon" [attr.data-icon]="item.icon"></span>
           <span class="menu-label">{{ item.label }}</span>
         </a>

@@ -35,6 +35,7 @@ passport.use(
 );
 
 // Google OAuth Strategy
+// Note: Google users are identified by email (google_id column removed from schema)
 if (config.google.clientID && config.google.clientSecret) {
     passport.use(
         new GoogleStrategy(
@@ -45,25 +46,15 @@ if (config.google.clientID && config.google.clientSecret) {
             },
             async (accessToken, refreshToken, profile, done) => {
                 try {
-                    // Check if user exists with this Google ID
-                    let user = await UserModel.findByGoogleId(profile.id);
+                    // Check if user exists with this email
+                    let user = await UserModel.findByEmail(profile.emails[0].value);
 
                     if (!user) {
-                        // Check if user exists with this email
-                        user = await UserModel.findByEmail(profile.emails[0].value);
-
-                        if (user) {
-                            // Link Google account to existing user
-                            // Note: You may want to update the user record here
-                            return done(null, user);
-                        }
-
                         // Create new user
                         user = await UserModel.create({
                             name: profile.displayName,
                             email: profile.emails[0].value,
-                            google_id: profile.id,
-                            password_hash: null,
+                            password_hash: null, // Google users don't have password
                             role: 'user',
                         });
                     }

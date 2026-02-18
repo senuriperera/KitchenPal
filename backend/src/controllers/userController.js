@@ -79,7 +79,6 @@ class UserController {
                 name,
                 email,
                 password_hash,
-                google_id: null,
                 role,
                 branch_id
             });

@@ -22,11 +22,11 @@ export const roleGuard: CanActivateFn = (route, state) => {
     }
 
     const currentUser = authService.currentUserValue;
-    if (currentUser && allowedRoles.includes(currentUser.role)) {
+    if (currentUser && allowedRoles.some(role => role.toLowerCase() === currentUser.role.toLowerCase())) {
         return true;
     }
 
     // User doesn't have required role, redirect to dashboard
-    console.warn(`Access denied. Required roles: ${allowedRoles.join(', ')}`);
+    console.warn(`Access denied. Required roles: ${allowedRoles.join(', ')}, User role: ${currentUser?.role}`);
     return router.createUrlTree(['/dashboard']);
 };

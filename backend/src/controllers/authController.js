@@ -24,7 +24,6 @@ class AuthController {
                 name,
                 email,
                 password_hash,
-                google_id: null,
                 role: role || 'user',
             });
 

@@ -37,23 +37,6 @@
 
 .menu-item {
   margin: 4px 0;
-
-  &.active {
-    .menu-link {
-      background: #fff7ed;
-      color: #f97316;
-
-      &::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 3px;
-        background: #f97316;
-      }
-    }
-  }
 }
 
 .menu-link {
@@ -68,6 +51,21 @@
   &:hover {
     background: #f9fafb;
     color: #374151;
+  }
+
+  &.active {
+    background: #fff7ed;
+    color: #f97316;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #f97316;
+    }
   }
 }
 
