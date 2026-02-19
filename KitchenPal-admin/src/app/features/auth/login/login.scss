@@ -31,7 +31,7 @@
     h1 {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #fbbf24;
+        color: #f97316;
         /* Amber/Yellow color */
         margin: 0;
     }
@@ -105,7 +105,7 @@ form {
 
     a {
         font-size: 0.875rem;
-        color: #fbbf24;
+        color: #f97316;
         text-decoration: none;
         font-weight: 500;
 
@@ -129,7 +129,7 @@ form {
 button[type="submit"] {
     width: 100%;
     padding: 0.75rem;
-    background-color: #fbbf24;
+    background-color: #f97316;
     color: #ffffff;
     font-weight: 600;
     font-size: 0.875rem;
@@ -139,7 +139,7 @@ button[type="submit"] {
     transition: background-color 0.15s ease-in-out;
 
     &:hover {
-        background-color: #f59e0b;
+        background-color: #ea580c;
         /* Darker amber */
     }
 
