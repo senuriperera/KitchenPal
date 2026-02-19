@@ -15,8 +15,20 @@ const app = express();
 
 // Middleware
 app.use(helmet());
+// Support comma-separated list of allowed frontend origins (e.g. admin + mobile web)
+const allowedOrigins = config.frontend.url
+    ? config.frontend.url.split(',').map(o => o.trim())
+    : ['http://localhost:4200', 'http://localhost:3001'];
+
 app.use(cors({
-    origin: config.frontend.url,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. curl, Postman, mobile apps)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS: origin ${origin} not allowed`));
+        }
+    },
     credentials: true,
 }));
 app.use(compression());

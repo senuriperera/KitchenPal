@@ -1,7 +1,20 @@
 const vision = require('@google-cloud/vision');
 
-// Creates a client
-const client = new vision.ImageAnnotatorClient();
+// Lazy client initialization to prevent crashes on startup
+let client = null;
+
+const getClient = () => {
+    if (!client) {
+        try {
+            client = new vision.ImageAnnotatorClient();
+        } catch (error) {
+            console.warn('Google Vision client initialization failed:', error.message);
+            console.warn('OCR functionality will be disabled. Please configure valid Google Cloud credentials.');
+            return null;
+        }
+    }
+    return client;
+};
 
 /**
  * Normalizes text by removing non-alphanumeric characters (except key delimiters) and lowercasing.
@@ -126,7 +139,12 @@ const findClosestDate = (dates, text, keywords) => {
 
 exports.extractDatesFromUrl = async (imageUrl) => {
     try {
-        const [result] = await client.textDetection(imageUrl);
+        const visionClient = getClient();
+        if (!visionClient) {
+            throw new Error('Google Vision API is not configured. Please provide valid credentials.');
+        }
+        
+        const [result] = await visionClient.textDetection(imageUrl);
         const detections = result.textAnnotations;
 
         if (!detections || detections.length === 0) {

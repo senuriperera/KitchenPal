@@ -5,7 +5,6 @@
   ></app-header>
 
   <div class="recipes-content">
-
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="search-container">
@@ -22,7 +21,7 @@
           <span class="btn-icon">⚡</span> Filter
         </button>
         <button class="btn btn-primary" (click)="openCreateModal()">
-          <span class="btn-icon">+</span> New Recipe
+          <span class="btn-icon">+</span> Create Recipe
         </button>
       </div>
     </div>
@@ -37,7 +36,6 @@
     <!-- Recipe Grid -->
     <div class="recipe-grid" *ngIf="filteredRecipes.length > 0">
       <div class="recipe-card" *ngFor="let recipe of filteredRecipes">
-
         <!-- Card Image -->
         <div class="card-image-wrapper">
           <img [src]="recipe.image" [alt]="recipe.name" class="card-image" />
@@ -48,29 +46,50 @@
           <div class="card-title-row">
             <h3 class="card-title">{{ recipe.name }}</h3>
             <div class="card-actions">
-              <button class="action-btn" (click)="editRecipe(recipe)" title="Edit">✏️</button>
-              <button class="action-btn" (click)="deleteRecipe(recipe)" title="Delete">🗑️</button>
+              <button
+                class="action-btn"
+                (click)="editRecipe(recipe)"
+                title="Edit"
+              >
+                ✏️
+              </button>
+              <button
+                class="action-btn"
+                (click)="deleteRecipe(recipe)"
+                title="Delete"
+              >
+                🗑️
+              </button>
             </div>
           </div>
 
           <div class="card-meta">
             <div class="meta-row">
               <span class="meta-label">Total Cost:</span>
-              <span class="meta-value">${{ recipe.totalCost | number:'1.2-2' }}</span>
+              <span class="meta-value"
+                >${{ recipe.totalCost | number: "1.2-2" }}</span
+              >
             </div>
             <div class="meta-row">
               <span class="meta-label">Suggested Price:</span>
-              <span class="meta-value">${{ recipe.suggestedPrice | number:'1.2-2' }}</span>
+              <span class="meta-value"
+                >${{ recipe.suggestedPrice | number: "1.2-2" }}</span
+              >
             </div>
             <div class="meta-row">
               <span class="meta-label">Discount:</span>
-              <span class="meta-value discount-value">{{ recipe.discount }}%</span>
+              <span class="meta-value discount-value"
+                >{{ recipe.discount }}%</span
+              >
             </div>
           </div>
 
           <!-- Show Ingredients Toggle -->
-          <button class="toggle-ingredients-btn" (click)="toggleIngredients(recipe)">
-            <span>{{ recipe.showIngredients ? '▲' : '▼' }}</span>
+          <button
+            class="toggle-ingredients-btn"
+            (click)="toggleIngredients(recipe)"
+          >
+            <span>{{ recipe.showIngredients ? "▲" : "▼" }}</span>
             Show Ingredients ({{ recipe.ingredients.length }})
           </button>
 
@@ -80,15 +99,16 @@
               <span class="ing-name">{{ ing.name }}</span>
               <span class="ing-qty">{{ ing.quantity }} {{ ing.unit }}</span>
             </div>
-            <div class="ingredient-item no-ingredients" *ngIf="recipe.ingredients.length === 0">
+            <div
+              class="ingredient-item no-ingredients"
+              *ngIf="recipe.ingredients.length === 0"
+            >
               <span>No ingredients listed</span>
             </div>
           </div>
         </div>
-
       </div>
     </div>
-
   </div>
 
   <!-- Create Recipe Modal -->
@@ -97,5 +117,4 @@
     (closeModal)="closeModal()"
     (saveRecipe)="onSaveRecipe($event)"
   ></app-recipe-modal>
-
 </div>

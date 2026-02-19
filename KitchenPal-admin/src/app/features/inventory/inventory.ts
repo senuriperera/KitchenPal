@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HttpClient } from '@angular/common/http';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { IngredientService, IngredientResponse } from '../../core/services/ingredient.service';
+import { environment } from '../../../environments/environment';
 
 interface Ingredient {
   id: number;
@@ -20,6 +21,11 @@ interface Ingredient {
   storageTypeId?: number;
   unitId?: number;
 }
+
+// Cloudinary config (same as mobile app)
+const CLOUDINARY_CLOUD_NAME = 'dzf4mceyk';
+const CLOUDINARY_UPLOAD_PRESET = 'kitchenpal';
+const CLOUDINARY_FOLDER = 'kitchenpal/ingredients';
 
 @Component({
   selector: 'app-inventory',
@@ -42,7 +48,7 @@ export class InventoryComponent implements OnInit {
   storageTypes: any[] = [];
   units: any[] = [];
 
-  constructor(private ingredientService: IngredientService) { }
+  constructor(private ingredientService: IngredientService, private http: HttpClient) { }
 
   ngOnInit(): void {
     this.loadIngredients();
@@ -54,7 +60,6 @@ export class InventoryComponent implements OnInit {
     this.ingredientService.getStorageTypes().subscribe({
       next: (types) => {
         this.storageTypes = types;
-        console.log('Storage types loaded:', types);
       },
       error: (err) => console.error('Failed to load storage types:', err)
     });
@@ -64,7 +69,6 @@ export class InventoryComponent implements OnInit {
     this.ingredientService.getUnits().subscribe({
       next: (units) => {
         this.units = units;
-        console.log('Units loaded:', units);
       },
       error: (err) => console.error('Failed to load units:', err)
     });
@@ -75,8 +79,8 @@ export class InventoryComponent implements OnInit {
     this.error = null;
 
     this.ingredientService.getIngredientsByBranch(this.BRANCH_ID).subscribe({
-      next: (response: any) => { // Using any because backend wraps in { ingredients: [] }
-        const data = response.ingredients || response; // Handle both wrapped and unwrapped cases
+      next: (response: any) => {
+        const data = response.ingredients || response;
 
         if (Array.isArray(data)) {
           this.ingredients = data.map((item: IngredientResponse) => this.mapToIngredient(item));
@@ -91,8 +95,6 @@ export class InventoryComponent implements OnInit {
         console.error('Error loading ingredients:', err);
         this.error = 'Failed to load ingredients. Please try again.';
         this.isLoading = false;
-
-        // Fallback or empty state is handled by the template
       }
     });
   }
@@ -109,7 +111,6 @@ export class InventoryComponent implements OnInit {
       status = 'Near expiry';
     }
 
-    // Determine Emoji based on name (Simple logic for demo)
     const emoji = this.getEmojiForIngredient(item.name);
 
     return {
@@ -155,39 +156,117 @@ export class InventoryComponent implements OnInit {
     );
   }
 
-  // Modal State
+  // ─── Modal State ────────────────────────────────────────────────────────────
   selectedIngredient: Ingredient | null = null;
   showViewModal: boolean = false;
   showEditModal: boolean = false;
+  showAddModal: boolean = false;
+  showDeleteModal: boolean = false;
+  ingredientToDelete: Ingredient | null = null;
   editData: Partial<Ingredient> = {};
+  editError: string | null = null;
+  isSaving: boolean = false;
+  isDeleting: boolean = false;
+  addError: string | null = null;
 
+  // Upload / OCR flags
+  isUploadingImage: boolean = false;
+  isScanning: boolean = false;
+  isEditUploadingImage: boolean = false;
+  isEditScanning: boolean = false;
+
+  addData: {
+    name: string;
+    quantity: number | null;
+    unitId: number | undefined;
+    storageTypeId: number | undefined;
+    manufactureDate: string;
+    expiryDate: string;
+    cost: number | null;
+    imageUrl: string | null;       // Cloudinary URL stored after upload
+    imagePreview: string | null;   // local object-URL for preview
+  } = this.emptyAddData();
+
+  private emptyAddData() {
+    return {
+      name: '',
+      quantity: null,
+      unitId: undefined,
+      storageTypeId: undefined,
+      manufactureDate: '',
+      expiryDate: '',
+      cost: null,
+      imageUrl: null,
+      imagePreview: null
+    };
+  }
+
+  // ─── View ────────────────────────────────────────────────────────────────────
   viewDetails(ingredient: Ingredient): void {
     this.selectedIngredient = ingredient;
     this.showViewModal = true;
   }
 
+  // ─── Edit ────────────────────────────────────────────────────────────────────
   editIngredient(ingredient: Ingredient): void {
     this.selectedIngredient = ingredient;
-    // Create a copy for editing with IDs
-    this.editData = { 
+    this.editData = {
       ...ingredient,
       storageTypeId: ingredient.storageTypeId,
       unitId: ingredient.unitId
     };
+    this.editError = null;
     this.showEditModal = true;
   }
 
-  closeModals(): void {
-    this.showViewModal = false;
-    this.showEditModal = false;
-    this.selectedIngredient = null;
-    this.editData = {};
+  /** Upload a new image for the Edit modal → Cloudinary → store URL in editData.image */
+  async onEditImageSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    // Show local preview immediately
+    this.editData = { ...this.editData, image: URL.createObjectURL(file) };
+    this.isEditUploadingImage = true;
+
+    try {
+      const url = await this.uploadToCloudinary(file);
+      this.editData = { ...this.editData, image: url };
+    } catch (e) {
+      console.error('Edit image upload failed:', e);
+      this.editError = 'Image upload failed. Changes saved without new image.';
+    } finally {
+      this.isEditUploadingImage = false;
+    }
+  }
+
+  /** OCR scan using the already-uploaded edit image URL */
+  async scanDatesForEdit(): Promise<void> {
+    if (!this.editData.image || !this.editData.image.startsWith('https://')) return;
+    this.isEditScanning = true;
+    try {
+      const result = await this.callOcrScan(this.editData.image);
+      if (result.manufactureDate) this.editData = { ...this.editData, manufactureDate: result.manufactureDate };
+      if (result.expiryDate) this.editData = { ...this.editData, expiryDate: result.expiryDate };
+    } catch (e) {
+      console.error('OCR scan failed:', e);
+      this.editError = 'Could not extract dates from image. Please enter manually.';
+    } finally {
+      this.isEditScanning = false;
+    }
   }
 
   saveEdit(): void {
     if (!this.selectedIngredient || !this.editData.id) return;
+    this.editError = null;
 
-    // Map UI fields to database fields
+    // Date validation
+    if (this.editData.manufactureDate && this.editData.expiryDate &&
+      this.editData.expiryDate < this.editData.manufactureDate) {
+      this.editError = 'Expiry date cannot be before manufacture date.';
+      return;
+    }
+
     const updatePayload: any = {
       name: this.editData.name,
       quantity_in_stock: this.editData.quantity,
@@ -195,48 +274,226 @@ export class InventoryComponent implements OnInit {
       expiry_date: this.editData.expiryDate,
       manufacture_date: this.editData.manufactureDate || null,
       storage_type_id: this.editData.storageTypeId,
-      unit_id: this.editData.unitId
+      unit_id: this.editData.unitId,
+      image_url: this.editData.image?.startsWith('https://') ? this.editData.image : null
     };
 
+    this.isSaving = true;
     this.ingredientService.updateIngredient(this.editData.id, updatePayload).subscribe({
-      next: (updated) => {
-        // Reload ingredients to get fresh data
+      next: () => {
         this.loadIngredients();
         this.closeModals();
       },
       error: (err) => {
         console.error('Failed to update:', err);
-        alert('Failed to update ingredient. Please try again.');
+        this.editError = 'Failed to save changes. Please try again.';
+        this.isSaving = false;
       }
     });
   }
 
-  deleteIngredient(ingredient: Ingredient): void {
-    if (confirm(`Are you sure you want to delete ${ingredient.name}?`)) {
-      this.ingredientService.deleteIngredient(ingredient.id).subscribe({
-        next: () => {
-          this.ingredients = this.ingredients.filter(item => item.id !== ingredient.id);
-          this.searchInventory();
-        },
-        error: (err) => console.error('Failed to delete:', err)
-      });
+  // ─── Add ─────────────────────────────────────────────────────────────────────
+  openAddModal(): void {
+    this.addData = this.emptyAddData();
+    this.addError = null;
+    this.isUploadingImage = false;
+    this.isScanning = false;
+    this.showAddModal = true;
+  }
+
+  /** Pick a file → upload to Cloudinary → store URL; show local preview while uploading */
+  async onImageSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    // Show local preview immediately
+    this.addData.imagePreview = URL.createObjectURL(file);
+    this.addData.imageUrl = null;
+    this.isUploadingImage = true;
+
+    try {
+      const url = await this.uploadToCloudinary(file);
+      this.addData.imageUrl = url;
+      this.addData.imagePreview = url; // replace blob URL with real Cloudinary URL
+    } catch (e) {
+      console.error('Image upload failed:', e);
+      this.addError = 'Image upload failed. You can still add the ingredient without an image.';
+      this.addData.imagePreview = null;
+    } finally {
+      this.isUploadingImage = false;
     }
   }
 
-  filterData(): void {
-    console.log('Open filter dialog');
+  /** After the image is uploaded to Cloudinary, call OCR scan and auto-fill dates */
+  async scanDates(): Promise<void> {
+    if (!this.addData.imageUrl) return;
+    this.isScanning = true;
+    this.addError = null;
+
+    try {
+      const result = await this.callOcrScan(this.addData.imageUrl);
+      if (result.manufactureDate) this.addData.manufactureDate = result.manufactureDate;
+      if (result.expiryDate) this.addData.expiryDate = result.expiryDate;
+
+      if (!result.manufactureDate && !result.expiryDate) {
+        this.addError = 'No dates found in image. Please enter dates manually.';
+      }
+    } catch (e) {
+      console.error('OCR scan failed:', e);
+      this.addError = 'Scan failed. Please enter dates manually.';
+    } finally {
+      this.isScanning = false;
+    }
   }
+
+  saveNewIngredient(): void {
+    this.addError = null;
+    if (!this.addData.name?.trim()) { this.addError = 'Item name is required.'; return; }
+    if (this.addData.quantity === null || this.addData.quantity < 0) { this.addError = 'Quantity is required.'; return; }
+    if (!this.addData.unitId) { this.addError = 'Please select a unit.'; return; }
+    if (!this.addData.storageTypeId) { this.addError = 'Please select a storage type.'; return; }
+    if (!this.addData.expiryDate) { this.addError = 'Expiry date is required.'; return; }
+    if (this.addData.cost === null || this.addData.cost < 0) { this.addError = 'Cost is required.'; return; }
+
+    // Date validation
+    if (this.addData.manufactureDate && this.addData.expiryDate < this.addData.manufactureDate) {
+      this.addError = 'Expiry date cannot be before manufacture date.';
+      return;
+    }
+
+    if (this.isUploadingImage) { this.addError = 'Please wait for image upload to finish.'; return; }
+
+    this.isSaving = true;
+
+    const payload: Partial<IngredientResponse> = {
+      name: this.addData.name.trim(),
+      quantity: this.addData.quantity!,
+      unit_id: this.addData.unitId,
+      storage_type_id: this.addData.storageTypeId,
+      expiry_date: this.addData.expiryDate,
+      manufacture_date: this.addData.manufactureDate || undefined,
+      price: this.addData.cost!,
+      branch_id: this.BRANCH_ID,
+      image_url: this.addData.imageUrl || undefined
+    };
+
+    this.ingredientService.createIngredient(payload).subscribe({
+      next: () => {
+        this.isSaving = false;
+        this.loadIngredients();
+        this.closeModals();
+      },
+      error: (err) => {
+        console.error('Failed to create ingredient:', err);
+        this.addError = 'Failed to add ingredient. Please try again.';
+        this.isSaving = false;
+      }
+    });
+  }
+
+  // ─── Delete ───────────────────────────────────────────────────────────────────
+  openDeleteModal(ingredient: Ingredient): void {
+    this.ingredientToDelete = ingredient;
+    this.showDeleteModal = true;
+  }
+
+  confirmDelete(): void {
+    if (!this.ingredientToDelete) return;
+    this.isDeleting = true;
+    this.ingredientService.deleteIngredient(this.ingredientToDelete.id).subscribe({
+      next: () => {
+        this.ingredients = this.ingredients.filter(item => item.id !== this.ingredientToDelete!.id);
+        this.searchInventory();
+        this.isDeleting = false;
+        this.closeModals();
+      },
+      error: (err) => {
+        console.error('Failed to delete:', err);
+        this.isDeleting = false;
+        this.closeModals();
+      }
+    });
+  }
+
+  // ─── Shared helpers ────────────────────────────────────────────────────────
+  closeModals(): void {
+    this.showViewModal = false;
+    this.showEditModal = false;
+    this.showAddModal = false;
+    this.showDeleteModal = false;
+    this.selectedIngredient = null;
+    this.ingredientToDelete = null;
+    this.editData = {};
+    this.addError = null;
+    this.editError = null;
+    this.isSaving = false;
+    this.isDeleting = false;
+    this.isUploadingImage = false;
+    this.isScanning = false;
+    this.isEditUploadingImage = false;
+    this.isEditScanning = false;
+  }
+
+  deleteIngredient(_ingredient: Ingredient): void {
+    // Kept for compatibility; use openDeleteModal for UI
+  }
+
+  filterData(): void { }
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'OK':
-        return 'status-ok';
-      case 'Near expiry':
-        return 'status-warning';
-      case 'Expired':
-        return 'status-danger';
-      default:
-        return '';
+      case 'OK': return 'status-ok';
+      case 'Near expiry': return 'status-warning';
+      case 'Expired': return 'status-danger';
+      default: return '';
     }
+  }
+
+  // ─── Cloudinary & OCR helpers ───────────────────────────────────────────────
+
+  /** Upload a File directly to Cloudinary (unsigned) and return the secure_url */
+  private uploadToCloudinary(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder', CLOUDINARY_FOLDER);
+
+    return fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+      { method: 'POST', body: formData }
+    )
+      .then(res => {
+        if (!res.ok) throw new Error(`Cloudinary upload failed: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (!data.secure_url) throw new Error('No secure_url in Cloudinary response');
+        return data.secure_url as string;
+      });
+  }
+
+  /** Call the backend OCR scan endpoint with a Cloudinary URL */
+  private callOcrScan(imageUrl: string): Promise<{ expiryDate: string | null; manufactureDate: string | null }> {
+    return fetch(`${environment.apiUrl}/ingredients/scan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
+      },
+      body: JSON.stringify({ imageUrl })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`OCR scan failed: ${res.status}`);
+        return res.json();
+      })
+      .then(data => ({
+        expiryDate: data.expiryDate
+          ? new Date(data.expiryDate).toISOString().split('T')[0]
+          : null,
+        manufactureDate: data.manufactureDate
+          ? new Date(data.manufactureDate).toISOString().split('T')[0]
+          : null
+      }));
   }
 }

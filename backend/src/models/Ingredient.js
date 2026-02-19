@@ -18,12 +18,10 @@ class IngredientModel {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name, 
              st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name,
              b.name as branch_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       LEFT JOIN branches b ON i.branch_id = b.branch_id
       WHERE i.branch_id = $1
       ORDER BY i.expiry_date ASC
@@ -37,12 +35,10 @@ class IngredientModel {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name, 
              st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name,
              b.name as branch_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       LEFT JOIN branches b ON i.branch_id = b.branch_id
       ORDER BY i.branch_id ASC, i.expiry_date ASC
     `;
@@ -54,12 +50,10 @@ class IngredientModel {
   static async findById(ingredient_id) {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name,
-             st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name
+             st.code as storage_code, st.name as storage_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       WHERE i.ingredient_id = $1
     `;
     const result = await db.query(query, [ingredient_id]);
@@ -70,12 +64,10 @@ class IngredientModel {
   static async findByNameAndBranch(name, branch_id) {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name,
-             st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name
+             st.code as storage_code, st.name as storage_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       WHERE LOWER(i.name) = LOWER($1) AND i.branch_id = $2
       LIMIT 1
     `;
