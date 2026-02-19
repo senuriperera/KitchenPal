@@ -18,12 +18,12 @@ interface MenuItem {
 })
 export class SidebarComponent {
   menuItems: MenuItem[] = [
-    { label: 'Dashboard', icon: 'home', route: '/dashboard' },
+    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
     { label: 'Inventory', icon: 'inventory', route: '/inventory' },
-    { label: 'Expiry Alerts', icon: 'alert', route: '/expiry-alerts' },
-    { label: 'Recipes', icon: 'recipes', route: '/recipes' },
-    { label: 'Discount Approvals', icon: 'discount', route: '/discount-approvals' },
-    { label: 'Reports', icon: 'reports', route: '/reports' },
-    { label: 'User Management', icon: 'users', route: '/user-management' }
+    { label: 'Expiry Alerts', icon: 'notification_important', route: '/expiry-alerts' },
+    { label: 'Recipes', icon: 'menu_book', route: '/recipes' },
+    { label: 'Discount Approvals', icon: 'local_offer', route: '/discount-approvals' },
+    { label: 'Reports', icon: 'bar_chart', route: '/reports' },
+    { label: 'User Management', icon: 'group', route: '/user-management' }
   ];
 }

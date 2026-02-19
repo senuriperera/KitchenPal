@@ -8,7 +8,7 @@
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="search-container">
-        <span class="search-icon">🔍</span>
+        <span class="material-icons search-icon">search</span>
         <input
           type="text"
           placeholder="Search recipes..."
@@ -18,7 +18,7 @@
       </div>
       <div class="toolbar-actions">
         <button class="btn btn-secondary">
-          <span class="btn-icon">⚡</span> Filter
+          <span class="material-icons btn-icon">filter_list</span> Filter
         </button>
         <button class="btn btn-primary" (click)="openCreateModal()">
           <span class="btn-icon">+</span> Create Recipe
@@ -28,7 +28,7 @@
 
     <!-- Empty State -->
     <div *ngIf="filteredRecipes.length === 0" class="empty-state">
-      <div class="empty-icon">🍽️</div>
+      <div class="empty-icon"><span class="material-icons">restaurant</span></div>
       <h2>No recipes found</h2>
       <p>Click <strong>+ New Recipe</strong> to create your first recipe</p>
     </div>
@@ -51,14 +51,14 @@
                 (click)="editRecipe(recipe)"
                 title="Edit"
               >
-                ✏️
+                <span class="material-icons">edit</span>
               </button>
               <button
                 class="action-btn"
                 (click)="deleteRecipe(recipe)"
                 title="Delete"
               >
-                🗑️
+                <span class="material-icons">delete</span>
               </button>
             </div>
           </div>
@@ -89,7 +89,7 @@
             class="toggle-ingredients-btn"
             (click)="toggleIngredients(recipe)"
           >
-            <span>{{ recipe.showIngredients ? "▲" : "▼" }}</span>
+            <span class="material-icons">{{ recipe.showIngredients ? 'expand_less' : 'expand_more' }}</span>
             Show Ingredients ({{ recipe.ingredients.length }})
           </button>
 

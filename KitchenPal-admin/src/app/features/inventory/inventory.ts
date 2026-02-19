@@ -111,7 +111,7 @@ export class InventoryComponent implements OnInit {
       status = 'Near expiry';
     }
 
-    const emoji = this.getEmojiForIngredient(item.name);
+
 
     return {
       id: item.ingredient_id,
@@ -124,23 +124,14 @@ export class InventoryComponent implements OnInit {
       cost: Number(item.price) || 0,
       lastScanned: item.added_at ? new Date(item.added_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       status: status,
-      image: item.image_url || emoji,
+      image: item.image_url || '',
       storageTypeId: item.storage_type_id,
       unitId: item.unit_id
     } as any;
   }
 
-  private getEmojiForIngredient(name: string): string {
-    const n = name.toLowerCase();
-    if (n.includes('apple')) return '🍎';
-    if (n.includes('milk')) return '🥛';
-    if (n.includes('chicken')) return '🍗';
-    if (n.includes('tomato')) return '🍅';
-    if (n.includes('bread')) return '🍞';
-    if (n.includes('egg')) return '🥚';
-    if (n.includes('cheese')) return '🧀';
-    if (n.includes('carrot')) return '🥕';
-    return '📦';
+  private getPlaceholderIcon(_name: string): string {
+    return '';
   }
 
   searchInventory(): void {

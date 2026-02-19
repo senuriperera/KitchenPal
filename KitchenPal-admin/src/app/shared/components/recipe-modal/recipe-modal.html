@@ -14,7 +14,7 @@
       <div class="image-upload-area" (click)="triggerFileInput()">
         <img *ngIf="form.imagePreview" [src]="form.imagePreview" alt="Recipe preview" class="image-preview" />
         <div *ngIf="!form.imagePreview" class="upload-placeholder">
-          <span class="upload-icon">🖼️</span>
+          <span class="material-icons upload-icon">image</span>
           <p class="upload-text">Click to upload recipe image</p>
           <p class="upload-hint">PNG, JPG up to 5MB</p>
         </div>
