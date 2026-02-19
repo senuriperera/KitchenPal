@@ -90,11 +90,11 @@
               <td>{{ user.lastLogin }}</td>
               <td>
                 <div class="actions">
-                  <button class="action-btn edit" *ngIf="isAdmin" (click)="editUser(user)">
-                    Edit
+                  <button class="action-btn edit-btn" *ngIf="isAdmin" (click)="editUser(user)" title="Edit user">
+                    <span class="material-icons">edit</span>
                   </button>
-                  <button class="action-btn delete" *ngIf="isAdmin" (click)="deleteUser(user)">
-                    Delete
+                  <button class="action-btn delete-btn" *ngIf="isAdmin" (click)="deleteUser(user)" title="Delete user">
+                    <span class="material-icons">delete</span>
                   </button>
                   <span *ngIf="!isAdmin" class="no-actions">View Only</span>
                 </div>
@@ -162,14 +162,11 @@
               <td>{{ branch.contact_number }}</td>
               <td>
                 <div class="actions">
-                  <button class="action-btn edit" (click)="editBranch(branch)">
-                    Edit
+                  <button class="action-btn edit-btn" (click)="editBranch(branch)" title="Edit branch">
+                    <span class="material-icons">edit</span>
                   </button>
-                  <button
-                    class="action-btn delete"
-                    (click)="deleteBranch(branch)"
-                  >
-                    Delete
+                  <button class="action-btn delete-btn" (click)="deleteBranch(branch)" title="Delete branch">
+                    <span class="material-icons">delete</span>
                   </button>
                 </div>
               </td>
