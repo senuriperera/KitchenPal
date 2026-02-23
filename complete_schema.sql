@@ -1,166 +1,272 @@
--- KitchenPal Database Schema (FINAL UPDATED)
--- Changes Applied:
--- 1. Removed google_id from users
--- 2. Removed weight & weight_unit_id from ingredients
--- 3. Removed recipe_steps table
--- 4. Removed recipe_images table
--- 5. Updated units seed data (added tsp, tbsp, cup, shot, unit)
+-- ============================================================
+-- KitchenPal Database Schema (FINAL COMPLETE)
+-- ============================================================
+-- Tables included:
+--  1. branches
+--  2. units
+--  3. storage_types
+--  4. users
+--  5. sessions
+--  6. master_ingredients
+--  7. stock_ingredients
+--  8. ingredient_batches
+--  9. recipes
+-- 10. recipe_ingredients
+-- 11. recipe_keywords
+-- 12. generated_recipes
+-- 13. generated_recipe_triggers
+-- 14. sales
+-- 15. sale_deductions
+-- 16. notifications
+-- 17. waste_logs
+-- ============================================================
 -- =======================
--- Create Branches table
+-- 1. Branches
 -- =======================
 CREATE TABLE IF NOT EXISTS public.branches (
-    branch_id integer NOT NULL,
-    name character varying(200) NOT NULL,
-    location character varying(500),
-    contact_email character varying(255),
-    contact_phone character varying(50),
-    is_active boolean DEFAULT true,
-    created_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT branches_pkey PRIMARY KEY (branch_id)
+    branch_id SERIAL PRIMARY KEY,
+    name CHARACTER VARYING(200) NOT NULL,
+    location CHARACTER VARYING(500),
+    contact_email CHARACTER VARYING(255),
+    contact_phone CHARACTER VARYING(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-CREATE SEQUENCE IF NOT EXISTS public.branches_branch_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.branches_branch_id_seq OWNED BY public.branches.branch_id;
-ALTER TABLE ONLY public.branches
-ALTER COLUMN branch_id
-SET DEFAULT nextval('public.branches_branch_id_seq'::regclass);
 -- =======================
--- Create Units table
+-- 2. Units
 -- =======================
 CREATE TABLE IF NOT EXISTS public.units (
-    unit_id integer NOT NULL,
-    code character varying(20) NOT NULL,
-    name character varying(50) NOT NULL,
-    CONSTRAINT units_pkey PRIMARY KEY (unit_id),
+    unit_id SERIAL PRIMARY KEY,
+    code CHARACTER VARYING(20) NOT NULL,
+    name CHARACTER VARYING(50) NOT NULL,
     CONSTRAINT units_code_key UNIQUE (code)
 );
-CREATE SEQUENCE IF NOT EXISTS public.units_unit_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.units_unit_id_seq OWNED BY public.units.unit_id;
-ALTER TABLE ONLY public.units
-ALTER COLUMN unit_id
-SET DEFAULT nextval('public.units_unit_id_seq'::regclass);
 -- =======================
--- Create Storage Types table
+-- 3. Storage Types
 -- =======================
 CREATE TABLE IF NOT EXISTS public.storage_types (
-    storage_type_id integer NOT NULL,
-    code character varying(50) NOT NULL,
-    name character varying(100) NOT NULL,
-    CONSTRAINT storage_types_pkey PRIMARY KEY (storage_type_id),
+    storage_type_id SERIAL PRIMARY KEY,
+    code CHARACTER VARYING(50) NOT NULL,
+    name CHARACTER VARYING(100) NOT NULL,
     CONSTRAINT storage_types_code_key UNIQUE (code)
 );
-CREATE SEQUENCE IF NOT EXISTS public.storage_types_storage_type_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.storage_types_storage_type_id_seq OWNED BY public.storage_types.storage_type_id;
-ALTER TABLE ONLY public.storage_types
-ALTER COLUMN storage_type_id
-SET DEFAULT nextval(
-        'public.storage_types_storage_type_id_seq'::regclass
-    );
 -- =======================
--- Users table (google_id removed)
+-- 4. Users
 -- =======================
 CREATE TABLE IF NOT EXISTS public.users (
-    user_id integer NOT NULL,
-    name character varying(150) NOT NULL,
-    email character varying(255) NOT NULL,
-    password_hash text,
-    role character varying(50),
-    branch_id integer,
-    created_at timestamp with time zone DEFAULT now(),
-    last_login timestamp with time zone,
-    CONSTRAINT users_pkey PRIMARY KEY (user_id),
-    CONSTRAINT users_email_key UNIQUE (email)
+    user_id SERIAL PRIMARY KEY,
+    name CHARACTER VARYING(150) NOT NULL,
+    email CHARACTER VARYING(255) NOT NULL,
+    password_hash TEXT,
+    role CHARACTER VARYING(50) CHECK (role IN ('admin', 'branch_manager', 'staff')),
+    branch_id INTEGER REFERENCES public.branches(branch_id),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_login TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT users_email_key UNIQUE (email) -- admin has NULL branch_id since they oversee all branches
 );
-CREATE SEQUENCE IF NOT EXISTS public.users_user_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.users_user_id_seq OWNED BY public.users.user_id;
-ALTER TABLE ONLY public.users
-ALTER COLUMN user_id
-SET DEFAULT nextval('public.users_user_id_seq'::regclass);
 -- =======================
--- Sessions table
+-- 5. Sessions
 -- =======================
 CREATE TABLE IF NOT EXISTS public.sessions (
-    session_id integer NOT NULL,
-    user_id integer,
-    jwt_token text NOT NULL,
-    refresh_token text,
-    created_at timestamp with time zone DEFAULT now(),
-    expires_at timestamp with time zone,
-    is_active boolean DEFAULT true,
-    user_agent text,
-    ip_address text,
-    CONSTRAINT sessions_pkey PRIMARY KEY (session_id)
+    session_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES public.users(user_id) ON DELETE CASCADE,
+    jwt_token TEXT NOT NULL,
+    refresh_token TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    user_agent TEXT,
+    ip_address TEXT
 );
-CREATE SEQUENCE IF NOT EXISTS public.sessions_session_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.sessions_session_id_seq OWNED BY public.sessions.session_id;
-ALTER TABLE ONLY public.sessions
-ALTER COLUMN session_id
-SET DEFAULT nextval('public.sessions_session_id_seq'::regclass);
 -- =======================
--- Ingredients table (weight fields removed)
+-- 6. Master Ingredients
+-- (Global ingredient list, not branch-specific)
 -- =======================
-CREATE TABLE IF NOT EXISTS public.ingredients (
-    ingredient_id integer NOT NULL,
-    branch_id integer,
-    name character varying(200) NOT NULL,
-    quantity_in_stock numeric(12, 4) NOT NULL,
-    unit_id integer,
-    manufacture_date date,
-    expiry_date date,
-    storage_type_id integer,
-    cost_per_unit numeric(10, 4),
-    reorder_level numeric(12, 4),
-    image_url text,
-    added_at timestamp with time zone DEFAULT now(),
-    last_updated timestamp with time zone DEFAULT now(),
-    CONSTRAINT ingredients_pkey PRIMARY KEY (ingredient_id)
+CREATE TABLE IF NOT EXISTS public.master_ingredients (
+    master_ingredient_id SERIAL PRIMARY KEY,
+    name CHARACTER VARYING(200) NOT NULL,
+    default_unit_id INTEGER REFERENCES public.units(unit_id),
+    is_custom BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT master_ingredients_name_key UNIQUE (name)
 );
-CREATE SEQUENCE IF NOT EXISTS public.ingredients_ingredient_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.ingredients_ingredient_id_seq OWNED BY public.ingredients.ingredient_id;
-ALTER TABLE ONLY public.ingredients
-ALTER COLUMN ingredient_id
-SET DEFAULT nextval('public.ingredients_ingredient_id_seq'::regclass);
 -- =======================
--- Recipes table
+-- 7. Stock Ingredients
+-- (Branch-specific inventory)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.stock_ingredients (
+    ingredient_id SERIAL PRIMARY KEY,
+    branch_id INTEGER NOT NULL REFERENCES public.branches(branch_id),
+    master_ingredient_id INTEGER NOT NULL REFERENCES public.master_ingredients(master_ingredient_id),
+    name CHARACTER VARYING(200) NOT NULL,
+    quantity_in_stock NUMERIC(12, 4) NOT NULL DEFAULT 0,
+    unit_id INTEGER REFERENCES public.units(unit_id),
+    manufacture_date DATE,
+    expiry_date DATE,
+    storage_type_id INTEGER REFERENCES public.storage_types(storage_type_id),
+    cost_per_unit NUMERIC(10, 4),
+    price NUMERIC(10, 4),
+    reorder_level NUMERIC(12, 4),
+    image_url TEXT,
+    added_by INTEGER REFERENCES public.users(user_id),
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- =======================
+-- 8. Ingredient Batches
+-- (Tracks each purchase separately for FIFO deduction)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.ingredient_batches (
+    batch_id SERIAL PRIMARY KEY,
+    ingredient_id INTEGER NOT NULL REFERENCES public.stock_ingredients(ingredient_id) ON DELETE CASCADE,
+    quantity NUMERIC(12, 4) NOT NULL,
+    remaining_quantity NUMERIC(12, 4) NOT NULL,
+    unit_id INTEGER REFERENCES public.units(unit_id),
+    cost_per_unit NUMERIC(10, 4),
+    manufacture_date DATE,
+    expiry_date DATE NOT NULL,
+    is_depleted BOOLEAN DEFAULT FALSE,
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- =======================
+-- 9. Recipes
+-- (Standard fixed recipes, branch_id is NULL for global recipes)
 -- =======================
 CREATE TABLE IF NOT EXISTS public.recipes (
-    recipe_id integer NOT NULL,
-    branch_id integer,
-    name character varying(200) NOT NULL,
-    image_url text,
-    cooking_time_minutes integer,
-    description text,
-    base_price numeric(12, 4) NOT NULL,
-    is_generated boolean DEFAULT false,
-    created_by integer,
-    created_at timestamp with time zone DEFAULT now(),
-    CONSTRAINT recipes_pkey PRIMARY KEY (recipe_id)
+    recipe_id SERIAL PRIMARY KEY,
+    branch_id INTEGER REFERENCES public.branches(branch_id),
+    name CHARACTER VARYING(200) NOT NULL,
+    image_url TEXT,
+    cooking_time_minutes INTEGER,
+    description TEXT,
+    base_price NUMERIC(12, 4) NOT NULL,
+    is_generated BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by INTEGER REFERENCES public.users(user_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-CREATE SEQUENCE IF NOT EXISTS public.recipes_recipe_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.recipes_recipe_id_seq OWNED BY public.recipes.recipe_id;
-ALTER TABLE ONLY public.recipes
-ALTER COLUMN recipe_id
-SET DEFAULT nextval('public.recipes_recipe_id_seq'::regclass);
 -- =======================
--- Recipe Ingredients table
+-- 10. Recipe Ingredients
+-- (Links recipes to master ingredients)
 -- =======================
 CREATE TABLE IF NOT EXISTS public.recipe_ingredients (
-    recipe_ingredient_id integer NOT NULL,
-    recipe_id integer,
-    ingredient_id integer,
-    quantity_required numeric(12, 4) NOT NULL,
-    unit_id integer,
-    CONSTRAINT recipe_ingredients_pkey PRIMARY KEY (recipe_ingredient_id)
+    recipe_ingredient_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES public.recipes(recipe_id) ON DELETE CASCADE,
+    master_ingredient_id INTEGER REFERENCES public.master_ingredients(master_ingredient_id),
+    ingredient_id INTEGER REFERENCES public.stock_ingredients(ingredient_id),
+    -- ingredient_id is nullable because standard recipes use master_ingredient_id
+    quantity_required NUMERIC(12, 4) NOT NULL,
+    unit_id INTEGER REFERENCES public.units(unit_id),
+    is_optional BOOLEAN DEFAULT FALSE,
+    CONSTRAINT recipe_ingredients_unique UNIQUE (recipe_id, master_ingredient_id)
 );
-CREATE SEQUENCE IF NOT EXISTS public.recipe_ingredients_recipe_ingredient_id_seq AS integer START WITH 1 INCREMENT BY 1;
-ALTER SEQUENCE public.recipe_ingredients_recipe_ingredient_id_seq OWNED BY public.recipe_ingredients.recipe_ingredient_id;
-ALTER TABLE ONLY public.recipe_ingredients
-ALTER COLUMN recipe_ingredient_id
-SET DEFAULT nextval(
-        'public.recipe_ingredients_recipe_ingredient_id_seq'::regclass
-    );
 -- =======================
--- UPDATED Seed Data (Extended Units)
+-- 11. Recipe Keywords
+-- (Used for Jaccard Similarity keyword matching)
 -- =======================
+CREATE TABLE IF NOT EXISTS public.recipe_keywords (
+    keyword_id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES public.recipes(recipe_id) ON DELETE CASCADE,
+    keyword CHARACTER VARYING(100) NOT NULL
+);
+-- =======================
+-- 12. Generated Recipes
+-- (Recipes suggested from expiry-nearing items, pending admin approval)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.generated_recipes (
+    generated_id SERIAL PRIMARY KEY,
+    branch_id INTEGER NOT NULL REFERENCES public.branches(branch_id),
+    recipe_id INTEGER NOT NULL REFERENCES public.recipes(recipe_id),
+    generated_by INTEGER NOT NULL REFERENCES public.users(user_id),
+    suggested_discount_percent NUMERIC(5, 2) NOT NULL,
+    suggested_discount_price NUMERIC(10, 2) NOT NULL,
+    final_discount_percent NUMERIC(5, 2),
+    final_discount_price NUMERIC(10, 2),
+    status CHARACTER VARYING(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    admin_note TEXT,
+    reviewed_by INTEGER REFERENCES public.users(user_id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- =======================
+-- 13. Generated Recipe Triggers
+-- (Records which expiry-nearing items triggered the recipe generation)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.generated_recipe_triggers (
+    trigger_id SERIAL PRIMARY KEY,
+    generated_id INTEGER NOT NULL REFERENCES public.generated_recipes(generated_id) ON DELETE CASCADE,
+    ingredient_id INTEGER NOT NULL REFERENCES public.stock_ingredients(ingredient_id),
+    expiry_date DATE NOT NULL
+);
+-- =======================
+-- 14. Sales
+-- (Recorded when staff clicks New Sale on a recipe)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.sales (
+    sale_id SERIAL PRIMARY KEY,
+    branch_id INTEGER NOT NULL REFERENCES public.branches(branch_id),
+    recipe_id INTEGER NOT NULL REFERENCES public.recipes(recipe_id),
+    generated_id INTEGER REFERENCES public.generated_recipes(generated_id),
+    -- generated_id is NULL when sale is from a standard recipe
+    sold_by INTEGER NOT NULL REFERENCES public.users(user_id),
+    sold_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- =======================
+-- 15. Sale Deductions
+-- (Tracks exactly which batch was deducted per sale for FIFO traceability)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.sale_deductions (
+    deduction_id SERIAL PRIMARY KEY,
+    sale_id INTEGER NOT NULL REFERENCES public.sales(sale_id) ON DELETE CASCADE,
+    batch_id INTEGER NOT NULL REFERENCES public.ingredient_batches(batch_id),
+    quantity_deducted NUMERIC(12, 4) NOT NULL
+);
+-- =======================
+-- 16. Notifications
+-- =======================
+CREATE TABLE IF NOT EXISTS public.notifications (
+    notification_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
+    branch_id INTEGER REFERENCES public.branches(branch_id),
+    ingredient_id INTEGER REFERENCES public.stock_ingredients(ingredient_id),
+    title CHARACTER VARYING(150) NOT NULL,
+    message TEXT NOT NULL,
+    notification_type CHARACTER VARYING(50) CHECK (
+        notification_type IN (
+            'expiry_alert',
+            'recipe_pending',
+            'recipe_approved',
+            'recipe_rejected'
+        )
+    ),
+    status CHARACTER VARYING(20) DEFAULT 'unread' CHECK (status IN ('unread', 'read')),
+    days_until_expiry INTEGER,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    acknowledged_at TIMESTAMP WITH TIME ZONE
+);
+-- =======================
+-- 17. Waste Logs
+-- (Used to calculate wasted vs saved pie chart on home page)
+-- =======================
+CREATE TABLE IF NOT EXISTS public.waste_logs (
+    waste_id SERIAL PRIMARY KEY,
+    branch_id INTEGER NOT NULL REFERENCES public.branches(branch_id),
+    ingredient_id INTEGER NOT NULL REFERENCES public.stock_ingredients(ingredient_id),
+    batch_id INTEGER REFERENCES public.ingredient_batches(batch_id),
+    quantity_wasted NUMERIC(12, 4) NOT NULL,
+    unit_id INTEGER REFERENCES public.units(unit_id),
+    reason CHARACTER VARYING(50) CHECK (reason IN ('expired', 'damaged', 'other')),
+    logged_by INTEGER NOT NULL REFERENCES public.users(user_id),
+    logged_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+-- ============================================================
+-- SEED DATA
+-- ============================================================
+-- Units
 INSERT INTO public.units (code, name)
 VALUES ('g', 'Grams'),
     ('kg', 'Kilograms'),
@@ -171,14 +277,14 @@ VALUES ('g', 'Grams'),
     ('cup', 'Cup'),
     ('shot', 'Shot'),
     ('unit', 'Unit') ON CONFLICT (code) DO NOTHING;
--- Storage Types Seed
+-- Storage Types
 INSERT INTO public.storage_types (code, name)
 VALUES ('FRIDGE', 'Refrigerator'),
     ('FREEZER', 'Freezer'),
     ('PANTRY', 'Pantry'),
     ('ROOM_TEMP', 'Room Temperature'),
     ('DRY_STORAGE', 'Dry Storage') ON CONFLICT (code) DO NOTHING;
--- Default Admin User Seed
+-- Default Admin User
 -- Email: admin@kitchenpal.com
 -- Password: admin123
 INSERT INTO public.users (name, email, password_hash, role)
@@ -186,7 +292,13 @@ VALUES (
         'Admin',
         'admin@kitchenpal.com',
         '$2a$10$tYP/vVZSoZY/CdF48sljpOdVFvD0RzkbWacxr/HE9K5Hse3xb9PSi',
-        'ADMIN'
+        'admin'
     ) ON CONFLICT (email) DO
 UPDATE
 SET password_hash = EXCLUDED.password_hash;
+-- ============================================================
+-- AUTO-CLEANUP: Delete generated recipes older than 1 month
+-- Run this as a scheduled job / cron on your backend
+-- ============================================================
+-- DELETE FROM public.generated_recipes
+-- WHERE created_at < NOW() - INTERVAL '1 month';
