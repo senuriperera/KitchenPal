@@ -1,6 +1,5 @@
 <div class="modal-overlay" *ngIf="show" (click)="onOverlayClick()">
   <div class="modal-content recipe-modal" (click)="$event.stopPropagation()">
-
     <!-- Header -->
     <div class="modal-header">
       <h3>Create New Recipe</h3>
@@ -9,10 +8,14 @@
 
     <!-- Body -->
     <div class="modal-body">
-
       <!-- Image Upload -->
       <div class="image-upload-area" (click)="triggerFileInput()">
-        <img *ngIf="form.imagePreview" [src]="form.imagePreview" alt="Recipe preview" class="image-preview" />
+        <img
+          *ngIf="form.imagePreview"
+          [src]="form.imagePreview"
+          alt="Recipe preview"
+          class="image-preview"
+        />
         <div *ngIf="!form.imagePreview" class="upload-placeholder">
           <span class="material-icons upload-icon">image</span>
           <p class="upload-text">Click to upload recipe image</p>
@@ -78,12 +81,19 @@
       <div class="ingredients-section">
         <div class="ingredients-header">
           <label class="section-label">Ingredients</label>
-          <button class="btn btn-add-ingredient" type="button" (click)="addIngredient()">
+          <button
+            class="btn btn-add-ingredient"
+            type="button"
+            (click)="addIngredient()"
+          >
             + Add Ingredient
           </button>
         </div>
 
-        <div class="ingredient-row" *ngFor="let ingredient of form.ingredients; let i = index">
+        <div
+          class="ingredient-row"
+          *ngFor="let ingredient of form.ingredients; let i = index"
+        >
           <input
             type="text"
             [(ngModel)]="ingredient.name"
@@ -98,8 +108,13 @@
             min="0"
             step="0.01"
           />
-          <select [(ngModel)]="ingredient.unitId" class="form-control ingredient-unit">
-            <option *ngFor="let unit of units" [value]="unit.id">{{ unit.label }}</option>
+          <select
+            [(ngModel)]="ingredient.unitId"
+            class="form-control ingredient-unit"
+          >
+            <option *ngFor="let unit of units" [value]="unit.id">
+              {{ unit.label }}
+            </option>
           </select>
           <button
             class="remove-ingredient-btn"
@@ -112,12 +127,13 @@
           </button>
         </div>
       </div>
-
     </div>
 
     <!-- Footer -->
     <div class="modal-footer">
-      <button class="btn btn-secondary" type="button" (click)="onCancel()">Cancel</button>
+      <button class="btn btn-secondary" type="button" (click)="onCancel()">
+        Cancel
+      </button>
       <button
         class="btn btn-primary"
         type="button"
@@ -127,6 +143,5 @@
         Save Recipe
       </button>
     </div>
-
   </div>
 </div>

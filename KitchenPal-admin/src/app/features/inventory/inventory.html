@@ -21,9 +21,6 @@
         <button class="btn btn-secondary">
           <span class="material-icons btn-icon">filter_list</span> Filter
         </button>
-        <button class="btn btn-primary" (click)="openAddModal()">
-          <span class="btn-icon">+</span> Add Ingredient
-        </button>
       </div>
     </div>
 
@@ -174,25 +171,54 @@
         <!-- Image Update -->
         <div class="form-group">
           <label>Image</label>
-          <div class="image-upload-area" (click)="!isEditUploadingImage && editImageInput.click()" [class.has-image]="editData.image">
+          <div
+            class="image-upload-area"
+            (click)="!isEditUploadingImage && editImageInput.click()"
+            [class.has-image]="editData.image"
+          >
             <!-- upload spinner -->
             <div *ngIf="isEditUploadingImage" class="upload-spinner">
               <div class="spinner"></div>
               <span>Uploading to Cloudinary...</span>
             </div>
-            <img *ngIf="editData.image && !isEditUploadingImage" [src]="editData.image" alt="Preview" class="image-preview" />
-            <div *ngIf="!editData.image && !isEditUploadingImage" class="upload-placeholder">
+            <img
+              *ngIf="editData.image && !isEditUploadingImage"
+              [src]="editData.image"
+              alt="Preview"
+              class="image-preview"
+            />
+            <div
+              *ngIf="!editData.image && !isEditUploadingImage"
+              class="upload-placeholder"
+            >
               <span class="material-icons upload-icon">photo_camera</span>
               <span>Click to update image</span>
             </div>
           </div>
-          <input #editImageInput type="file" accept="image/*" class="hidden-file-input"
-            (change)="onEditImageSelected($event)" />
+          <input
+            #editImageInput
+            type="file"
+            accept="image/*"
+            class="hidden-file-input"
+            (change)="onEditImageSelected($event)"
+          />
           <!-- Scan Dates button -->
-          <button class="scan-btn" (click)="scanDatesForEdit()"
-            [disabled]="!editData.image || isEditScanning || isEditUploadingImage">
+          <button
+            class="scan-btn"
+            (click)="scanDatesForEdit()"
+            [disabled]="
+              !editData.image || isEditScanning || isEditUploadingImage
+            "
+          >
             <span *ngIf="isEditScanning" class="scan-spinner">⏳</span>
-            <span *ngIf="!isEditScanning"><span class="material-icons" style="font-size:16px;vertical-align:middle">document_scanner</span> Scan Dates via OCR</span>
+            <span *ngIf="!isEditScanning"
+              ><span
+                class="material-icons"
+                style="font-size: 16px; vertical-align: middle"
+                >document_scanner</span
+              >
+              Scan Dates via OCR</span
+            >
             <span *ngIf="isEditScanning">Scanning...</span>
           </button>
         </div>
@@ -204,7 +230,12 @@
         <div class="form-row">
           <div class="form-group">
             <label>Quantity</label>
-            <input type="number" [(ngModel)]="editData.quantity" class="form-control" step="0.01" />
+            <input
+              type="number"
+              [(ngModel)]="editData.quantity"
+              class="form-control"
+              step="0.01"
+            />
           </div>
           <div class="form-group">
             <label>Unit</label>
@@ -220,7 +251,10 @@
           <label>Storage Type</label>
           <select [(ngModel)]="editData.storageTypeId" class="form-control">
             <option [value]="undefined" disabled>Select Storage Type</option>
-            <option *ngFor="let type of storageTypes" [ngValue]="type.storage_type_id">
+            <option
+              *ngFor="let type of storageTypes"
+              [ngValue]="type.storage_type_id"
+            >
               {{ type.name }}
             </option>
           </select>
@@ -228,24 +262,47 @@
         <div class="form-row">
           <div class="form-group">
             <label>Manufacture Date</label>
-            <input type="date" [(ngModel)]="editData.manufactureDate" class="form-control" />
+            <input
+              type="date"
+              [(ngModel)]="editData.manufactureDate"
+              class="form-control"
+            />
           </div>
           <div class="form-group">
             <label>Expiry Date</label>
-            <input type="date" [(ngModel)]="editData.expiryDate" class="form-control"
-              [min]="editData.manufactureDate || ''" />
+            <input
+              type="date"
+              [(ngModel)]="editData.expiryDate"
+              class="form-control"
+              [min]="editData.manufactureDate || ''"
+            />
           </div>
         </div>
         <div class="form-group">
           <label>Cost per Unit ($)</label>
-          <input type="number" [(ngModel)]="editData.cost" class="form-control" step="0.01" />
+          <input
+            type="number"
+            [(ngModel)]="editData.cost"
+            class="form-control"
+            step="0.01"
+          />
         </div>
         <!-- Edit Error -->
         <div *ngIf="editError" class="add-error">{{ editError }}</div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeModals()" [disabled]="isSaving">Cancel</button>
-        <button class="btn btn-primary" (click)="saveEdit()" [disabled]="isSaving || isEditUploadingImage">
+        <button
+          class="btn btn-secondary"
+          (click)="closeModals()"
+          [disabled]="isSaving"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          (click)="saveEdit()"
+          [disabled]="isSaving || isEditUploadingImage"
+        >
           <span *ngIf="isSaving">Saving...</span>
           <span *ngIf="!isSaving">Save Changes</span>
         </button>
@@ -254,126 +311,34 @@
   </div>
 </div>
 
-  <!-- Add Ingredient Modal -->
-  <div class="modal-overlay" *ngIf="showAddModal" (click)="closeModals()">
-    <div class="modal-content add-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Add Ingredient</h3>
-        <button class="close-btn" (click)="closeModals()">×</button>
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeModals()">
+  <div class="modal-content delete-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Delete Ingredient</h3>
+      <button class="close-btn" (click)="closeModals()">×</button>
+    </div>
+    <div class="modal-body delete-confirm-body">
+      <div class="delete-icon">
+        <span class="material-icons">delete_forever</span>
       </div>
-      <div class="modal-body">
-
-        <!-- Image Upload -->
-        <div class="form-group">
-          <label>Image</label>
-          <div class="image-upload-area" (click)="!isUploadingImage && imageInput.click()" [class.has-image]="addData.imagePreview">
-            <!-- upload progress overlay -->
-            <div *ngIf="isUploadingImage" class="upload-spinner">
-              <div class="spinner"></div>
-              <span>Uploading to Cloudinary...</span>
-            </div>
-            <img *ngIf="addData.imagePreview && !isUploadingImage" [src]="addData.imagePreview" alt="Preview" class="image-preview" />
-            <div *ngIf="!addData.imagePreview && !isUploadingImage" class="upload-placeholder">
-              <span class="material-icons upload-icon">photo_camera</span>
-              <span>Click to upload image</span>
-              <span class="upload-hint">Used for OCR date scanning</span>
-            </div>
-          </div>
-          <input #imageInput type="file" accept="image/*" class="hidden-file-input"
-            (change)="onImageSelected($event)" />
-          <!-- Scan Dates button (enabled only when Cloudinary URL is ready) -->
-          <button class="scan-btn" (click)="scanDates()"
-            [disabled]="!addData.imageUrl || isScanning || isUploadingImage">
-            <span *ngIf="!isScanning"><span class="material-icons" style="font-size:16px;vertical-align:middle">document_scanner</span> Scan Dates via OCR</span>
-            <span *ngIf="isScanning">⏳ Scanning...</span>
-          </button>
-        </div>
-
-        <!-- Name -->
-        <div class="form-group">
-          <label>Item Name *</label>
-          <input type="text" [(ngModel)]="addData.name" class="form-control" placeholder="e.g. Organic Apples" />
-        </div>
-
-        <!-- Quantity + Unit -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>Quantity *</label>
-            <input type="number" [(ngModel)]="addData.quantity" class="form-control" step="0.01" min="0" placeholder="0" />
-          </div>
-          <div class="form-group">
-            <label>Unit *</label>
-            <select [(ngModel)]="addData.unitId" class="form-control">
-              <option [value]="undefined" disabled>Select Unit</option>
-              <option *ngFor="let unit of units" [ngValue]="unit.unit_id">
-                {{ unit.name }} ({{ unit.code }})
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Storage Type -->
-        <div class="form-group">
-          <label>Storage Type *</label>
-          <select [(ngModel)]="addData.storageTypeId" class="form-control">
-            <option [value]="undefined" disabled>Select Storage Type</option>
-            <option *ngFor="let type of storageTypes" [ngValue]="type.storage_type_id">
-              {{ type.name }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Manufacture + Expiry Date -->
-        <div class="form-row">
-          <div class="form-group">
-            <label>Manufacture Date</label>
-            <input type="date" [(ngModel)]="addData.manufactureDate" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label>Expiry Date *</label>
-            <input type="date" [(ngModel)]="addData.expiryDate" class="form-control"
-              [min]="addData.manufactureDate || ''" />
-          </div>
-        </div>
-
-        <!-- Cost -->
-        <div class="form-group">
-          <label>Cost per Unit ($) *</label>
-          <input type="number" [(ngModel)]="addData.cost" class="form-control" step="0.01" min="0" placeholder="0.00" />
-        </div>
-
-        <!-- Error Message -->
-        <div *ngIf="addError" class="add-error">{{ addError }}</div>
-
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeModals()" [disabled]="isSaving">Cancel</button>
-        <button class="btn btn-primary" (click)="saveNewIngredient()" [disabled]="isSaving">
-          <span *ngIf="isSaving">Saving...</span>
-          <span *ngIf="!isSaving">Add Ingredient</span>
-        </button>
-      </div>
+      <p>
+        Are you sure you want to delete
+        <strong>{{ ingredientToDelete?.name }}</strong
+        >?
+      </p>
+      <p class="delete-warning">This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" (click)="closeModals()">Cancel</button>
+      <button
+        class="btn btn-danger"
+        (click)="confirmDelete()"
+        [disabled]="isDeleting"
+      >
+        <span *ngIf="isDeleting">Deleting...</span>
+        <span *ngIf="!isDeleting">Delete</span>
+      </button>
     </div>
   </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeModals()">
-    <div class="modal-content delete-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Delete Ingredient</h3>
-        <button class="close-btn" (click)="closeModals()">×</button>
-      </div>
-      <div class="modal-body delete-confirm-body">
-        <div class="delete-icon"><span class="material-icons">delete_forever</span></div>
-        <p>Are you sure you want to delete <strong>{{ ingredientToDelete?.name }}</strong>?</p>
-        <p class="delete-warning">This action cannot be undone.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeModals()">Cancel</button>
-        <button class="btn btn-danger" (click)="confirmDelete()" [disabled]="isDeleting">
-          <span *ngIf="isDeleting">Deleting...</span>
-          <span *ngIf="!isDeleting">Delete</span>
-        </button>
-      </div>
-    </div>
-  </div>
+</div>

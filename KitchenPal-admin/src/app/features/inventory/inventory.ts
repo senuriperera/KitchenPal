@@ -151,46 +151,16 @@ export class InventoryComponent implements OnInit {
   selectedIngredient: Ingredient | null = null;
   showViewModal: boolean = false;
   showEditModal: boolean = false;
-  showAddModal: boolean = false;
   showDeleteModal: boolean = false;
   ingredientToDelete: Ingredient | null = null;
   editData: Partial<Ingredient> = {};
   editError: string | null = null;
   isSaving: boolean = false;
   isDeleting: boolean = false;
-  addError: string | null = null;
 
   // Upload / OCR flags
-  isUploadingImage: boolean = false;
-  isScanning: boolean = false;
   isEditUploadingImage: boolean = false;
   isEditScanning: boolean = false;
-
-  addData: {
-    name: string;
-    quantity: number | null;
-    unitId: number | undefined;
-    storageTypeId: number | undefined;
-    manufactureDate: string;
-    expiryDate: string;
-    cost: number | null;
-    imageUrl: string | null;       // Cloudinary URL stored after upload
-    imagePreview: string | null;   // local object-URL for preview
-  } = this.emptyAddData();
-
-  private emptyAddData() {
-    return {
-      name: '',
-      quantity: null,
-      unitId: undefined,
-      storageTypeId: undefined,
-      manufactureDate: '',
-      expiryDate: '',
-      cost: null,
-      imageUrl: null,
-      imagePreview: null
-    };
-  }
 
   // ─── View ────────────────────────────────────────────────────────────────────
   viewDetails(ingredient: Ingredient): void {
@@ -283,106 +253,6 @@ export class InventoryComponent implements OnInit {
     });
   }
 
-  // ─── Add ─────────────────────────────────────────────────────────────────────
-  openAddModal(): void {
-    this.addData = this.emptyAddData();
-    this.addError = null;
-    this.isUploadingImage = false;
-    this.isScanning = false;
-    this.showAddModal = true;
-  }
-
-  /** Pick a file → upload to Cloudinary → store URL; show local preview while uploading */
-  async onImageSelected(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || !input.files[0]) return;
-    const file = input.files[0];
-
-    // Show local preview immediately
-    this.addData.imagePreview = URL.createObjectURL(file);
-    this.addData.imageUrl = null;
-    this.isUploadingImage = true;
-
-    try {
-      const url = await this.uploadToCloudinary(file);
-      this.addData.imageUrl = url;
-      this.addData.imagePreview = url; // replace blob URL with real Cloudinary URL
-    } catch (e) {
-      console.error('Image upload failed:', e);
-      this.addError = 'Image upload failed. You can still add the ingredient without an image.';
-      this.addData.imagePreview = null;
-    } finally {
-      this.isUploadingImage = false;
-    }
-  }
-
-  /** After the image is uploaded to Cloudinary, call OCR scan and auto-fill dates */
-  async scanDates(): Promise<void> {
-    if (!this.addData.imageUrl) return;
-    this.isScanning = true;
-    this.addError = null;
-
-    try {
-      const result = await this.callOcrScan(this.addData.imageUrl);
-      if (result.manufactureDate) this.addData.manufactureDate = result.manufactureDate;
-      if (result.expiryDate) this.addData.expiryDate = result.expiryDate;
-
-      if (!result.manufactureDate && !result.expiryDate) {
-        this.addError = 'No dates found in image. Please enter dates manually.';
-      }
-    } catch (e) {
-      console.error('OCR scan failed:', e);
-      this.addError = 'Scan failed. Please enter dates manually.';
-    } finally {
-      this.isScanning = false;
-    }
-  }
-
-  saveNewIngredient(): void {
-    this.addError = null;
-    if (!this.addData.name?.trim()) { this.addError = 'Item name is required.'; return; }
-    if (this.addData.quantity === null || this.addData.quantity < 0) { this.addError = 'Quantity is required.'; return; }
-    if (!this.addData.unitId) { this.addError = 'Please select a unit.'; return; }
-    if (!this.addData.storageTypeId) { this.addError = 'Please select a storage type.'; return; }
-    if (!this.addData.expiryDate) { this.addError = 'Expiry date is required.'; return; }
-    if (this.addData.cost === null || this.addData.cost < 0) { this.addError = 'Cost is required.'; return; }
-
-    // Date validation
-    if (this.addData.manufactureDate && this.addData.expiryDate < this.addData.manufactureDate) {
-      this.addError = 'Expiry date cannot be before manufacture date.';
-      return;
-    }
-
-    if (this.isUploadingImage) { this.addError = 'Please wait for image upload to finish.'; return; }
-
-    this.isSaving = true;
-
-    const payload: Partial<IngredientResponse> = {
-      name: this.addData.name.trim(),
-      quantity: this.addData.quantity!,
-      unit_id: this.addData.unitId,
-      storage_type_id: this.addData.storageTypeId,
-      expiry_date: this.addData.expiryDate,
-      manufacture_date: this.addData.manufactureDate || undefined,
-      price: this.addData.cost!,
-      branch_id: this.BRANCH_ID,
-      image_url: this.addData.imageUrl || undefined
-    };
-
-    this.ingredientService.createIngredient(payload).subscribe({
-      next: () => {
-        this.isSaving = false;
-        this.loadIngredients();
-        this.closeModals();
-      },
-      error: (err) => {
-        console.error('Failed to create ingredient:', err);
-        this.addError = 'Failed to add ingredient. Please try again.';
-        this.isSaving = false;
-      }
-    });
-  }
-
   // ─── Delete ───────────────────────────────────────────────────────────────────
   openDeleteModal(ingredient: Ingredient): void {
     this.ingredientToDelete = ingredient;
@@ -411,17 +281,13 @@ export class InventoryComponent implements OnInit {
   closeModals(): void {
     this.showViewModal = false;
     this.showEditModal = false;
-    this.showAddModal = false;
     this.showDeleteModal = false;
     this.selectedIngredient = null;
     this.ingredientToDelete = null;
     this.editData = {};
-    this.addError = null;
     this.editError = null;
     this.isSaving = false;
     this.isDeleting = false;
-    this.isUploadingImage = false;
-    this.isScanning = false;
     this.isEditUploadingImage = false;
     this.isEditScanning = false;
   }
