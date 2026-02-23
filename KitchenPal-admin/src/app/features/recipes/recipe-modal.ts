@@ -1,12 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
-import { MasterIngredientService, MasterIngredient } from '../../../core/services/master-ingredient.service';
-import { IngredientService } from '../../../core/services/ingredient.service';
+import { MasterIngredientService, MasterIngredient } from '../../core/services/master-ingredient.service';
+import { IngredientService } from '../../core/services/ingredient.service';
 
 export interface RecipeIngredient {
     name: string;
@@ -36,7 +35,7 @@ interface IngredientSearchState {
 @Component({
     selector: 'app-recipe-modal',
     standalone: true,
-    imports: [CommonModule, FormsModule, HttpClientModule],
+    imports: [CommonModule, FormsModule],
     templateUrl: './recipe-modal.html',
     styleUrl: './recipe-modal.scss'
 })
@@ -246,7 +245,9 @@ export class RecipeModalComponent implements OnChanges, OnDestroy {
 
     isDropdownVisible(index: number): boolean {
         const state = this.getSearchState(index);
-        return state.showDropdown && (state.suggestions.length > 0 || state.isLoading);
+        const ingredient = this.form.ingredients[index];
+        // Show dropdown when: has suggestions, is loading, or user typed enough to create new
+        return state.showDropdown && (state.suggestions.length > 0 || state.isLoading || ingredient.name.length >= 2);
     }
 
     isSearchLoading(index: number): boolean {

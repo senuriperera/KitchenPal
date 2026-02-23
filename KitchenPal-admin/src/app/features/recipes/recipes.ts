@@ -1,13 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+import { forkJoin, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { HeaderComponent } from '../../shared/components/header/header';
-import { RecipeModalComponent, RecipeFormData } from '../../shared/components/recipe-modal/recipe-modal';
+import { RecipeModalComponent, RecipeFormData, RecipeIngredient } from './recipe-modal';
+import { MasterIngredientService } from '../../core/services/master-ingredient.service';
 
 export interface RecipeIngredientDisplay {
   name: string;
   quantity: number | null;
   unit: string;
+  masterIngredientId?: number | null;
 }
 
 export interface Recipe {
@@ -26,13 +31,16 @@ export interface Recipe {
 @Component({
   selector: 'app-recipes',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent, RecipeModalComponent],
+  imports: [CommonModule, FormsModule, HttpClientModule, HeaderComponent, RecipeModalComponent],
   templateUrl: './recipes.html',
   styleUrl: './recipes.scss'
 })
 export class Recipes {
   searchQuery: string = '';
   showCreateModal: boolean = false;
+  isSaving: boolean = false;
+
+  private masterIngredientService = inject(MasterIngredientService);
 
   recipes: Recipe[] = [
     {
@@ -85,6 +93,66 @@ export class Recipes {
   }
 
   onSaveRecipe(data: RecipeFormData): void {
+    const validIngredients = data.ingredients.filter(i => i.name.trim());
+    
+    if (validIngredients.length === 0) {
+      this.createAndAddRecipe(data, []);
+      return;
+    }
+
+    this.isSaving = true;
+
+    // Process each ingredient: find or create in master_ingredients
+    const ingredientRequests = validIngredients.map(ingredient => {
+      if (ingredient.masterIngredientId) {
+        // Already selected from catalog, use existing ID
+        return of({
+          name: ingredient.name,
+          quantity: ingredient.quantity,
+          unit: ingredient.unitId,
+          masterIngredientId: ingredient.masterIngredientId
+        });
+      } else {
+        // New ingredient - find or create
+        return this.masterIngredientService.findOrCreate(ingredient.name.trim()).pipe(
+          map(result => ({
+            name: result.ingredient.name,
+            quantity: ingredient.quantity,
+            unit: ingredient.unitId,
+            masterIngredientId: result.ingredient.master_ingredient_id
+          })),
+          catchError(() => of({
+            name: ingredient.name,
+            quantity: ingredient.quantity,
+            unit: ingredient.unitId,
+            masterIngredientId: null
+          }))
+        );
+      }
+    });
+
+    forkJoin(ingredientRequests).subscribe({
+      next: (processedIngredients) => {
+        this.createAndAddRecipe(data, processedIngredients);
+        this.isSaving = false;
+      },
+      error: () => {
+        // Fallback: create recipe without master ingredient IDs
+        this.createAndAddRecipe(data, validIngredients.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unitId,
+          masterIngredientId: null
+        })));
+        this.isSaving = false;
+      }
+    });
+  }
+
+  private createAndAddRecipe(
+    data: RecipeFormData,
+    ingredients: { name: string; quantity: number | null; unit: string; masterIngredientId: number | null }[]
+  ): void {
     const newRecipe: Recipe = {
       id: Date.now(),
       name: data.name,
@@ -95,13 +163,12 @@ export class Recipes {
       cookingTime: data.cookingTime ?? 0,
       description: data.description,
       showIngredients: false,
-      ingredients: data.ingredients
-        .filter(i => i.name.trim())
-        .map(i => ({
-          name: i.name.trim(),
-          quantity: i.quantity,
-          unit: String(i.unitId ?? '')
-        }))
+      ingredients: ingredients.map(i => ({
+        name: i.name,
+        quantity: i.quantity,
+        unit: i.unit,
+        masterIngredientId: i.masterIngredientId
+      }))
     };
     this.recipes.unshift(newRecipe);
     this.showCreateModal = false;
