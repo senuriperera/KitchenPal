@@ -61,21 +61,21 @@
             <h3 class="card-title">{{ recipe.name }}</h3>
             <div class="card-actions">
               <button
-                class="action-btn"
+                class="action-btn view-btn"
                 (click)="viewRecipe(recipe)"
                 title="View Details"
               >
                 <span class="material-icons">visibility</span>
               </button>
               <button
-                class="action-btn"
+                class="action-btn edit-btn"
                 (click)="editRecipe(recipe)"
                 title="Edit"
               >
                 <span class="material-icons">edit</span>
               </button>
               <button
-                class="action-btn"
+                class="action-btn delete-btn"
                 (click)="deleteRecipe(recipe)"
                 title="Delete"
               >

@@ -157,17 +157,41 @@
     margin-left: 8px;
 
     .action-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 0.9rem;
-      padding: 4px;
-      border-radius: 6px;
-      transition: background 0.2s;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 3px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s, color 0.15s;
 
-      &:hover {
-        background: #f3f4f6;
-      }
+        .material-icons {
+          font-size: 20px;
+        }
+
+        &.view-btn {
+          color: #3b82f6;
+          &:hover {
+            background: #eff6ff;
+            color: #1d4ed8;
+          }
+        }
+        &.edit-btn {
+          color: #f97316;
+          &:hover {
+            background: #fff7ed;
+            color: #ea580c;
+          }
+        }
+        &.delete-btn {
+          color: #ef4444;
+          &:hover {
+            background: #fef2f2;
+            color: #dc2626;
+          }
+        }
     }
   }
 }
@@ -781,11 +805,11 @@
         }
 
         &.btn-primary {
-            background: #fbbf24;
+            background: #f97316;
             color: white;
 
             &:hover:not(:disabled) {
-                background: #f59e0b;
+                background: #ea580c;
             }
 
             &:disabled {
