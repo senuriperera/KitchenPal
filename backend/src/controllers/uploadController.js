@@ -10,7 +10,7 @@ class UploadController {
                 return res.status(400).json({ error: 'No image file provided' });
             }
 
-            // Upload to Cloudinary
+            // Upload to Cloudinary with timeout handling
             const result = await uploadImage(req.file.buffer, 'kitchenpal/recipes');
 
             res.status(200).json({
@@ -20,7 +20,16 @@ class UploadController {
             });
         } catch (error) {
             console.error('Upload image error:', error);
-            res.status(500).json({ error: 'Failed to upload image' });
+
+            // Provide more specific error messages
+            if (error.message && error.message.includes('timeout')) {
+                return res.status(408).json({ error: 'Image upload timeout. Please try again.' });
+            }
+            if (error.http_code === 401 || error.message?.includes('credentials')) {
+                return res.status(500).json({ error: 'Image upload service configuration error' });
+            }
+
+            res.status(500).json({ error: 'Failed to upload image. Please try again.' });
         }
     }
 

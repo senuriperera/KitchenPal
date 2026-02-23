@@ -1,16 +1,19 @@
-import { Component, inject, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, of, Subject, Subscription } from 'rxjs';
-import { catchError, map, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { of, Subject, Subscription } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { MasterIngredientService, MasterIngredient } from '../../core/services/master-ingredient.service';
 import { IngredientService } from '../../core/services/ingredient.service';
+import { RecipeService, Recipe as ApiRecipe, RecipeIngredient as ApiRecipeIngredient } from '../../core/services/recipe.service';
+import { UploadService } from '../../core/services/upload.service';
 
 export interface RecipeIngredient {
   name: string;
   quantity: number | null;
-  unitId: string;
+  unitId: number | null;
+  unitCode: string;
   masterIngredientId: number | null;
   isNew: boolean;
 }
@@ -36,6 +39,7 @@ export interface RecipeIngredientDisplay {
   name: string;
   quantity: number | null;
   unit: string;
+  unitId: number;
   masterIngredientId?: number | null;
 }
 
@@ -44,8 +48,6 @@ export interface Recipe {
   name: string;
   image: string;
   totalCost: number;
-  suggestedPrice: number;
-  discount: number;
   ingredients: RecipeIngredientDisplay[];
   showIngredients: boolean;
   cookingTime: number;
@@ -59,18 +61,26 @@ export interface Recipe {
   templateUrl: './recipes.html',
   styleUrl: './recipes.scss'
 })
-export class Recipes implements OnDestroy {
+export class Recipes implements OnInit, OnDestroy {
   searchQuery: string = '';
   showCreateModal: boolean = false;
+  showViewModal: boolean = false;
+  showDeleteModal: boolean = false;
   isSaving: boolean = false;
+  isLoading: boolean = false;
+  errorMessage: string = '';
+  isEditMode: boolean = false;
+  selectedRecipe: Recipe | null = null;
+  recipeToDelete: Recipe | null = null;
 
   private masterIngredientService = inject(MasterIngredientService);
   private ingredientService = inject(IngredientService);
+  private recipeService = inject(RecipeService);
+  private uploadService = inject(UploadService);
 
-  // Units from database (will be loaded)
+  // Units
   units: { id: number; code: string; label: string }[] = [];
 
-  // Fallback static units (used until DB units load)
   private staticUnits = [
     { id: 1, code: 'g', label: 'g (grams)' },
     { id: 2, code: 'kg', label: 'kg (kilograms)' },
@@ -92,49 +102,54 @@ export class Recipes implements OnDestroy {
   private subscriptions: Subscription[] = [];
   private activeDropdownIndex: number | null = null;
 
-  recipes: Recipe[] = [
-    {
-      id: 1,
-      name: 'Cappuccino',
-      image: 'https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=400&q=80',
-      totalCost: 8.00,
-      suggestedPrice: 12.00,
-      discount: 10,
-      cookingTime: 10,
-      description: 'Classic Italian coffee drink',
-      showIngredients: false,
-      ingredients: [
-        { name: 'Espresso', quantity: 30, unit: 'ml' },
-        { name: 'Milk', quantity: 120, unit: 'ml' },
-        { name: 'Milk Foam', quantity: 60, unit: 'ml' },
-      ]
-    },
-    {
-      id: 2,
-      name: 'Avocado Toast',
-      image: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c820?w=400&q=80',
-      totalCost: 5.50,
-      suggestedPrice: 9.00,
-      discount: 15,
-      cookingTime: 15,
-      description: 'Healthy breakfast with avocado on sourdough',
-      showIngredients: false,
-      ingredients: [
-        { name: 'Sourdough Bread', quantity: 2, unit: 'pcs' },
-        { name: 'Avocado', quantity: 1, unit: 'pcs' },
-        { name: 'Lemon Juice', quantity: 10, unit: 'ml' },
-        { name: 'Salt', quantity: 2, unit: 'g' },
-      ]
-    }
-  ];
+  recipes: Recipe[] = [];
+  private nextId: number = 1;
 
   constructor() {
     this.loadUnits();
   }
 
+  ngOnInit(): void {
+    this.loadRecipes();
+  }
+
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.searchSubjects.forEach(subject => subject.complete());
+  }
+
+  private loadRecipes(): void {
+    this.isLoading = true;
+    this.recipeService.getAllRecipes().subscribe({
+      next: (apiRecipes) => {
+        this.recipes = apiRecipes.map(r => this.mapApiRecipeToRecipe(r));
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Failed to load recipes:', error);
+        this.errorMessage = 'Failed to load recipes. Please try again.';
+        this.isLoading = false;
+      }
+    });
+  }
+
+  private mapApiRecipeToRecipe(apiRecipe: ApiRecipe): Recipe {
+    return {
+      id: apiRecipe.recipe_id,
+      name: apiRecipe.recipe_name,
+      image: apiRecipe.image_url || 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&q=80',
+      totalCost: apiRecipe.base_price,
+      cookingTime: apiRecipe.cooking_time_minutes || 0,
+      description: apiRecipe.description || '',
+      showIngredients: false,
+      ingredients: apiRecipe.ingredients.map(ing => ({
+        name: ing.name,
+        quantity: ing.quantity_required,
+        unit: ing.unit_code,
+        unitId: ing.unit_id,
+        masterIngredientId: ing.master_ingredient_id
+      }))
+    };
   }
 
   private loadUnits(): void {
@@ -162,12 +177,22 @@ export class Recipes implements OnDestroy {
 
   openCreateModal(): void {
     this.showCreateModal = true;
+    this.isEditMode = false;
+    this.selectedRecipe = null;
     this.form = this.emptyForm();
     this.clearSearchStates();
   }
 
   closeModal(): void {
     this.showCreateModal = false;
+    this.showViewModal = false;
+    this.isEditMode = false;
+    this.selectedRecipe = null;
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.recipeToDelete = null;
   }
 
   onOverlayClick(): void {
@@ -190,14 +215,17 @@ export class Recipes implements OnDestroy {
     return {
       name: '',
       quantity: null,
-      unitId: 'g',
+      unitId: null,
+      unitCode: 'g',
       masterIngredientId: null,
       isNew: false
     };
   }
 
   addIngredient(): void {
-    this.form.ingredients.push(this.newIngredient());
+    const newIng = this.newIngredient();
+    this.form.ingredients.push(newIng);
+    console.log('Added new ingredient, total count:', this.form.ingredients.length);
   }
 
   removeIngredient(index: number): void {
@@ -297,8 +325,10 @@ export class Recipes implements OnDestroy {
     ingredient.masterIngredientId = masterIngredient.master_ingredient_id;
     ingredient.isNew = false;
 
-    if (masterIngredient.defaultUnit) {
-      ingredient.unitId = masterIngredient.defaultUnit.code;
+    // Auto-fill unit from master ingredient's default unit
+    if (masterIngredient.default_unit_id) {
+      ingredient.unitId = masterIngredient.default_unit_id;
+      ingredient.unitCode = masterIngredient.defaultUnit?.code || 'g';
     }
 
     const state = this.getSearchState(index);
@@ -369,95 +399,194 @@ export class Recipes implements OnDestroy {
     return !!(this.form.name.trim() && this.form.cookingTime && this.form.price);
   }
 
-  // ─── Recipe CRUD ────────────────────────────────────────────────────────────
+  // ─── Recipe CRUD ────────────────────────────────────────────
 
-  onSaveRecipe(): void {
-    const validIngredients = this.form.ingredients.filter(i => i.name.trim());
+  async onSaveRecipe(): Promise<void> {
+    this.isSaving = true;
+    this.errorMessage = '';
+
+    console.log('Form ingredients before processing:', this.form.ingredients);
+
+    // Process new ingredients - create them in master ingredients first
+    const newIngredients = this.form.ingredients.filter(i => 
+      i.isNew && !i.masterIngredientId && i.name.trim() && i.quantity && i.unitId
+    );
+
+    if (newIngredients.length > 0) {
+      console.log('Creating new master ingredients:', newIngredients.length);
+      try {
+        for (const ingredient of newIngredients) {
+          const result = await this.masterIngredientService
+            .findOrCreate(ingredient.name.trim(), ingredient.unitId!)
+            .toPromise();
+          
+          if (result) {
+            ingredient.masterIngredientId = result.ingredient.master_ingredient_id;
+            ingredient.isNew = false;
+            console.log(`Created/found master ingredient: ${ingredient.name} (ID: ${ingredient.masterIngredientId})`);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to create master ingredients:', error);
+        this.errorMessage = 'Failed to create new ingredients. Please try again.';
+        this.isSaving = false;
+        return;
+      }
+    }
+
+    const validIngredients = this.form.ingredients
+      .filter(i => i.name.trim() && i.quantity && i.unitId && i.masterIngredientId)
+      .map(i => ({
+        master_ingredient_id: i.masterIngredientId!,
+        quantity_required: i.quantity!,
+        unit_id: i.unitId!
+      }));
+
+    console.log('Valid ingredients after processing:', validIngredients);
 
     if (validIngredients.length === 0) {
-      this.createAndAddRecipe(this.form, []);
+      this.errorMessage = 'Please add at least one valid ingredient with quantity and unit';
+      this.isSaving = false;
       return;
     }
 
-    this.isSaving = true;
-
-    const ingredientRequests = validIngredients.map(ingredient => {
-      if (ingredient.masterIngredientId) {
-        return of({
-          name: ingredient.name,
-          quantity: ingredient.quantity,
-          unit: ingredient.unitId,
-          masterIngredientId: ingredient.masterIngredientId
-        });
-      } else {
-        return this.masterIngredientService.findOrCreate(ingredient.name.trim()).pipe(
-          map(result => ({
-            name: result.ingredient.name,
-            quantity: ingredient.quantity,
-            unit: ingredient.unitId,
-            masterIngredientId: result.ingredient.master_ingredient_id
-          })),
-          catchError(() => of({
-            name: ingredient.name,
-            quantity: ingredient.quantity,
-            unit: ingredient.unitId,
-            masterIngredientId: null
-          }))
-        );
+    // Upload image to Cloudinary if a new image file is selected
+    let imageUrl: string | undefined = this.form.imagePreview || undefined;
+    if (this.form.imageFile) {
+      try {
+        imageUrl = await this.uploadService.uploadImage(this.form.imageFile).toPromise();
+      } catch (uploadError) {
+        console.warn('Image upload failed, using existing or no image:', uploadError);
+        // Continue with existing image or without image - don't block recipe save
       }
-    });
+    }
 
-    forkJoin(ingredientRequests).subscribe({
-      next: (processedIngredients) => {
-        this.createAndAddRecipe(this.form, processedIngredients);
-        this.isSaving = false;
-      },
-      error: () => {
-        this.createAndAddRecipe(this.form, validIngredients.map(i => ({
-          name: i.name,
-          quantity: i.quantity,
-          unit: i.unitId,
-          masterIngredientId: null
-        })));
-        this.isSaving = false;
-      }
-    });
-  }
-
-  private createAndAddRecipe(
-    data: RecipeFormData,
-    ingredients: { name: string; quantity: number | null; unit: string; masterIngredientId: number | null }[]
-  ): void {
-    const newRecipe: Recipe = {
-      id: Date.now(),
-      name: data.name,
-      image: data.imagePreview || 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&q=80',
-      totalCost: data.price ?? 0,
-      suggestedPrice: Math.round((data.price ?? 0) * 1.5 * 100) / 100,
-      discount: 10,
-      cookingTime: data.cookingTime ?? 0,
-      description: data.description,
-      showIngredients: false,
-      ingredients: ingredients.map(i => ({
-        name: i.name,
-        quantity: i.quantity,
-        unit: i.unit,
-        masterIngredientId: i.masterIngredientId
-      }))
+    const recipeData = {
+      name: this.form.name.trim(),
+      image_url: imageUrl,
+      cooking_time_minutes: this.form.cookingTime || undefined,
+      description: this.form.description || undefined,
+      base_price: this.form.price!,
+      ingredients: validIngredients
     };
-    this.recipes.unshift(newRecipe);
-    this.showCreateModal = false;
+
+    console.log('Saving recipe:', { isEditMode: this.isEditMode, recipeId: this.selectedRecipe?.id, recipeData });
+
+    if (this.isEditMode && this.selectedRecipe) {
+      // Update existing recipe
+      console.log('Updating recipe ID:', this.selectedRecipe.id);
+      this.recipeService.updateRecipe(this.selectedRecipe.id, recipeData).subscribe({
+        next: (response) => {
+          console.log('Recipe updated successfully:', response);
+          this.loadRecipes();
+          this.showCreateModal = false;
+          this.showViewModal = false;
+          this.isSaving = false;
+          this.isEditMode = false;
+          this.selectedRecipe = null;
+        },
+        error: (error) => {
+          console.error('Failed to update recipe:', error);
+          this.errorMessage = error.error?.error || 'Failed to update recipe. Please try again.';
+          this.isSaving = false;
+        }
+      });
+    } else {
+      // Create new recipe
+      console.log('Creating new recipe');
+      this.recipeService.createRecipe(recipeData).subscribe({
+        next: (response) => {
+          console.log('Recipe created successfully:', response);
+          this.loadRecipes();
+          this.showCreateModal = false;
+          this.isSaving = false;
+        },
+        error: (error) => {
+          console.error('Failed to create recipe:', error);
+          this.errorMessage = error.error?.error || 'Failed to create recipe. Please try again.';
+          this.isSaving = false;
+        }
+      });
+    }
   }
 
   toggleIngredients(recipe: Recipe): void {
     recipe.showIngredients = !recipe.showIngredients;
   }
 
+  viewRecipe(recipe: Recipe): void {
+    this.selectedRecipe = recipe;
+    this.showViewModal = true;
+  }
+
   editRecipe(recipe: Recipe): void {
-    console.log('Edit recipe:', recipe.name);
+    this.selectedRecipe = recipe;
+    this.isEditMode = true;
+    this.showViewModal = false; // Close view modal
+    
+    // Populate form with recipe data
+    this.form = {
+      name: recipe.name,
+      cookingTime: recipe.cookingTime,
+      price: recipe.totalCost,
+      description: recipe.description,
+      imageFile: null,
+      imagePreview: recipe.image,
+      ingredients: recipe.ingredients.map(ing => ({
+        name: ing.name,
+        quantity: ing.quantity,
+        unitId: ing.unitId, // Use the stored unitId directly
+        unitCode: ing.unit,
+        masterIngredientId: ing.masterIngredientId || null,
+        isNew: !ing.masterIngredientId
+      }))
+    };
+
+    this.showCreateModal = true;
+    this.clearSearchStates();
+  }
+
+  private getUnitIdFromCode(code: string): number | null {
+    const unit = this.units.find(u => u.code === code);
+    return unit ? unit.id : null;
   }
 
   deleteRecipe(recipe: Recipe): void {
-    this.recipes = this.recipes.filter(r => r.id !== recipe.id);
+    this.recipeToDelete = recipe;
+    this.showDeleteModal = true;
+  }
+
+  confirmDelete(): void {
+    if (!this.recipeToDelete) return;
+
+    this.isSaving = true;
+    this.recipeService.deleteRecipe(this.recipeToDelete.id).subscribe({
+      next: () => {
+        this.loadRecipes();
+        this.errorMessage = '';
+        this.closeDeleteModal();
+        this.isSaving = false;
+      },
+      error: (error) => {
+        console.error('Failed to delete recipe:', error);
+        this.errorMessage = 'Failed to delete recipe. Please try again.';
+        this.isSaving = false;
+        this.closeDeleteModal();
+      }
+    });
+  }
+
+  dismissError(): void {
+    this.errorMessage = '';
+  }
+
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  formatQuantity(value: number | null): string {
+    if (value === null || value === undefined) return '';
+    const formatted = parseFloat(value.toFixed(4));
+    return formatted.toString();
   }
 }

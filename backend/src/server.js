@@ -100,13 +100,19 @@ const startServer = async () => {
 // Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
     console.error('❌ Unhandled Rejection:', err);
-    process.exit(1);
+    // In production, exit. In development, just log it
+    if (config.nodeEnv === 'production') {
+        process.exit(1);
+    }
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
     console.error('❌ Uncaught Exception:', err);
-    process.exit(1);
+    // In production, exit. In development, just log it
+    if (config.nodeEnv === 'production') {
+        process.exit(1);
+    }
 });
 
 // Graceful shutdown

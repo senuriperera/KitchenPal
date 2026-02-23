@@ -1,174 +1,482 @@
 const db = require('../config/database');
 
 class RecipeModel {
-  // Create recipe
-  static async create({ branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by }) {
-    const query = `
-      INSERT INTO recipes (branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `;
-    const values = [branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by];
-    const result = await db.query(query, values);
-    return result.rows[0];
-  }
+    // Get recipe by ID with all details
+    static async findById(recipe_id) {
+        const query = `
+            SELECT r.*,
+                   b.name as branch_name,
+                   u.name as created_by_name
+            FROM recipes r
+            LEFT JOIN branches b ON r.branch_id = b.branch_id
+            LEFT JOIN users u ON r.created_by = u.user_id
+            WHERE r.recipe_id = $1
+        `;
+        const result = await db.query(query, [recipe_id]);
 
-  // Get all recipes by branch (includes ingredients)
-  static async getAllByBranch(branch_id, is_generated = null) {
-    let query = `
-      SELECT r.*,
-        u.name as created_by_name,
-        COALESCE(
-          (
-            SELECT json_agg(
-              json_build_object(
-                'recipe_ingredient_id', ri.recipe_ingredient_id,
-                'ingredient_id', ri.ingredient_id,
-                'ingredient_name', i.name,
-                'quantity_required', ri.quantity_required,
-                'unit_id', ri.unit_id,
-                'unit_code', un.code,
-                'unit_name', un.name
-              )
-            )
+        if (!result.rows[0]) {
+            return null;
+        }
+
+        // Get recipe ingredients
+        const ingredientsQuery = `
+            SELECT ri.*,
+                   mi.name as ingredient_name,
+                   un.code as unit_code,
+                   un.name as unit_name
             FROM recipe_ingredients ri
-            JOIN ingredients i ON ri.ingredient_id = i.ingredient_id
+            LEFT JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
             LEFT JOIN units un ON ri.unit_id = un.unit_id
-            WHERE ri.recipe_id = r.recipe_id
-          ),
-          '[]'::json
-        ) as ingredients
-      FROM recipes r
-      LEFT JOIN users u ON r.created_by = u.user_id
-      WHERE r.branch_id = $1
-    `;
-    const values = [branch_id];
+            WHERE ri.recipe_id = $1
+        `;
+        const ingredientsResult = await db.query(ingredientsQuery, [recipe_id]);
 
-    if (is_generated !== null) {
-      query += ' AND r.is_generated = $2';
-      values.push(is_generated);
+        return {
+            ...result.rows[0],
+            ingredients: ingredientsResult.rows
+        };
     }
 
-    query += ' ORDER BY r.created_at DESC';
+    // Find recipes that match given ingredients (for suggestions)
+    static async findMatchingRecipes(branch_id, ingredient_ids) {
+        // Find recipes where the recipe's required ingredients match the expiring ingredients
+        const query = `
+            WITH recipe_matches AS (
+                SELECT 
+                    r.recipe_id,
+                    r.name,
+                    r.base_price,
+                    r.cooking_time_minutes,
+                    r.image_url,
+                    COUNT(DISTINCT ri.master_ingredient_id) as total_ingredients,
+                    COUNT(DISTINCT CASE 
+                        WHEN si.ingredient_id = ANY($2::int[]) THEN ri.master_ingredient_id 
+                    END) as matching_ingredients
+                FROM recipes r
+                JOIN recipe_ingredients ri ON r.recipe_id = ri.recipe_id
+                LEFT JOIN stock_ingredients si ON ri.master_ingredient_id = si.master_ingredient_id
+                WHERE r.is_active = true
+                  AND (r.branch_id = $1 OR r.branch_id IS NULL)
+                GROUP BY r.recipe_id, r.name, r.base_price, r.cooking_time_minutes, r.image_url
+            )
+            SELECT *,
+                   ROUND((matching_ingredients::decimal / NULLIF(total_ingredients, 0)) * 100, 2) as match_percentage
+            FROM recipe_matches
+            WHERE matching_ingredients > 0
+            ORDER BY match_percentage DESC, matching_ingredients DESC
+            LIMIT 10
+        `;
+        const result = await db.query(query, [branch_id, ingredient_ids]);
+        return result.rows;
+    }
 
-    const result = await db.query(query, values);
-    return result.rows;
-  }
+    // Get all recipes for a branch
+    static async getAllByBranch(branch_id) {
+        const query = `
+            SELECT r.*,
+                   b.name as branch_name,
+                   u.name as created_by_name
+            FROM recipes r
+            LEFT JOIN branches b ON r.branch_id = b.branch_id
+            LEFT JOIN users u ON r.created_by = u.user_id
+            WHERE r.branch_id = $1 OR r.branch_id IS NULL
+            ORDER BY r.created_at DESC
+        `;
+        const result = await db.query(query, [branch_id]);
+        return result.rows;
+    }
 
+    // Get all recipes (for admin)
+    static async getAll() {
+        const query = `
+            SELECT r.*,
+                   b.name as branch_name,
+                   u.name as created_by_name
+            FROM recipes r
+            LEFT JOIN branches b ON r.branch_id = b.branch_id
+            LEFT JOIN users u ON r.created_by = u.user_id
+            ORDER BY r.created_at DESC
+        `;
+        const result = await db.query(query);
+        return result.rows;
+    }
 
-  // Get recipe by ID with ingredients and steps
-  static async findById(recipe_id) {
-    const recipeQuery = `
-      SELECT r.*, u.name as created_by_name
-      FROM recipes r
-      LEFT JOIN users u ON r.created_by = u.user_id
-      WHERE r.recipe_id = $1
-    `;
-    const recipeResult = await db.query(recipeQuery, [recipe_id]);
+    // Get all standard recipes with ingredients (is_generated = false)
+    static async getAllStandardRecipes() {
+        const query = `
+            SELECT 
+                r.recipe_id,
+                r.name AS recipe_name,
+                r.image_url,
+                r.cooking_time_minutes,
+                r.description,
+                r.base_price,
+                r.created_at,
+                r.updated_at,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'master_ingredient_id', mi.master_ingredient_id,
+                            'name', mi.name,
+                            'quantity_required', ri.quantity_required,
+                            'unit_code', u.code,
+                            'unit_name', u.name,
+                            'unit_id', u.unit_id
+                        ) ORDER BY ri.recipe_ingredient_id
+                    ) FILTER (WHERE mi.master_ingredient_id IS NOT NULL),
+                    '[]'
+                ) AS ingredients
+            FROM recipes r
+            LEFT JOIN recipe_ingredients ri ON r.recipe_id = ri.recipe_id
+            LEFT JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
+            LEFT JOIN units u ON ri.unit_id = u.unit_id
+            WHERE r.is_generated = false AND r.is_active = true
+            GROUP BY r.recipe_id
+            ORDER BY r.created_at DESC
+        `;
 
-    if (recipeResult.rows.length === 0) return null;
+        const result = await db.query(query);
+        return result.rows;
+    }
 
-    const recipe = recipeResult.rows[0];
+    // Get a single standard recipe by ID with ingredients
+    static async getStandardRecipeById(recipeId) {
+        const query = `
+            SELECT 
+                r.recipe_id,
+                r.name AS recipe_name,
+                r.image_url,
+                r.cooking_time_minutes,
+                r.description,
+                r.base_price,
+                r.created_at,
+                r.updated_at,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'master_ingredient_id', mi.master_ingredient_id,
+                            'name', mi.name,
+                            'quantity_required', ri.quantity_required,
+                            'unit_code', u.code,
+                            'unit_name', u.name,
+                            'unit_id', u.unit_id
+                        ) ORDER BY ri.recipe_ingredient_id
+                    ) FILTER (WHERE mi.master_ingredient_id IS NOT NULL),
+                    '[]'
+                ) AS ingredients
+            FROM recipes r
+            LEFT JOIN recipe_ingredients ri ON r.recipe_id = ri.recipe_id
+            LEFT JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
+            LEFT JOIN units u ON ri.unit_id = u.unit_id
+            WHERE r.recipe_id = $1 AND r.is_generated = false
+            GROUP BY r.recipe_id
+        `;
 
-    // Get ingredients
-    const ingredientsQuery = `
-      SELECT ri.*, i.name as ingredient_name, u.code as unit_code, u.name as unit_name
-      FROM recipe_ingredients ri
-      JOIN ingredients i ON ri.ingredient_id = i.ingredient_id
-      LEFT JOIN units u ON ri.unit_id = u.unit_id
-      WHERE ri.recipe_id = $1
-    `;
-    const ingredientsResult = await db.query(ingredientsQuery, [recipe_id]);
-    recipe.ingredients = ingredientsResult.rows;
+        const result = await db.query(query, [recipeId]);
+        return result.rows[0];
+    }
 
-    return recipe;
-  }
+    // Create new recipe
+    static async create({ branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by }) {
+        const query = `
+            INSERT INTO recipes (branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+        `;
+        const values = [branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated || false, created_by];
+        const result = await db.query(query, values);
+        return result.rows[0];
+    }
 
-  // Add ingredient to recipe
-  static async addIngredient({ recipe_id, ingredient_id, quantity_required, unit_id }) {
-    const query = `
-      INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity_required, unit_id)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `;
-    const result = await db.query(query, [recipe_id, ingredient_id, quantity_required, unit_id]);
-    return result.rows[0];
-  }
+    // Create standard recipe with ingredients and auto-generated keywords (transaction)
+    static async createStandardRecipe(recipeData, ingredients) {
+        const client = await db.getClient();
 
-  // Add step to recipe
-  static async addStep({ recipe_id, step_number, instruction }) {
-    const query = `
-      INSERT INTO recipe_steps (recipe_id, step_number, instruction)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `;
-    const result = await db.query(query, [recipe_id, step_number, instruction]);
-    return result.rows[0];
-  }
+        try {
+            await client.query('BEGIN');
 
-  // Add image to recipe
-  static async addImage({ recipe_id, image_url, caption }) {
-    const query = `
-      INSERT INTO recipe_images (recipe_id, image_url, caption)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `;
-    const result = await db.query(query, [recipe_id, image_url, caption]);
-    return result.rows[0];
-  }
+            // 1. Insert recipe
+            const recipeQuery = `
+                INSERT INTO recipes (
+                    name, image_url, cooking_time_minutes, description, 
+                    base_price, is_generated, created_by, branch_id
+                )
+                VALUES ($1, $2, $3, $4, $5, false, $6, NULL)
+                RETURNING recipe_id, name, image_url, cooking_time_minutes, 
+                          description, base_price, created_at, updated_at
+            `;
 
-  // Update recipe
-  static async update(recipe_id, updates) {
-    const fields = [];
-    const values = [];
-    let paramCount = 1;
+            const recipeResult = await client.query(recipeQuery, [
+                recipeData.name,
+                recipeData.image_url || null,
+                recipeData.cooking_time_minutes || null,
+                recipeData.description || null,
+                recipeData.base_price,
+                recipeData.created_by || null
+            ]);
 
-    Object.keys(updates).forEach((key) => {
-      if (updates[key] !== undefined) {
-        fields.push(`${key} = $${paramCount}`);
-        values.push(updates[key]);
-        paramCount++;
-      }
-    });
+            const recipe = recipeResult.rows[0];
+            const recipeId = recipe.recipe_id;
 
-    if (fields.length === 0) return null;
+            // 2. Insert recipe ingredients
+            if (ingredients && ingredients.length > 0) {
+                const ingredientQuery = `
+                    INSERT INTO recipe_ingredients (
+                        recipe_id, master_ingredient_id, quantity_required, unit_id
+                    )
+                    VALUES ($1, $2, $3, $4)
+                `;
 
-    values.push(recipe_id);
-    const query = `
-      UPDATE recipes 
-      SET ${fields.join(', ')}
-      WHERE recipe_id = $${paramCount}
-      RETURNING *
-    `;
+                for (const ing of ingredients) {
+                    await client.query(ingredientQuery, [
+                        recipeId,
+                        ing.master_ingredient_id,
+                        ing.quantity_required,
+                        ing.unit_id
+                    ]);
+                }
+            }
 
-    const result = await db.query(query, values);
-    return result.rows[0];
-  }
+            // 3. Generate and insert keywords
+            const keywords = new Set();
 
-  // Delete recipe
-  static async delete(recipe_id) {
-    const query = 'DELETE FROM recipes WHERE recipe_id = $1';
-    await db.query(query, [recipe_id]);
-  }
+            // Add recipe name words
+            const recipeNameWords = recipeData.name.toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 2);
+            recipeNameWords.forEach(word => keywords.add(word));
 
-  // Find recipes that can be made with given ingredients
-  static async findMatchingRecipes(branch_id, ingredient_ids) {
-    const query = `
-      SELECT DISTINCT r.*, 
-        COUNT(ri.ingredient_id) as matching_ingredients,
-        (SELECT COUNT(*) FROM recipe_ingredients WHERE recipe_id = r.recipe_id) as total_ingredients
-      FROM recipes r
-      JOIN recipe_ingredients ri ON r.recipe_id = ri.recipe_id
-      WHERE r.branch_id = $1
-        AND r.is_generated = false
-        AND ri.ingredient_id = ANY($2::int[])
-      GROUP BY r.recipe_id
-      ORDER BY matching_ingredients DESC, r.cooking_time_minutes ASC
-      LIMIT 10
-    `;
-    const result = await db.query(query, [branch_id, ingredient_ids]);
-    return result.rows;
-  }
+            // Add ingredient name words
+            if (ingredients && ingredients.length > 0) {
+                for (const ing of ingredients) {
+                    const ingNameQuery = `
+                        SELECT name FROM master_ingredients 
+                        WHERE master_ingredient_id = $1
+                    `;
+                    const ingResult = await client.query(ingNameQuery, [ing.master_ingredient_id]);
+
+                    if (ingResult.rows[0]) {
+                        const ingredientWords = ingResult.rows[0].name.toLowerCase()
+                            .split(/\s+/)
+                            .filter(word => word.length > 2);
+                        ingredientWords.forEach(word => keywords.add(word));
+                    }
+                }
+            }
+
+            // Insert keywords
+            if (keywords.size > 0) {
+                const keywordQuery = `
+                    INSERT INTO recipe_keywords (recipe_id, keyword)
+                    VALUES ($1, $2)
+                `;
+
+                for (const keyword of keywords) {
+                    await client.query(keywordQuery, [recipeId, keyword]);
+                }
+            }
+
+            await client.query('COMMIT');
+
+            return recipe;
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // Update recipe
+    static async update(recipe_id, { name, image_url, cooking_time_minutes, description, base_price, is_active }) {
+        const query = `
+            UPDATE recipes
+            SET name = COALESCE($2, name),
+                image_url = COALESCE($3, image_url),
+                cooking_time_minutes = COALESCE($4, cooking_time_minutes),
+                description = COALESCE($5, description),
+                base_price = COALESCE($6, base_price),
+                is_active = COALESCE($7, is_active),
+                updated_at = NOW()
+            WHERE recipe_id = $1
+            RETURNING *
+        `;
+        const values = [recipe_id, name, image_url, cooking_time_minutes, description, base_price, is_active];
+        const result = await db.query(query, values);
+        return result.rows[0];
+    }
+
+    // Update recipe with ingredients (transaction)
+    static async updateWithIngredients(recipe_id, recipeData, ingredients) {
+        const client = await db.getClient();
+
+        try {
+            console.log('Starting transaction for recipe update:', recipe_id);
+            await client.query('BEGIN');
+
+            // 1. Update recipe
+            const recipeQuery = `
+                UPDATE recipes
+                SET name = $2,
+                    image_url = $3,
+                    cooking_time_minutes = $4,
+                    description = $5,
+                    base_price = $6,
+                    updated_at = NOW()
+                WHERE recipe_id = $1 AND is_generated = false
+                RETURNING recipe_id, name, image_url, cooking_time_minutes, 
+                          description, base_price, created_at, updated_at
+            `;
+
+            const recipeResult = await client.query(recipeQuery, [
+                recipe_id,
+                recipeData.name,
+                recipeData.image_url || null,
+                recipeData.cooking_time_minutes || null,
+                recipeData.description || null,
+                recipeData.base_price
+            ]);
+
+            if (recipeResult.rows.length === 0) {
+                console.log('Recipe not found or is generated, rolling back:', recipe_id);
+                await client.query('ROLLBACK');
+                return null;
+            }
+
+            const recipe = recipeResult.rows[0];
+            console.log('Recipe updated in DB:', recipe.recipe_id);
+
+            // 2. Delete existing ingredients
+            const deleteIngredientsQuery = `
+                DELETE FROM recipe_ingredients WHERE recipe_id = $1
+            `;
+            const deleteResult = await client.query(deleteIngredientsQuery, [recipe_id]);
+            console.log('Deleted', deleteResult.rowCount, 'existing ingredients');
+
+            // 3. Insert new ingredients
+            if (ingredients && ingredients.length > 0) {
+                const ingredientQuery = `
+                    INSERT INTO recipe_ingredients (
+                        recipe_id, master_ingredient_id, quantity_required, unit_id
+                    )
+                    VALUES ($1, $2, $3, $4)
+                `;
+
+                for (const ing of ingredients) {
+                    await client.query(ingredientQuery, [
+                        recipe_id,
+                        ing.master_ingredient_id,
+                        ing.quantity_required,
+                        ing.unit_id
+                    ]);
+                }
+                console.log('Inserted', ingredients.length, 'new ingredients');
+            }
+
+            // 4. Delete old keywords
+            const deleteKeywordsQuery = `
+                DELETE FROM recipe_keywords WHERE recipe_id = $1
+            `;
+            await client.query(deleteKeywordsQuery, [recipe_id]);
+
+            // 5. Generate and insert new keywords
+            const keywords = new Set();
+
+            // Add recipe name words
+            const recipeNameWords = recipeData.name.toLowerCase()
+                .split(/\s+/)
+                .filter(word => word.length > 2);
+            recipeNameWords.forEach(word => keywords.add(word));
+
+            // Add ingredient name words
+            if (ingredients && ingredients.length > 0) {
+                for (const ing of ingredients) {
+                    const ingNameQuery = `
+                        SELECT name FROM master_ingredients 
+                        WHERE master_ingredient_id = $1
+                    `;
+                    const ingResult = await client.query(ingNameQuery, [ing.master_ingredient_id]);
+
+                    if (ingResult.rows[0]) {
+                        const ingredientWords = ingResult.rows[0].name.toLowerCase()
+                            .split(/\s+/)
+                            .filter(word => word.length > 2);
+                        ingredientWords.forEach(word => keywords.add(word));
+                    }
+                }
+            }
+
+            // Insert keywords
+            if (keywords.size > 0) {
+                const keywordQuery = `
+                    INSERT INTO recipe_keywords (recipe_id, keyword)
+                    VALUES ($1, $2)
+                `;
+
+                for (const keyword of keywords) {
+                    await client.query(keywordQuery, [recipe_id, keyword]);
+                }
+                console.log('Inserted', keywords.size, 'keywords');
+            }
+
+            await client.query('COMMIT');
+            console.log('Transaction committed successfully for recipe:', recipe_id);
+
+            return recipe;
+
+        } catch (error) {
+            console.error('Error in updateWithIngredients, rolling back:', error);
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // Delete recipe
+    static async delete(recipe_id) {
+        const query = 'DELETE FROM recipes WHERE recipe_id = $1 RETURNING *';
+        const result = await db.query(query, [recipe_id]);
+        return result.rows[0];
+    }
+
+    // Add ingredient to recipe
+    static async addIngredient(recipe_id, { master_ingredient_id, quantity_required, unit_id, is_optional }) {
+        const query = `
+            INSERT INTO recipe_ingredients (recipe_id, master_ingredient_id, quantity_required, unit_id, is_optional)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (recipe_id, master_ingredient_id) 
+            DO UPDATE SET quantity_required = $3, unit_id = $4, is_optional = $5
+            RETURNING *
+        `;
+        const values = [recipe_id, master_ingredient_id, quantity_required, unit_id, is_optional || false];
+        const result = await db.query(query, values);
+        return result.rows[0];
+    }
+
+    // Remove ingredient from recipe
+    static async removeIngredient(recipe_id, master_ingredient_id) {
+        const query = 'DELETE FROM recipe_ingredients WHERE recipe_id = $1 AND master_ingredient_id = $2 RETURNING *';
+        const result = await db.query(query, [recipe_id, master_ingredient_id]);
+        return result.rows[0];
+    }
+
+    // Get recipe ingredients
+    static async getIngredients(recipe_id) {
+        const query = `
+            SELECT ri.*,
+                   mi.name as ingredient_name,
+                   un.code as unit_code,
+                   un.name as unit_name
+            FROM recipe_ingredients ri
+            LEFT JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
+            LEFT JOIN units un ON ri.unit_id = un.unit_id
+            WHERE ri.recipe_id = $1
+        `;
+        const result = await db.query(query, [recipe_id]);
+        return result.rows;
+    }
 }
 
 module.exports = RecipeModel;

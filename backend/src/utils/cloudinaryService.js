@@ -41,14 +41,22 @@ const upload = multer({
  */
 const uploadImage = (buffer, folder = 'kitchenpal/recipes') => {
     return new Promise((resolve, reject) => {
+        // Set timeout to prevent hanging
+        const timeout = setTimeout(() => {
+            reject(new Error('Cloudinary upload timeout after 30 seconds'));
+        }, 30000);
+
         const uploadStream = cloudinary.uploader.upload_stream(
             {
                 folder: folder,
                 resource_type: 'image',
                 transformation: [{ width: 800, height: 800, crop: 'limit' }],
+                timeout: 30000,
             },
             (error, result) => {
+                clearTimeout(timeout);
                 if (error) {
+                    console.error('Cloudinary upload error:', error);
                     reject(error);
                 } else {
                     resolve(result);

@@ -762,6 +762,13 @@
         font-weight: 600;
         font-size: 0.875rem;
         transition: background 0.2s, opacity 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .btn-icon-small {
+            font-size: 1rem;
+        }
 
         &.btn-secondary {
             background: white;
@@ -785,6 +792,272 @@
                 opacity: 0.5;
                 cursor: not-allowed;
             }
+        }
+    }
+}
+
+// ============================================
+// View Recipe Modal Styles
+// ============================================
+
+.modal-content.view-modal {
+    max-width: 720px;
+}
+
+.view-image-container {
+    width: 100%;
+    margin-bottom: 24px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f3f4f6;
+
+    .view-recipe-image {
+        width: 100%;
+        height: 280px;
+        object-fit: cover;
+        display: block;
+    }
+}
+
+.view-section {
+    margin-bottom: 28px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.view-recipe-name {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 20px;
+}
+
+.view-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.view-meta-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+
+    .view-icon {
+        color: #f97316;
+        font-size: 1.3rem;
+        margin-top: 2px;
+    }
+
+    .view-meta-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .view-meta-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .view-meta-value {
+        font-size: 1.1rem;
+        color: #111827;
+        font-weight: 600;
+    }
+}
+
+.view-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .material-icons {
+        color: #f97316;
+        font-size: 1.3rem;
+    }
+}
+
+.view-description {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #4b5563;
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.view-ingredients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.view-ingredient-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+
+    .view-ing-bullet {
+        color: #f97316;
+        font-size: 1.2rem;
+        font-weight: bold;
+        line-height: 1;
+    }
+
+    .view-ing-name {
+        flex: 1;
+        font-size: 0.9rem;
+        color: #111827;
+        font-weight: 500;
+    }
+
+    .view-ing-qty {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+        background: white;
+        padding: 4px 10px;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+    }
+}
+
+.view-no-ingredients {
+    color: #9ca3af;
+    font-style: italic;
+    justify-content: center;
+}
+
+// ============================================
+// Delete Confirmation Modal Styles
+// ============================================
+
+.modal-overlay.delete-overlay {
+    z-index: 1001;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+}
+
+.modal-content.delete-modal {
+    max-width: 420px;
+    width: 90%;
+    background: #ffffff;
+    padding: 40px 36px 32px;
+    text-align: center;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease-out;
+}
+
+.delete-icon-wrapper {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 24px;
+    background: #fef2f2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .delete-icon {
+        font-size: 2.25rem;
+        color: #ef4444;
+    }
+}
+
+.delete-title {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 16px;
+    letter-spacing: -0.01em;
+}
+
+.delete-message {
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0 0 8px;
+}
+
+.delete-recipe-name {
+    font-size: 0.9rem;
+    color: #111827;
+    font-weight: 500;
+    margin: 0 0 32px;
+    padding: 0 20px;
+}
+
+.delete-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    
+    .btn {
+        flex: 1;
+        max-width: 160px;
+        padding: 12px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        outline: none;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        &.btn-cancel {
+            background: #ffffff;
+            color: #374151;
+            border: 1.5px solid #e5e7eb;
+            
+            &:hover:not(:disabled) {
+                background: #f9fafb;
+                border-color: #d1d5db;
+            }
+        }
+        
+        &.btn-delete {
+            background: #ef4444;
+            color: white;
+            
+            &:hover:not(:disabled) {
+                background: #dc2626;
+                transform: translateY(-1px);
+                box-shadow: 0 8px 16px rgba(239, 68, 68, 0.25);
+            }
+            
+            &:active:not(:disabled) {
+                transform: translateY(0);
+            }
+        }
+        
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
     }
 }
