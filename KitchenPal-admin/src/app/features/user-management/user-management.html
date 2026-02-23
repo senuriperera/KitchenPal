@@ -13,7 +13,7 @@
         [class.active]="activeTab === 'users'"
         (click)="setActiveTab('users')"
       >
-        <span class="tab-icon">👤</span>
+        <span class="material-icons tab-icon">people</span>
         <span class="tab-label">Users</span>
       </button>
       <button
@@ -22,7 +22,7 @@
         [class.active]="activeTab === 'branches'"
         (click)="setActiveTab('branches')"
       >
-        <span class="tab-icon">🏢</span>
+        <span class="material-icons tab-icon">business</span>
         <span class="tab-label">Branches</span>
       </button>
     </div>
@@ -70,7 +70,7 @@
               <td>
                 <div class="user-cell">
                   <div class="user-avatar">
-                    <span class="avatar-icon">👤</span>
+                    <span class="material-icons avatar-icon">account_circle</span>
                   </div>
                   <span class="user-name">{{ user.name }}</span>
                 </div>
@@ -90,11 +90,11 @@
               <td>{{ user.lastLogin }}</td>
               <td>
                 <div class="actions">
-                  <button class="action-btn edit" *ngIf="isAdmin" (click)="editUser(user)">
-                    Edit
+                  <button class="action-btn edit-btn" *ngIf="isAdmin" (click)="editUser(user)" title="Edit user">
+                    <span class="material-icons">edit</span>
                   </button>
-                  <button class="action-btn delete" *ngIf="isAdmin" (click)="deleteUser(user)">
-                    Delete
+                  <button class="action-btn delete-btn" *ngIf="isAdmin" (click)="deleteUser(user)" title="Delete user">
+                    <span class="material-icons">delete</span>
                   </button>
                   <span *ngIf="!isAdmin" class="no-actions">View Only</span>
                 </div>
@@ -152,7 +152,7 @@
               <td>
                 <div class="branch-cell">
                   <div class="branch-icon">
-                    <span class="icon">🏢</span>
+                    <span class="material-icons icon">business</span>
                   </div>
                   <span class="branch-name">{{ branch.name }}</span>
                 </div>
@@ -162,14 +162,11 @@
               <td>{{ branch.contact_number }}</td>
               <td>
                 <div class="actions">
-                  <button class="action-btn edit" (click)="editBranch(branch)">
-                    Edit
+                  <button class="action-btn edit-btn" (click)="editBranch(branch)" title="Edit branch">
+                    <span class="material-icons">edit</span>
                   </button>
-                  <button
-                    class="action-btn delete"
-                    (click)="deleteBranch(branch)"
-                  >
-                    Delete
+                  <button class="action-btn delete-btn" (click)="deleteBranch(branch)" title="Delete branch">
+                    <span class="material-icons">delete</span>
                   </button>
                 </div>
               </td>

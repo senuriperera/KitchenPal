@@ -121,7 +121,7 @@
   .trend-arrow {
     width: 16px;
     height: 16px;
-    
+
     &.up {
       color: #f59e0b;
     }
@@ -181,16 +181,23 @@
   justify-content: center;
   font-size: 24px;
 
+  .material-icons {
+    font-size: 26px;
+  }
+
   &.yellow-bg {
     background: #fef3c7;
+    color: #d97706;
   }
 
   &.purple-bg {
     background: #e9d5ff;
+    color: #7c3aed;
   }
 
   &.orange-bg {
     background: #fed7aa;
+    color: #ea580c;
   }
 }
 

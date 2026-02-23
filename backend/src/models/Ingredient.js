@@ -2,13 +2,13 @@ const db = require('../config/database');
 
 class IngredientModel {
   // Create ingredient
-  static async create({ branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id }) {
+  static async create({ branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url }) {
     const query = `
-      INSERT INTO ingredients (branch_id, name, quantity_in_stock, unit_id, cost_per_unit, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO ingredients (branch_id, name, quantity_in_stock, unit_id, cost_per_unit, expiry_date, manufacture_date, storage_type_id, image_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *
     `;
-    const values = [branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url, weight, weight_unit_id];
+    const values = [branch_id, name, quantity, unit_id, price, expiry_date, manufacture_date, storage_type_id, image_url];
     const result = await db.query(query, values);
     return result.rows[0];
   }
@@ -18,12 +18,10 @@ class IngredientModel {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name, 
              st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name,
              b.name as branch_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       LEFT JOIN branches b ON i.branch_id = b.branch_id
       WHERE i.branch_id = $1
       ORDER BY i.expiry_date ASC
@@ -37,12 +35,10 @@ class IngredientModel {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name, 
              st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name,
              b.name as branch_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       LEFT JOIN branches b ON i.branch_id = b.branch_id
       ORDER BY i.branch_id ASC, i.expiry_date ASC
     `;
@@ -54,16 +50,29 @@ class IngredientModel {
   static async findById(ingredient_id) {
     const query = `
       SELECT i.*, u.code as unit_code, u.name as unit_name,
-             st.code as storage_code, st.name as storage_name,
-             wu.code as weight_unit_code, wu.name as weight_unit_name
+             st.code as storage_code, st.name as storage_name
       FROM ingredients i
       LEFT JOIN units u ON i.unit_id = u.unit_id
       LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
-      LEFT JOIN units wu ON i.weight_unit_id = wu.unit_id
       WHERE i.ingredient_id = $1
     `;
     const result = await db.query(query, [ingredient_id]);
     return this._mapRow(result.rows[0]);
+  }
+
+  // Find ingredient by name and branch
+  static async findByNameAndBranch(name, branch_id) {
+    const query = `
+      SELECT i.*, u.code as unit_code, u.name as unit_name,
+             st.code as storage_code, st.name as storage_name
+      FROM ingredients i
+      LEFT JOIN units u ON i.unit_id = u.unit_id
+      LEFT JOIN storage_types st ON i.storage_type_id = st.storage_type_id
+      WHERE LOWER(i.name) = LOWER($1) AND i.branch_id = $2
+      LIMIT 1
+    `;
+    const result = await db.query(query, [name, branch_id]);
+    return result.rows[0];
   }
 
   // Get expiring ingredients (within days)

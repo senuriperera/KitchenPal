@@ -4,12 +4,14 @@ const router = express.Router();
 // Import route modules
 const authRoutes = require('./authRoutes');
 const ingredientRoutes = require('./ingredientRoutes');
-const recipeRoutes = require('./recipeRoutes');
+const masterIngredientRoutes = require('./masterIngredientRoutes');
 const notificationRoutes = require('./notificationRoutes');
 const recipeSuggestionRoutes = require('./recipeSuggestionRoutes');
+const recipeRoutes = require('./recipeRoutes');
 const saleRoutes = require('./saleRoutes');
 const commonRoutes = require('./commonRoutes');
 const userRoutes = require('./userRoutes');
+const uploadRoutes = require('./uploadRoutes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -19,11 +21,13 @@ router.get('/health', (req, res) => {
 // Mount routes
 router.use('/auth', authRoutes);
 router.use('/ingredients', ingredientRoutes);
-router.use('/recipes', recipeRoutes);
+router.use('/master-ingredients', masterIngredientRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/suggestions', recipeSuggestionRoutes);
+router.use('/recipes', recipeRoutes);
 router.use('/sales', saleRoutes);
 router.use('/common', commonRoutes);
 router.use('/users', userRoutes);
+router.use('/upload', uploadRoutes);
 
 module.exports = router;

@@ -70,45 +70,15 @@
 }
 
 .menu-icon {
+  font-size: 20px;
   width: 24px;
   height: 24px;
   margin-right: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  &::before {
-    font-size: 20px;
-  }
-
-  &[data-icon="home"]::before {
-    content: '🏠';
-  }
-
-  &[data-icon="inventory"]::before {
-    content: '📦';
-  }
-
-  &[data-icon="alert"]::before {
-    content: 'ℹ️';
-  }
-
-  &[data-icon="recipes"]::before {
-    content: '📖';
-  }
-
-  &[data-icon="discount"]::before {
-    content: '%';
-    font-weight: 600;
-  }
-
-  &[data-icon="reports"]::before {
-    content: '📊';
-  }
-
-  &[data-icon="users"]::before {
-    content: '👥';
-  }
+  color: inherit;
+  flex-shrink: 0;
 }
 
 .menu-label {

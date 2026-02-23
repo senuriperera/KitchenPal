@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { DashboardComponent } from './dashboard.component';
+import { DashboardComponent } from './dashboard';
 import { provideRouter } from '@angular/router';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { AuthService } from '../../core/services/auth.service';

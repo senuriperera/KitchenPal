@@ -4,6 +4,7 @@ import 'home_page.dart';
 import 'add_ingredient_page.dart';
 import 'inventory_page.dart';
 import 'notifications_page.dart';
+import 'recipes_page.dart';
 
 class MainContainer extends StatefulWidget {
   const MainContainer({super.key});
@@ -33,7 +34,7 @@ class _MainContainerState extends State<MainContainer> {
       HomePageContent(onNavigate: _navigateToPage),
       const InventoryPageContent(),
       const AddIngredientPageContent(),
-      const Center(child: Text('Recipes')), // Placeholder for Recipes page
+      const RecipesPageContent(),
       const NotificationsPageContent(),
     ];
   }

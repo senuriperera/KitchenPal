@@ -32,8 +32,8 @@ interface DashboardStats {
   selector: 'app-dashboard',
   standalone: true,
   imports: [CommonModule, HeaderComponent],
-  templateUrl: './dashboard.component.html',
-  styleUrls: ['./dashboard.component.scss']
+  templateUrl: './dashboard.html',
+  styleUrls: ['./dashboard.scss']
 })
 export class DashboardComponent implements OnInit {
   stats: DashboardStats = {
