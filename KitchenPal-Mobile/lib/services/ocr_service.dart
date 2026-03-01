@@ -1,65 +1,39 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'package:cloudinary_public/cloudinary_public.dart';
-import '../config/cloudinary_config.dart';
+import '../config/api_constants.dart';
+import 'storage_service.dart';
 
-class OCRService {
-  final ImagePicker _picker = ImagePicker();
+class OcrService {
+  /// Scans an already-uploaded Cloudinary image URL using Google Vision via backend.
+  /// Returns `{'manufactureDate': DateTime?, 'expiryDate': DateTime?}` or null.
+  static Future<Map<String, DateTime?>?> scanImageUrl(String imageUrl) async {
+    final token = await StorageService.getToken();
+    if (token == null) throw Exception('No authentication token found');
 
-  final CloudinaryPublic _cloudinary = CloudinaryPublic(
-    CloudinaryConfig.cloudName,
-    CloudinaryConfig.uploadPreset,
-    cache: false,
-  );
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients/scan'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'imageUrl': imageUrl}),
+    );
 
-  // TODO: Sync with AuthService URL
-  final String _baseUrl = 'http://192.168.1.61:3000/api/ingredients/scan';
-
-  Future<Map<String, DateTime?>?> pickAndScanImage(String token) async {
-    try {
-      // 1. Pick Image
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-      if (image == null) return null;
-
-      // 2. Upload to Cloudinary
-      CloudinaryResponse response = await _cloudinary.uploadFile(
-        CloudinaryFile.fromFile(
-          image.path,
-          resourceType: CloudinaryResourceType.Image,
-        ),
-      );
-
-      String imageUrl = response.secureUrl;
-
-      // 3. Send URL to Backend
-      final backendResponse = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token', // Assuming Bearer token auth
-        },
-        body: jsonEncode({'imageUrl': imageUrl}),
-      );
-
-      if (backendResponse.statusCode == 200) {
-        final data = jsonDecode(backendResponse.body);
-        return {
-          'expiryDate': data['expiryDate'] != null
-              ? DateTime.parse(data['expiryDate'])
-              : null,
-          'manufactureDate': data['manufactureDate'] != null
-              ? DateTime.parse(data['manufactureDate'])
-              : null,
-        };
-      } else {
-        throw Exception(
-          'Backend Error ${backendResponse.statusCode}: ${backendResponse.body}',
-        );
-      }
-    } catch (e) {
-      print('OCR Service Error: $e');
-      rethrow;
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return {
+        'manufactureDate': data['manufactureDate'] != null
+            ? DateTime.tryParse(data['manufactureDate'])
+            : null,
+        'expiryDate': data['expiryDate'] != null
+            ? DateTime.tryParse(data['expiryDate'])
+            : null,
+      };
+    } else if (response.statusCode == 401) {
+      throw Exception('401');
+    } else {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Scan failed: ${response.statusCode}');
     }
   }
 }

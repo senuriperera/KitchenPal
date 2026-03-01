@@ -36,7 +36,6 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   String? _errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
-  int _branchId = 1; // Default branch, will be loaded from storage
 
   @override
   void initState() {
@@ -57,37 +56,29 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     });
 
     try {
-      // Load branch ID from storage (can be null for admin)
-      final branchId = await StorageService.getBranchId();
-      if (branchId != null) {
-        _branchId = branchId;
-      }
-
-      // Admin with null branch_id will get all ingredients
-      final ingredients = await IngredientService.getAllIngredients(branchId);
+      // branch_id is now carried by the JWT — no param needed
+      final ingredients = await IngredientService.getAllIngredients();
       final keywords = IngredientService.extractKeywords(ingredients);
 
       setState(() {
         _allIngredients = ingredients;
         _filteredIngredients = ingredients;
-        _keywords = keywords.take(10).toList(); // Limit to 10 keywords
+        _keywords = keywords.take(10).toList();
         _isLoading = false;
       });
     } catch (e) {
-      String errorMessage = e.toString();
-      if (errorMessage.contains('401') ||
-          errorMessage.toLowerCase().contains('token expired') ||
-          errorMessage.toLowerCase().contains('unauthorized')) {
+      final msg = e.toString();
+      if (msg.contains('401')) {
         await StorageService.clearAuthData();
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginPage()),
+            MaterialPageRoute(builder: (_) => const LoginPage()),
             (route) => false,
           );
         }
       } else {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = msg;
           _isLoading = false;
         });
       }
@@ -96,40 +87,25 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
 
   void _filterIngredients() {
     List<Ingredient> filtered = _allIngredients;
-
-    // Apply search query filter
     if (_searchQuery.isNotEmpty) {
       filtered = IngredientService.searchIngredients(filtered, _searchQuery);
     }
-
-    // Apply keyword filter
     if (_selectedKeyword != null) {
-      filtered = filtered.where((ingredient) {
-        return ingredient.name.toLowerCase().contains(
-          _selectedKeyword!.toLowerCase(),
-        );
-      }).toList();
+      filtered = filtered
+          .where((i) => i.name.toLowerCase().contains(_selectedKeyword!.toLowerCase()))
+          .toList();
     }
-
-    setState(() {
-      _filteredIngredients = filtered;
-    });
+    setState(() => _filteredIngredients = filtered);
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
+  void _onSearchChanged(String q) {
+    setState(() => _searchQuery = q);
     _filterIngredients();
   }
 
   void _onKeywordTapped(String keyword) {
     setState(() {
-      if (_selectedKeyword == keyword) {
-        _selectedKeyword = null; // Deselect if already selected
-      } else {
-        _selectedKeyword = keyword;
-      }
+      _selectedKeyword = _selectedKeyword == keyword ? null : keyword;
     });
     _filterIngredients();
   }
@@ -179,10 +155,8 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
       ),
@@ -200,7 +174,6 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         itemBuilder: (context, index) {
           final keyword = _keywords[index];
           final isSelected = _selectedKeyword == keyword;
-
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FilterChip(
@@ -211,13 +184,15 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
               selectedColor: const Color(0xFFFF9500),
               labelStyle: TextStyle(
                 color: Colors.white,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide.none,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           );
         },
@@ -228,8 +203,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   Widget _buildContent() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF2C2C54)),
-      );
+          child: CircularProgressIndicator(color: Color(0xFF2C2C54)));
     }
 
     if (_errorMessage != null) {
@@ -239,22 +213,17 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text(
-              'Failed to load ingredients',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
+            Text('Failed to load ingredients',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700])),
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
+              child: Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[600])),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -265,12 +234,9 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                 backgroundColor: const Color(0xFF2C2C54),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
+                    horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                    borderRadius: BorderRadius.circular(8)),
               ),
             ),
           ],
@@ -283,16 +249,14 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[400]),
+            Icon(Icons.inventory_2_outlined,
+                size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text(
-              'No ingredients found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
+            Text('No ingredients found',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[700])),
             const SizedBox(height: 8),
             Text(
               _searchQuery.isNotEmpty || _selectedKeyword != null
@@ -311,9 +275,8 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _filteredIngredients.length,
-        itemBuilder: (context, index) {
-          return _buildIngredientCard(_filteredIngredients[index]);
-        },
+        itemBuilder: (context, index) =>
+            _buildIngredientCard(_filteredIngredients[index]),
       ),
     );
   }
@@ -324,14 +287,11 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => IngredientDetailPage(ingredient: ingredient),
+            builder: (_) =>
+                IngredientDetailPage(ingredientId: ingredient.ingredientId),
           ),
         );
-
-        // Reload ingredients if changes were made
-        if (result == true) {
-          _loadIngredients();
-        }
+        if (result == true) _loadIngredients();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -348,7 +308,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         ),
         child: Row(
           children: [
-            // Ingredient Image
+            // Image
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
@@ -358,20 +318,17 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                 width: 80,
                 height: 80,
                 color: Colors.grey[200],
-                child:
-                    ingredient.imageUrl != null &&
+                child: ingredient.imageUrl != null &&
                         ingredient.imageUrl!.isNotEmpty
                     ? Image.network(
                         ingredient.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildPlaceholderImage();
-                        },
+                        errorBuilder: (_, __, ___) => _buildPlaceholder(),
                       )
-                    : _buildPlaceholderImage(),
+                    : _buildPlaceholder(),
               ),
             ),
-            // Ingredient Details
+            // Details
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -381,10 +338,9 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                     Text(
                       ingredient.name,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2C2C54),
-                      ),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2C2C54)),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -402,22 +358,20 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    // Display total weight — Flutter-side calculation, never stored
                     Text(
-                      '${ingredient.quantityInStock} ${ingredient.unitName ?? 'units'}',
+                      ingredient.displayTotalWeight,
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
             ),
-            // Arrow Icon
+            // Arrow
             Padding(
               padding: const EdgeInsets.only(right: 12.0),
-              child: Icon(
-                Icons.chevron_right,
-                color: Colors.grey[400],
-                size: 28,
-              ),
+              child: Icon(Icons.chevron_right,
+                  color: Colors.grey[400], size: 28),
             ),
           ],
         ),
@@ -425,7 +379,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     );
   }
 
-  Widget _buildPlaceholderImage() {
+  Widget _buildPlaceholder() {
     return Container(
       color: Colors.grey[300],
       child: const Icon(Icons.restaurant, size: 40, color: Colors.grey),

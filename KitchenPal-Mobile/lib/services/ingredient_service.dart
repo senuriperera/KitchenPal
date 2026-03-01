@@ -1,200 +1,123 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/ingredient.dart';
+import '../config/api_constants.dart';
 import 'storage_service.dart';
 
 class IngredientService {
-  static const String _baseUrl = 'http://192.168.1.61:3000/api/ingredients';
+  static Future<Map<String, String>> _authHeaders() async {
+    final token = await StorageService.getToken();
+    if (token == null) throw Exception('No authentication token found');
+    return {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+  }
 
-  // Get all ingredients for a branch (or all branches for admin)
-  static Future<List<Ingredient>> getAllIngredients(int? branchId) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
+  // GET /api/ingredients  (branch_id from JWT — no URL param)
+  static Future<List<Ingredient>> getAllIngredients() async {
+    final headers = await _authHeaders();
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients'),
+      headers: headers,
+    );
 
-      // Admin with null branch_id gets all ingredients
-      final uri = branchId == null
-          ? Uri.parse('$_baseUrl/all')
-          : Uri.parse('$_baseUrl/branch/$branchId');
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        final List<dynamic> ingredientsJson = jsonResponse['ingredients'] ?? [];
-        return ingredientsJson
-            .map((json) => Ingredient.fromJson(json))
-            .toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
-      } else {
-        throw Exception('Failed to load ingredients: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error fetching ingredients: $e');
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final List<dynamic> list = json['ingredients'] ?? [];
+      return list.map((j) => Ingredient.fromJson(j)).toList();
+    } else if (response.statusCode == 401) {
+      throw Exception('401');
+    } else {
+      throw Exception('Failed to load ingredients: ${response.statusCode}');
     }
   }
 
-  // Get expiring ingredients (for a branch or all branches for admin)
-  static Future<List<Ingredient>> getExpiringIngredients(
-    int? branchId,
-    int days,
-  ) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
+  // GET /api/ingredients/:id  (full detail with batches)
+  static Future<Ingredient> getIngredientById(int id) async {
+    final headers = await _authHeaders();
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients/$id'),
+      headers: headers,
+    );
 
-      // Admin with null branch_id gets expiring ingredients from all branches
-      final uri = branchId == null
-          ? Uri.parse('$_baseUrl/branch/all/expiring?days=$days')
-          : Uri.parse('$_baseUrl/branch/$branchId/expiring?days=$days');
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        final List<dynamic> ingredientsJson = jsonResponse['ingredients'] ?? [];
-        return ingredientsJson
-            .map((json) => Ingredient.fromJson(json))
-            .toList();
-      } else {
-        throw Exception(
-          'Failed to load expiring ingredients: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      throw Exception('Error fetching expiring ingredients: $e');
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return Ingredient.fromJson(json['ingredient']);
+    } else if (response.statusCode == 401) {
+      throw Exception('401');
+    } else {
+      throw Exception('Failed to load ingredient: ${response.statusCode}');
     }
   }
 
-  // Delete ingredient
-  static Future<bool> deleteIngredient(int ingredientId) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
+  // POST /api/ingredients
+  static Future<Ingredient> createIngredient(Map<String, dynamic> data) async {
+    final headers = await _authHeaders();
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients'),
+      headers: headers,
+      body: jsonEncode(data),
+    );
 
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/$ingredientId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        return true;
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
-      } else {
-        throw Exception('Failed to delete ingredient: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error deleting ingredient: $e');
+    if (response.statusCode == 201) {
+      final json = jsonDecode(response.body);
+      return Ingredient.fromJson(json['ingredient']);
+    } else if (response.statusCode == 401) {
+      throw Exception('401');
+    } else {
+      final body = jsonDecode(response.body);
+      throw Exception(body['error'] ?? 'Failed to create ingredient');
     }
   }
 
-  // Update ingredient
-  static Future<Ingredient> updateIngredient(
-    int ingredientId,
-    Map<String, dynamic> ingredientData,
-  ) async {
-    try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
+  // DELETE /api/ingredients/:id
+  static Future<void> deleteIngredient(int id) async {
+    final headers = await _authHeaders();
+    final response = await http.delete(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients/$id'),
+      headers: headers,
+    );
 
-      final response = await http.put(
-        Uri.parse('$_baseUrl/$ingredientId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(ingredientData),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        return Ingredient.fromJson(jsonResponse['ingredient']);
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
-      } else {
-        throw Exception('Failed to update ingredient: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error updating ingredient: $e');
+    if (response.statusCode == 401) throw Exception('401');
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete ingredient: ${response.statusCode}');
     }
   }
 
-  // Search ingredients by name (client-side filtering)
-  static List<Ingredient> searchIngredients(
-    List<Ingredient> ingredients,
-    String query,
-  ) {
-    if (query.isEmpty) return ingredients;
+  // GET /api/ingredients/expiring?days=N
+  static Future<List<Ingredient>> getExpiringIngredients({int days = 7}) async {
+    final headers = await _authHeaders();
+    final response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients/expiring?days=$days'),
+      headers: headers,
+    );
 
-    final lowerQuery = query.toLowerCase();
-    return ingredients.where((ingredient) {
-      return ingredient.name.toLowerCase().contains(lowerQuery);
-    }).toList();
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final List<dynamic> list = json['ingredients'] ?? [];
+      return list.map((j) => Ingredient.fromJson(j)).toList();
+    } else if (response.statusCode == 401) {
+      throw Exception('401');
+    } else {
+      throw Exception('Failed to load expiring: ${response.statusCode}');
+    }
   }
 
-  // Filter ingredients by storage type (client-side filtering)
-  static List<Ingredient> filterByStorageType(
-    List<Ingredient> ingredients,
-    String storageType,
-  ) {
-    if (storageType.isEmpty) return ingredients;
-
-    return ingredients.where((ingredient) {
-      return ingredient.storageName?.toLowerCase() ==
-              storageType.toLowerCase() ||
-          ingredient.storageCode?.toLowerCase() == storageType.toLowerCase();
-    }).toList();
+  // Client-side helpers
+  static List<Ingredient> searchIngredients(List<Ingredient> list, String q) {
+    if (q.isEmpty) return list;
+    final lower = q.toLowerCase();
+    return list.where((i) => i.name.toLowerCase().contains(lower)).toList();
   }
 
-  // Get unique storage types from ingredients list
-  static List<String> getUniqueStorageTypes(List<Ingredient> ingredients) {
-    final Set<String> storageTypes = {};
-    for (var ingredient in ingredients) {
-      if (ingredient.storageName != null &&
-          ingredient.storageName!.isNotEmpty) {
-        storageTypes.add(ingredient.storageName!);
+  static List<String> extractKeywords(List<Ingredient> list) {
+    final Set<String> kw = {};
+    for (final i in list) {
+      for (final w in i.name.split(' ')) {
+        if (w.length > 3) kw.add(w);
       }
     }
-    return storageTypes.toList()..sort();
-  }
-
-  // Get ingredient keywords/categories (based on name patterns)
-  static List<String> extractKeywords(List<Ingredient> ingredients) {
-    final Set<String> keywords = {};
-    for (var ingredient in ingredients) {
-      // Simple keyword extraction - can be enhanced
-      final words = ingredient.name.split(' ');
-      for (var word in words) {
-        if (word.length > 3) {
-          keywords.add(word);
-        }
-      }
-    }
-    return keywords.toList()..sort();
+    return kw.toList()..sort();
   }
 }
