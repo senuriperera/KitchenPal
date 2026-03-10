@@ -142,6 +142,7 @@ class MasterIngredientModel {
         return {
             master_ingredient_id: row.master_ingredient_id,
             name: row.name,
+            unit_family: row.unit_family,
             default_unit_id: row.default_unit_id,
             is_custom: row.is_custom,
             created_at: row.created_at,

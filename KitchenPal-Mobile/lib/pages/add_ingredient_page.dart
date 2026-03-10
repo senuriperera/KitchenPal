@@ -135,14 +135,10 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         _masterIngredients = masterList;
         _allUnits = units;
         _storageTypes = storageTypes;
-        _selectedStorageType = storageTypes.isNotEmpty
-            ? storageTypes.first
-            : null;
-        // Default weight unit — show all until ingredient selected
+        _selectedStorageType = storageTypes.isNotEmpty ? storageTypes.first : null;
+        // No ingredient selected yet — default to weight family, no pre-fill
         _filteredUnits = units.where((u) => u.unitFamily == 'weight').toList();
-        _selectedWeightUnit = _filteredUnits.isNotEmpty
-            ? _filteredUnits.first
-            : null;
+        _selectedWeightUnit = null;
         _isLoadingData = false;
       });
     } catch (e) {
@@ -188,7 +184,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       _nameSearchController.text = master.name;
       _showSuggestions = false;
       _customIngredientName = master.name;
-      _filterUnitsByFamily(master.unitFamily);
+      // Filter by family AND pre-select the default unit from master_ingredients
+      _applyMasterIngredientUnits(master.unitFamily, master.defaultUnitId);
     });
   }
 
@@ -197,35 +194,32 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       _selectedMaster = null;
       _isNewCustomIngredient = true;
       _showSuggestions = false;
-      // Default to weight family for new custom ingredients
-      _filterUnitsByFamily('weight');
+      // New custom ingredient — default weight family, no specific pre-fill
+      _applyMasterIngredientUnits('weight', null);
     });
   }
 
-  void _filterUnitsByFamily(String family) {
-    setState(() {
-      if (family == 'count') {
-        _filteredUnits = _allUnits
-            .where((u) => u.unitFamily == 'count')
-            .toList();
-        _selectedWeightUnit = _filteredUnits.isNotEmpty
-            ? _filteredUnits.first
-            : null;
-      } else if (family == 'volume') {
-        _filteredUnits = _allUnits
-            .where((u) => u.unitFamily == 'volume')
-            .toList();
-        _selectedWeightUnit = _filteredUnits.isNotEmpty
-            ? _filteredUnits.first
-            : null;
-      } else {
-        _filteredUnits = _allUnits
-            .where((u) => u.unitFamily == 'weight')
-            .toList();
-        _selectedWeightUnit = _filteredUnits.isNotEmpty
-            ? _filteredUnits.first
-            : null;
+  /// Filters the Weight Unit dropdown to [family] and pre-selects the unit
+  /// matching [defaultUnitId] (from master_ingredients.default_unit_id).
+  /// Falls back to the first unit in the filtered list when defaultUnitId is
+  /// null or not found.
+  void _applyMasterIngredientUnits(String family, int? defaultUnitId) {
+    final filtered = _allUnits.where((u) => u.unitFamily == family).toList();
+
+    UnitModel? preSelected;
+    if (defaultUnitId != null) {
+      // Try to find the unit whose unitId matches the default
+      try {
+        preSelected = filtered.firstWhere((u) => u.unitId == defaultUnitId);
+      } catch (_) {
+        // default_unit_id not found in filtered list — fall back to first
+        preSelected = null;
       }
+    }
+
+    setState(() {
+      _filteredUnits = filtered;
+      _selectedWeightUnit = preSelected ?? (filtered.isNotEmpty ? filtered.first : null);
     });
   }
 
