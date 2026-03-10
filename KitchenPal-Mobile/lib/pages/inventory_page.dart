@@ -92,7 +92,10 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     }
     if (_selectedKeyword != null) {
       filtered = filtered
-          .where((i) => i.name.toLowerCase().contains(_selectedKeyword!.toLowerCase()))
+          .where(
+            (i) =>
+                i.name.toLowerCase().contains(_selectedKeyword!.toLowerCase()),
+          )
           .toList();
     }
     setState(() => _filteredIngredients = filtered);
@@ -155,8 +158,10 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ),
@@ -184,15 +189,13 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
               selectedColor: const Color(0xFFFF9500),
               labelStyle: TextStyle(
                 color: Colors.white,
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide.none,
               ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           );
         },
@@ -203,7 +206,8 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   Widget _buildContent() {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(color: Color(0xFF2C2C54)));
+        child: CircularProgressIndicator(color: Color(0xFF2C2C54)),
+      );
     }
 
     if (_errorMessage != null) {
@@ -213,17 +217,22 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text('Failed to load ingredients',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700])),
+            Text(
+              'Failed to load ingredients',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
             const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(_errorMessage!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600])),
+              child: Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600]),
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -234,9 +243,12 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                 backgroundColor: const Color(0xFF2C2C54),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
@@ -249,14 +261,16 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined,
-                size: 64, color: Colors.grey[400]),
+            Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text('No ingredients found',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[700])),
+            Text(
+              'No ingredients found',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               _searchQuery.isNotEmpty || _selectedKeyword != null
@@ -318,7 +332,8 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                 width: 80,
                 height: 80,
                 color: Colors.grey[200],
-                child: ingredient.imageUrl != null &&
+                child:
+                    ingredient.imageUrl != null &&
                         ingredient.imageUrl!.isNotEmpty
                     ? Image.network(
                         ingredient.imageUrl!,
@@ -338,9 +353,10 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                     Text(
                       ingredient.name,
                       style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C2C54)),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C2C54),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -370,8 +386,11 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
             // Arrow
             Padding(
               padding: const EdgeInsets.only(right: 12.0),
-              child: Icon(Icons.chevron_right,
-                  color: Colors.grey[400], size: 28),
+              child: Icon(
+                Icons.chevron_right,
+                color: Colors.grey[400],
+                size: 28,
+              ),
             ),
           ],
         ),

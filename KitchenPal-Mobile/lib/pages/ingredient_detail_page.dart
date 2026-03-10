@@ -37,7 +37,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       _errorMessage = null;
     });
     try {
-      final ingredient = await IngredientService.getIngredientById(widget.ingredientId);
+      final ingredient = await IngredientService.getIngredientById(
+        widget.ingredientId,
+      );
       setState(() {
         _ingredient = ingredient;
         _isLoading = false;
@@ -62,12 +64,14 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         content: Text('Are you sure you want to delete ${_ingredient?.name}?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -78,13 +82,15 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         await IngredientService.deleteIngredient(widget.ingredientId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Ingredient deleted successfully')));
+            const SnackBar(content: Text('Ingredient deleted successfully')),
+          );
           Navigator.pop(context, true);
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to delete: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
         }
       } finally {
         if (mounted) setState(() => _isDeleting = false);
@@ -106,8 +112,18 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
   String _formatDate(DateTime? date) {
     if (date == null) return '—';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -123,40 +139,42 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       ),
       body: _isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF2C2C54)))
+              child: CircularProgressIndicator(color: Color(0xFF2C2C54)),
+            )
           : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline,
-                          size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text('Failed to load details',
-                          style: TextStyle(
-                              fontSize: 18, color: Colors.grey[700])),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(_errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.grey[600])),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _loadDetail,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2C2C54),
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load details',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[700]),
                   ),
-                )
-              : _buildBody(),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _loadDetail,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2C2C54),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _buildBody(),
     );
   }
 
@@ -191,9 +209,14 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('INGREDIENT VISUAL',
-            style: TextStyle(
-                fontSize: 12, color: Colors.black54, letterSpacing: 0.5)),
+        const Text(
+          'INGREDIENT VISUAL',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+            letterSpacing: 0.5,
+          ),
+        ),
         const SizedBox(height: 12),
         Container(
           height: 180,
@@ -227,13 +250,16 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(30)),
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(30),
+          ),
           child: const Icon(Icons.restaurant, size: 28, color: Colors.grey),
         ),
         const SizedBox(height: 12),
-        const Text('No image available',
-            style: TextStyle(fontSize: 14, color: Colors.black45)),
+        const Text(
+          'No image available',
+          style: TextStyle(fontSize: 14, color: Colors.black45),
+        ),
       ],
     );
   }
@@ -246,25 +272,46 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('BASIC INFORMATION',
-              style: TextStyle(
-                  fontSize: 12, color: Colors.black54, letterSpacing: 0.5)),
+          const Text(
+            'BASIC INFORMATION',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              letterSpacing: 0.5,
+            ),
+          ),
           const SizedBox(height: 16),
           _infoRow(Icons.label_outline, 'Ingredient Name', i.name),
           _divider(),
-          _infoRow(Icons.inventory_2_outlined, 'Quantity in Stock',
-              '${i.quantityInStock.toInt()} packet(s)'),
+          _infoRow(
+            Icons.inventory_2_outlined,
+            'Quantity in Stock',
+            '${i.quantityInStock.toInt()} item(s)',
+          ),
           _divider(),
-          _infoRow(Icons.scale_outlined, 'Weight per Packet',
-              '${i.unitWeight} ${i.unitWeightUnitCode}'),
+          _infoRow(
+            Icons.scale_outlined,
+            'Weight per Packet',
+            '${i.unitWeight} ${i.unitWeightUnitCode}',
+          ),
           _divider(),
-          _infoRow(Icons.calculate_outlined, 'Display Total Weight', displayTotal),
+          _infoRow(
+            Icons.calculate_outlined,
+            'Display Total Weight',
+            displayTotal,
+          ),
           _divider(),
-          _infoRow(Icons.attach_money, 'Price per Packet', '\$${i.price.toStringAsFixed(2)}'),
+          _infoRow(
+            Icons.attach_money,
+            'Price per Packet',
+            '\$${i.price.toStringAsFixed(2)}',
+          ),
           _divider(),
           _infoRow(Icons.storage_outlined, 'Storage Type', i.storageTypeName),
           if (i.addedByName != null) ...[
@@ -287,15 +334,19 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
                 const SizedBox(height: 2),
-                Text(value,
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
           ),
@@ -304,21 +355,27 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     );
   }
 
-  Widget _divider() =>
-      Divider(height: 1, color: Colors.grey.shade100);
+  Widget _divider() => Divider(height: 1, color: Colors.grey.shade100);
 
   // ─── Dates section ────────────────────────────────────────────────────────
   Widget _buildDatesSection(Ingredient i) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('INVENTORY DATES',
-              style: TextStyle(
-                  fontSize: 12, color: Colors.black54, letterSpacing: 0.5)),
+          const Text(
+            'INVENTORY DATES',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              letterSpacing: 0.5,
+            ),
+          ),
           const SizedBox(height: 16),
           _buildDateTile(
             icon: Icons.factory,
@@ -353,7 +410,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         border: Border.all(
-            color: isExpirySoon ? Colors.red.shade200 : Colors.grey.shade300),
+          color: isExpirySoon ? Colors.red.shade200 : Colors.grey.shade300,
+        ),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -362,7 +420,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-                color: bgColor, borderRadius: BorderRadius.circular(8)),
+              color: bgColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Icon(icon, color: iconColor, size: 20),
           ),
           const SizedBox(width: 12),
@@ -370,30 +430,37 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.black54)),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
                 const SizedBox(height: 2),
-                Text(value,
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: isExpirySoon ? Colors.red : Colors.black87)),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isExpirySoon ? Colors.red : Colors.black87,
+                  ),
+                ),
               ],
             ),
           ),
           if (isExpirySoon)
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(12)),
-              child: const Text('Expiring Soon',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Expiring Soon',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
         ],
       ),
@@ -402,40 +469,97 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
 
   // ─── Batches section ──────────────────────────────────────────────────────
   Widget _buildBatchesSection(
-      List<IngredientBatch> batches, String baseUnitCode) {
+    List<IngredientBatch> batches,
+    String baseUnitCode,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('ACTIVE BATCHES (FIFO)',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                      letterSpacing: 0.5)),
+              const Text(
+                'ACTIVE BATCHES (FIFO)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.black54,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Color(0xFF2C2C54)),
+                          SizedBox(width: 8),
+                          Text('Active Batches (FIFO)'),
+                        ],
+                      ),
+                      content: const Text(
+                        'FIFO stands for "First In, First Out" - a standard inventory management method.\n\n'
+                        'Each time you add stock, it creates a new batch with its own expiry date and quantity. '
+                        'When you use ingredients, the system automatically uses from the oldest batch first to minimize waste.\n\n'
+                        'The "remaining" amount shows how much is left in each batch in base units (g for weight, ml for volume, or count for items).',
+                        style: TextStyle(fontSize: 15, height: 1.5),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Got it'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                child: const Icon(
+                  Icons.help_outline,
+                  size: 16,
+                  color: Color(0xFF2C2C54),
+                ),
+              ),
               const Spacer(),
-              Text('${batches.length} batch(es)',
-                  style:
-                      const TextStyle(fontSize: 12, color: Colors.black45)),
+              Text(
+                '${batches.length} batch(es)',
+                style: const TextStyle(fontSize: 12, color: Colors.black45),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           if (batches.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text('No active batches',
-                  style: TextStyle(color: Colors.black45, fontSize: 14)),
+              child: Text(
+                'No active batches',
+                style: TextStyle(color: Colors.black45, fontSize: 14),
+              ),
             )
           else
             ...batches.asMap().entries.map((entry) {
               final idx = entry.key;
               final batch = entry.value;
-              final daysLeft =
-                  batch.expiryDate.difference(DateTime.now()).inDays;
+              final daysLeft = batch.expiryDate
+                  .difference(DateTime.now())
+                  .inDays;
+
+              // Format the remaining quantity nicely
+              String formattedQty;
+              if (batch.remainingBaseQuantity.isNaN ||
+                  batch.remainingBaseQuantity.isInfinite) {
+                formattedQty = '0 ${batch.baseUnitCode}';
+              } else {
+                final qty = batch.remainingBaseQuantity.toStringAsFixed(0);
+                formattedQty = '$qty ${batch.baseUnitCode}';
+              }
+
               return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(12),
@@ -443,9 +567,10 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                   color: const Color(0xFFF9F9F9),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: daysLeft <= 3
-                          ? Colors.red.shade200
-                          : Colors.grey.shade200),
+                    color: daysLeft <= 3
+                        ? Colors.red.shade200
+                        : Colors.grey.shade200,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -457,11 +582,14 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Center(
-                        child: Text('${idx + 1}',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold)),
+                        child: Text(
+                          '${idx + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -470,25 +598,31 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${batch.remainingBaseQuantity.toStringAsFixed(0)} ${batch.baseUnitCode} remaining',
+                            '$formattedQty remaining',
                             style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Expires: ${_formatDate(batch.expiryDate)}',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: daysLeft <= 3
-                                    ? Colors.red
-                                    : Colors.grey[600]),
+                              fontSize: 12,
+                              color: daysLeft <= 3
+                                  ? Colors.red
+                                  : Colors.grey[600],
+                            ),
                           ),
                         ],
                       ),
                     ),
                     if (daysLeft <= 3)
-                      const Icon(Icons.warning_amber_rounded,
-                          color: Colors.red, size: 20),
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.red,
+                        size: 20,
+                      ),
                   ],
                 ),
               );
@@ -506,15 +640,20 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
           ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.red,
+              ),
+            )
           : const Icon(Icons.delete_outline, color: Colors.red),
-      label: const Text('Delete Ingredient',
-          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
+      label: const Text(
+        'Delete Ingredient',
+        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+      ),
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 12),
         side: const BorderSide(color: Colors.red),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

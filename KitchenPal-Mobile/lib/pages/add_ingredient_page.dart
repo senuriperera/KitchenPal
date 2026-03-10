@@ -135,9 +135,13 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         _masterIngredients = masterList;
         _allUnits = units;
         _storageTypes = storageTypes;
-        _selectedStorageType = storageTypes.isNotEmpty ? storageTypes.first : null;
+        _selectedStorageType = storageTypes.isNotEmpty
+            ? storageTypes.first
+            : null;
         // No ingredient selected yet — default to weight family, no pre-fill
-        _filteredUnits = units.where((u) => u.unitFamily == 'weight').toList();
+        _filteredUnits = units
+            .where((u) => u.unitFamily.trim().toLowerCase() == 'weight')
+            .toList();
         _selectedWeightUnit = null;
         _isLoadingData = false;
       });
@@ -204,7 +208,12 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   /// Falls back to the first unit in the filtered list when defaultUnitId is
   /// null or not found.
   void _applyMasterIngredientUnits(String family, int? defaultUnitId) {
-    final filtered = _allUnits.where((u) => u.unitFamily == family).toList();
+    final filtered = _allUnits
+        .where(
+          (u) =>
+              u.unitFamily.trim().toLowerCase() == family.trim().toLowerCase(),
+        )
+        .toList();
 
     UnitModel? preSelected;
     if (defaultUnitId != null) {
@@ -219,7 +228,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
     setState(() {
       _filteredUnits = filtered;
-      _selectedWeightUnit = preSelected ?? (filtered.isNotEmpty ? filtered.first : null);
+      _selectedWeightUnit =
+          preSelected ?? (filtered.isNotEmpty ? filtered.first : null);
     });
   }
 

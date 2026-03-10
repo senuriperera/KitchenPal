@@ -114,9 +114,8 @@ class IngredientService {
   static List<String> extractKeywords(List<Ingredient> list) {
     final Set<String> kw = {};
     for (final i in list) {
-      for (final w in i.name.split(' ')) {
-        if (w.length > 3) kw.add(w);
-      }
+      // Use full ingredient names as keywords instead of splitting words
+      kw.add(i.name);
     }
     return kw.toList()..sort();
   }
