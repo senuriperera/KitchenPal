@@ -151,7 +151,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2C2C54),
+        backgroundColor: const Color(0xFFFF9500),
         foregroundColor: Colors.white,
         title: Text(_ingredient?.name ?? 'Ingredient Details'),
       ),
@@ -289,8 +289,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF2C2C54), Color(0xFF3D3D6B)],
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF9500), Color(0xFFFFB84D)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -314,7 +314,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 Text(
                   i.displayTotalWeight,
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),

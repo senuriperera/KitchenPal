@@ -118,7 +118,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     return SafeArea(
       child: Column(
         children: [
-          _buildSearchBar(),
+          _buildHeader(),
           if (_keywords.isNotEmpty) _buildKeywordFilters(),
           Expanded(child: _buildContent()),
         ],
@@ -126,79 +126,143 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF9500), Color(0xFFFFB84D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: TextField(
-          controller: _searchController,
-          onChanged: _onSearchChanged,
-          decoration: InputDecoration(
-            hintText: 'Enter search terms',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 16),
-            prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      _searchController.clear();
-                      _onSearchChanged('');
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Ingredients',
+            style: TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
-        ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search ingredients...',
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 15),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildKeywordFilters() {
+    // Add "All" option at the beginning
+    final allKeywords = ['All', ..._keywords];
+
     return Container(
-      height: 50,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _keywords.length,
-        itemBuilder: (context, index) {
-          final keyword = _keywords[index];
-          final isSelected = _selectedKeyword == keyword;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(keyword),
-              selected: isSelected,
-              onSelected: (_) => _onKeywordTapped(keyword),
-              backgroundColor: const Color(0xFFFFB84D),
-              selectedColor: const Color(0xFFFF9500),
-              labelStyle: TextStyle(
-                color: Colors.white,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide.none,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              '${_filteredIngredients.length} items found',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
             ),
-          );
-        },
+          ),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: allKeywords.length,
+              itemBuilder: (context, index) {
+                final keyword = allKeywords[index];
+                final isAll = keyword == 'All';
+                final isSelected = isAll
+                    ? _selectedKeyword == null
+                    : _selectedKeyword == keyword;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (isAll) {
+                        setState(() {
+                          _selectedKeyword = null;
+                        });
+                        _filterIngredients();
+                      } else {
+                        _onKeywordTapped(keyword);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFFFF9500)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFFFF9500)
+                              : Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        keyword,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isSelected ? Colors.white : Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
