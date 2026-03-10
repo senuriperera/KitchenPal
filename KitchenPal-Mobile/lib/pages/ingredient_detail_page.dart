@@ -207,6 +207,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             children: [
               _buildImageSection(i),
               const SizedBox(height: 24),
+              _buildStockSummaryCard(i),
+              const SizedBox(height: 24),
               _buildInfoSection(i),
               const SizedBox(height: 24),
               _buildDatesSection(i),
@@ -282,11 +284,74 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     );
   }
 
+  // ─── Stock Summary Card ───────────────────────────────────────────────────
+  Widget _buildStockSummaryCard(Ingredient i) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2C2C54), Color(0xFF3D3D6B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Total Stock (all batches combined)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  i.displayTotalWeight,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text(
+                'Quantity in stock',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white70,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${i.quantityInStock.toInt()} item(s)',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── Info section ─────────────────────────────────────────────────────────
   Widget _buildInfoSection(Ingredient i) {
-    // Display total weight is quantity_in_stock * unit_weight — computed Flutter-side
-    final displayTotal = i.displayTotalWeight;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -308,18 +373,10 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
           _infoRow(Icons.label_outline, 'Ingredient Name', i.name),
           _divider(),
           _infoRow(
-            Icons.inventory_2_outlined,
-            'Quantity in Stock',
-            '${i.quantityInStock.toInt()} item(s)',
-          ),
-          _divider(),
-          _infoRow(
             Icons.scale_outlined,
             'Weight per Packet',
             '${i.unitWeight} ${i.unitWeightUnitCode}',
           ),
-          _divider(),
-          _infoRow(Icons.calculate_outlined, 'Total Weight', displayTotal),
           _divider(),
           _infoRow(
             Icons.attach_money,

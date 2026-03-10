@@ -86,6 +86,30 @@ class IngredientModel {
     };
   }
 
+  // ─── Find existing ingredient by master_ingredient_id (for auto-fill) ──────
+  static async findExistingByMasterIngredient(branch_id, master_ingredient_id) {
+    const query = `
+      SELECT
+        si.ingredient_id,
+        si.unit_weight,
+        si.unit_weight_unit_id,
+        si.price,
+        si.storage_type_id,
+        si.image_url,
+        u.code AS unit_weight_unit_code,
+        u.name AS unit_weight_unit_name,
+        st.name AS storage_type_name
+      FROM stock_ingredients si
+      JOIN units u ON si.unit_weight_unit_id = u.unit_id
+      JOIN storage_types st ON si.storage_type_id = st.storage_type_id
+      WHERE si.branch_id = $1
+      AND si.master_ingredient_id = $2
+      LIMIT 1
+    `;
+    const result = await db.query(query, [branch_id, master_ingredient_id]);
+    return result.rows[0] || null;
+  }
+
   // ─── Create ingredient (full 6-step transaction) ───────────────────────────
   /**
    * @param {Object} data
@@ -156,27 +180,87 @@ class IngredientModel {
       );
       const base_unit_id = baseUnitRow.rows[0]?.unit_id;
 
-      // Step 3 — Insert into stock_ingredients
-      const stockRow = await client.query(
-        `INSERT INTO stock_ingredients
-                    (branch_id, master_ingredient_id, name, quantity_in_stock,
-                     unit_weight, unit_weight_unit_id, total_base_quantity, base_unit_id,
-                     price, storage_type_id, manufacture_date, expiry_date,
-                     image_url, added_by)
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-                 RETURNING ingredient_id`,
-        [
-          data.branch_id, masterIngredientId, data.name,
-          data.quantity_in_stock, data.unit_weight, data.unit_weight_unit_id,
-          total_base_quantity, base_unit_id,
-          data.price, data.storage_type_id,
-          data.manufacture_date || null,
-          data.expiry_date,
-          data.image_url || null,
-          data.added_by,
-        ]
-      );
-      const ingredient_id = stockRow.rows[0].ingredient_id;
+      // Step 3 — Check for duplicate if master_ingredient_id exists
+      let ingredient_id;
+
+      if (masterIngredientId) {
+        const duplicateCheck = await client.query(
+          `SELECT ingredient_id, total_base_quantity, quantity_in_stock
+           FROM stock_ingredients
+           WHERE branch_id = $1 AND master_ingredient_id = $2`,
+          [data.branch_id, masterIngredientId]
+        );
+
+        if (duplicateCheck.rows.length > 0) {
+          // Ingredient exists — UPDATE
+          const existing = duplicateCheck.rows[0];
+          await client.query(
+            `UPDATE stock_ingredients SET
+              total_base_quantity = total_base_quantity + $1,
+              quantity_in_stock = quantity_in_stock + $2,
+              price = $3,
+              unit_weight = $4,
+              unit_weight_unit_id = $5,
+              image_url = COALESCE($6, image_url),
+              last_updated = NOW()
+             WHERE ingredient_id = $7`,
+            [
+              total_base_quantity,
+              data.quantity_in_stock,
+              data.price,
+              data.unit_weight,
+              data.unit_weight_unit_id,
+              data.image_url || null,
+              existing.ingredient_id,
+            ]
+          );
+          ingredient_id = existing.ingredient_id;
+        } else {
+          // Ingredient does not exist — INSERT
+          const stockRow = await client.query(
+            `INSERT INTO stock_ingredients
+                        (branch_id, master_ingredient_id, name, quantity_in_stock,
+                         unit_weight, unit_weight_unit_id, total_base_quantity, base_unit_id,
+                         price, storage_type_id, manufacture_date, expiry_date,
+                         image_url, added_by)
+                     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                     RETURNING ingredient_id`,
+            [
+              data.branch_id, masterIngredientId, data.name,
+              data.quantity_in_stock, data.unit_weight, data.unit_weight_unit_id,
+              total_base_quantity, base_unit_id,
+              data.price, data.storage_type_id,
+              data.manufacture_date || null,
+              data.expiry_date,
+              data.image_url || null,
+              data.added_by,
+            ]
+          );
+          ingredient_id = stockRow.rows[0].ingredient_id;
+        }
+      } else {
+        // No master_ingredient_id — new custom ingredient — always INSERT
+        const stockRow = await client.query(
+          `INSERT INTO stock_ingredients
+                      (branch_id, master_ingredient_id, name, quantity_in_stock,
+                       unit_weight, unit_weight_unit_id, total_base_quantity, base_unit_id,
+                       price, storage_type_id, manufacture_date, expiry_date,
+                       image_url, added_by)
+                   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                   RETURNING ingredient_id`,
+          [
+            data.branch_id, masterIngredientId, data.name,
+            data.quantity_in_stock, data.unit_weight, data.unit_weight_unit_id,
+            total_base_quantity, base_unit_id,
+            data.price, data.storage_type_id,
+            data.manufacture_date || null,
+            data.expiry_date,
+            data.image_url || null,
+            data.added_by,
+          ]
+        );
+        ingredient_id = stockRow.rows[0].ingredient_id;
+      }
 
       // Step 4 — Insert into ingredient_batches
       await client.query(

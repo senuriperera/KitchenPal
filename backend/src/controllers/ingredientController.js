@@ -86,6 +86,36 @@ class IngredientController {
         }
     }
 
+    // ─── GET /api/ingredients/existing ────────────────────────────────────────
+    static async getExistingIngredient(req, res) {
+        try {
+            const branch_id = req.user.branch_id;
+            const { master_ingredient_id } = req.query;
+
+            if (!branch_id) {
+                return res.status(400).json({ error: 'No branch associated with this account' });
+            }
+
+            if (!master_ingredient_id) {
+                return res.status(400).json({ error: 'master_ingredient_id is required' });
+            }
+
+            const existing = await IngredientModel.findExistingByMasterIngredient(
+                branch_id,
+                master_ingredient_id
+            );
+
+            if (!existing) {
+                return res.status(204).send();
+            }
+
+            res.json({ ingredient: existing });
+        } catch (error) {
+            console.error('Get existing ingredient error:', error);
+            res.status(500).json({ error: 'Failed to fetch existing ingredient' });
+        }
+    }
+
     // ─── DELETE /api/ingredients/:ingredient_id ───────────────────────────────
     static async deleteIngredient(req, res) {
         try {

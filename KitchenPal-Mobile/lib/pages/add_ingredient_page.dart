@@ -66,6 +66,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   bool _isScanning = false;
   bool _isSubmitting = false;
   bool _isLoadingData = true;
+  bool _isRestocking = false;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -168,6 +169,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         _suggestions = [];
         _selectedMaster = null;
         _isNewCustomIngredient = false;
+        _isRestocking = false;
       } else {
         final lower = query.toLowerCase();
         _suggestions = _masterIngredients
@@ -177,6 +179,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         _showSuggestions = true;
         _selectedMaster = null;
         _isNewCustomIngredient = false;
+        _isRestocking = false;
       }
     });
   }
@@ -191,6 +194,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       // Filter by family AND pre-select the default unit from master_ingredients
       _applyMasterIngredientUnits(master.unitFamily, master.defaultUnitId);
     });
+    // Check if this ingredient already exists at this branch
+    _checkExistingIngredient(master.masterIngredientId);
   }
 
   void _selectNewIngredient() {
@@ -237,6 +242,73 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       (_selectedMaster?.unitFamily ??
           (_isNewCustomIngredient ? 'weight' : 'weight')) ==
       'count';
+
+  // ─── Check existing ingredient for auto-fill ────────────────────────────────
+  Future<void> _checkExistingIngredient(int masterIngredientId) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse(
+          '${ApiConstants.baseUrl}/ingredients/existing?master_ingredient_id=$masterIngredientId',
+        ),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 204) {
+        // No existing ingredient — form stays fresh
+        setState(() => _isRestocking = false);
+        return;
+      }
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        final existing = json['ingredient'];
+
+        setState(() {
+          _isRestocking = true;
+
+          // Auto-fill storage type
+          final storageTypeId = existing['storage_type_id'];
+          _selectedStorageType = _storageTypes.firstWhere(
+            (st) => st.storageTypeId == storageTypeId,
+            orElse: () => _storageTypes.first,
+          );
+
+          // Auto-fill weight per unit
+          _weightController.text = existing['unit_weight'].toString();
+
+          // Auto-fill weight unit
+          final unitId = existing['unit_weight_unit_id'];
+          _selectedWeightUnit = _filteredUnits.firstWhere(
+            (u) => u.unitId == unitId,
+            orElse: () =>
+                _filteredUnits.isNotEmpty ? _filteredUnits.first : null!,
+          );
+
+          // Auto-fill price
+          _priceController.text = existing['price'].toString();
+
+          // Auto-fill image if available
+          if (existing['image_url'] != null &&
+              existing['image_url'].toString().isNotEmpty) {
+            _cloudinaryImageUrl = existing['image_url'];
+          }
+
+          // Leave quantity, manufacture date, and expiry date untouched
+        });
+      }
+    } catch (e) {
+      if (e.toString().contains('401')) {
+        _handleUnauthorized();
+      }
+      // Silently fail — not critical
+    }
+  }
 
   // ─── Date pickers ────────────────────────────────────────────────────────────
   Future<void> _selectManufactureDate(BuildContext ctx) async {
@@ -611,6 +683,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       _cloudinaryImageUrl = null;
       _ocrImage = null;
       _ocrCloudinaryImageUrl = null;
+      _isRestocking = false;
     });
   }
 
@@ -686,6 +759,38 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // ── RESTOCK BANNER ───────────────────────────────────────────
+                if (_isRestocking)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3CD),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFB84D)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline,
+                          color: Color(0xFFF59E0B),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: const Text(
+                            'Restocking existing ingredient — Storage type, weight and price have been pre-filled. Please enter quantity and dates for this new delivery.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF856404),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // ── INGREDIENT IMAGE ─────────────────────────────────────────
                 const Text(
                   'INGREDIENT IMAGE',

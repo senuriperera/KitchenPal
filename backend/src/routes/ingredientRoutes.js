@@ -21,9 +21,10 @@ const createIngredientValidation = [
 ];
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
-// IMPORTANT: /scan and /expiring must be declared BEFORE /:ingredient_id
+// IMPORTANT: /scan, /expiring, and /existing must be declared BEFORE /:ingredient_id
 router.post('/scan', authenticate, IngredientController.scanIngredient);
 router.get('/expiring', authenticate, IngredientController.getExpiringIngredients);
+router.get('/existing', authenticate, IngredientController.getExistingIngredient);
 
 router.get('/', authenticate, IngredientController.getIngredients);
 router.get('/:ingredient_id', authenticate, IngredientController.getIngredientById);

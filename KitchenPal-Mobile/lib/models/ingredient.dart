@@ -80,13 +80,9 @@ class Ingredient {
     return 0.0;
   }
 
-  // Flutter-side display calculation — never stored in DB
+  // Display total weight using base quantity from database
   String get displayTotalWeight {
-    final total = quantityInStock * unitWeight;
-    if (total == total.toInt()) {
-      return '${total.toInt()} $unitWeightUnitCode';
-    }
-    return '${total.toStringAsFixed(1)} $unitWeightUnitCode';
+    return '${totalBaseQuantity.toStringAsFixed(0)} $baseUnitCode';
   }
 
   int get daysUntilExpiry {
