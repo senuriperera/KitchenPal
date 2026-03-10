@@ -128,6 +128,24 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('•  ', style: TextStyle(fontSize: 15, height: 1.5)),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 15, height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -210,7 +228,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'INGREDIENT VISUAL',
+          'INGREDIENT IMAGE',
           style: TextStyle(
             fontSize: 12,
             color: Colors.black54,
@@ -301,16 +319,12 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             '${i.unitWeight} ${i.unitWeightUnitCode}',
           ),
           _divider(),
-          _infoRow(
-            Icons.calculate_outlined,
-            'Display Total Weight',
-            displayTotal,
-          ),
+          _infoRow(Icons.calculate_outlined, 'Total Weight', displayTotal),
           _divider(),
           _infoRow(
             Icons.attach_money,
             'Price per Packet',
-            '\$${i.price.toStringAsFixed(2)}',
+            '\Rs ${i.price.toStringAsFixed(2)}',
           ),
           _divider(),
           _infoRow(Icons.storage_outlined, 'Storage Type', i.storageTypeName),
@@ -484,7 +498,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
           Row(
             children: [
               const Text(
-                'ACTIVE BATCHES (FIFO)',
+                'ACTIVE BATCH STOCK',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.black54,
@@ -497,19 +511,31 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Row(
+                      title: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Color(0xFF2C2C54)),
-                          SizedBox(width: 8),
-                          Text('Active Batches (FIFO)'),
+                          const Icon(
+                            Icons.info_outline,
+                            color: Color(0xFF2C2C54),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: const Text('Active Batch Stock')),
                         ],
                       ),
-                      content: const Text(
-                        'FIFO stands for "First In, First Out" - a standard inventory management method.\n\n'
-                        'Each time you add stock, it creates a new batch with its own expiry date and quantity. '
-                        'When you use ingredients, the system automatically uses from the oldest batch first to minimize waste.\n\n'
-                        'The "remaining" amount shows how much is left in each batch in base units (g for weight, ml for volume, or count for items).',
-                        style: TextStyle(fontSize: 15, height: 1.5),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'This section shows all your stock batches for this ingredient.',
+                            style: TextStyle(fontSize: 15, height: 1.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Each time you add stock, it creates a separate batch. The batches are numbered in order of which should be used first (oldest first) to avoid waste.',
+                            style: TextStyle(fontSize: 15, height: 1.5),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                       ),
                       actions: [
                         TextButton(

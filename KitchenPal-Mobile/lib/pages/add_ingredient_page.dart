@@ -686,9 +686,9 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── INGREDIENT VISUAL ─────────────────────────────────────────
+                // ── INGREDIENT IMAGE ─────────────────────────────────────────
                 const Text(
-                  'INGREDIENT VISUAL',
+                  'INGREDIENT IMAGE',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.black54,
@@ -1037,7 +1037,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  'Price',
+                                  'Price Per Unit',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.black87,
@@ -1049,7 +1049,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                   controller: _priceController,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
-                                    hintText: '\$ 0.00',
+                                    hintText: '\Rs 0.00',
                                     hintStyle: const TextStyle(
                                       color: Colors.black38,
                                       fontSize: 14,
@@ -1128,7 +1128,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Weight',
+                                    'Weight Per Unit',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.black87,
