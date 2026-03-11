@@ -102,6 +102,11 @@ class RecipeController {
                 return res.status(400).json({ error: 'Invalid ingredient or unit ID' });
             }
 
+            // Surface explicit status codes thrown from model (unit mismatch = 400)
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: error.message });
+            }
+
             res.status(500).json({ error: 'Failed to create recipe' });
         }
     }
@@ -176,6 +181,11 @@ class RecipeController {
         } catch (error) {
             console.error('Update recipe error:', error);
 
+            // Surface explicit status codes thrown from model (unit mismatch = 400, inactive = 404)
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: error.message });
+            }
+
             // Handle specific database errors
             if (error.code === '23503') { // Foreign key violation
                 return res.status(400).json({ error: 'Invalid ingredient or unit ID' });
@@ -186,7 +196,7 @@ class RecipeController {
     }
 
     /**
-     * Delete a recipe (soft delete)
+     * Delete a recipe (soft delete — sets is_active = false)
      * DELETE /api/recipes/:id
      */
     static async deleteRecipe(req, res) {
@@ -195,7 +205,7 @@ class RecipeController {
             const recipe = await Recipe.delete(id);
 
             if (!recipe) {
-                return res.status(404).json({ error: 'Recipe not found' });
+                return res.status(404).json({ error: 'Recipe not found or already inactive' });
             }
 
             res.json({ message: 'Recipe deleted successfully' });

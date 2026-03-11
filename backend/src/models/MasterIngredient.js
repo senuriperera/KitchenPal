@@ -6,7 +6,12 @@ class MasterIngredientModel {
      */
     static async search(searchTerm, limit = 20) {
         const query = `
-      SELECT mi.*, u.code as unit_code, u.name as unit_name
+      SELECT mi.*,
+             mi.unit_family,
+             mi.base_unit_id,
+             mi.default_unit_id,
+             u.code as unit_code,
+             u.name as unit_name
       FROM master_ingredients mi
       LEFT JOIN units u ON mi.default_unit_id = u.unit_id
       WHERE LOWER(mi.name) LIKE LOWER($1)
@@ -64,31 +69,74 @@ class MasterIngredientModel {
     /**
      * Create a new master ingredient
      */
-    static async create({ name, default_unit_id = null, is_custom = false }) {
+    static async create({ name, default_unit_id = null, unit_family = null, base_unit_id = null, is_custom = false }) {
         const query = `
-      INSERT INTO master_ingredients (name, default_unit_id, is_custom)
-      VALUES ($1, $2, $3)
+      INSERT INTO master_ingredients (name, default_unit_id, unit_family, base_unit_id, is_custom)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `;
-        const result = await db.query(query, [name, default_unit_id, is_custom]);
+        const result = await db.query(query, [name, default_unit_id, unit_family, base_unit_id, is_custom]);
         return this._mapRow(result.rows[0]);
+    }
+
+    /**
+     * Derive unit_family and base_unit_id from a unit_id.
+     * Returns { unit_family, base_unit_id } or null if unit not found.
+     * Change 2 helper.
+     */
+    static async deriveUnitFamilyFields(unitId) {
+        // Step 1: get unit_family and base_unit_code from the selected unit
+        const unitQuery = `
+      SELECT unit_family, base_unit_code
+      FROM units
+      WHERE unit_id = $1
+    `;
+        const unitResult = await db.query(unitQuery, [unitId]);
+        if (!unitResult.rows[0]) return null;
+
+        const { unit_family, base_unit_code } = unitResult.rows[0];
+
+        // Step 2: look up base_unit_id from the code
+        const baseQuery = `
+      SELECT unit_id
+      FROM units
+      WHERE code = $1
+    `;
+        const baseResult = await db.query(baseQuery, [base_unit_code]);
+        const base_unit_id = baseResult.rows[0]?.unit_id || null;
+
+        return { unit_family, base_unit_id };
     }
 
     /**
      * Find or create a master ingredient by name
      * If exists, return it. If not, create with is_custom = true
+     * Change 2: accepts unitId and derives unit_family + base_unit_id before inserting
      */
-    static async findOrCreate({ name, default_unit_id = null }) {
+    static async findOrCreate({ name, default_unit_id = null, unit_id = null }) {
         // First try to find existing
         const existing = await this.findByName(name);
         if (existing) {
             return { ingredient: existing, created: false };
         }
 
-        // Create new custom ingredient
+        // Derive unit_family and base_unit_id from the selected unit (Change 2)
+        let unit_family = null;
+        let base_unit_id = null;
+        if (unit_id) {
+            const derived = await this.deriveUnitFamilyFields(unit_id);
+            if (derived) {
+                unit_family = derived.unit_family;
+                base_unit_id = derived.base_unit_id;
+            }
+        }
+
+        // Create new custom ingredient with derived fields
         const created = await this.create({
             name,
-            default_unit_id,
+            default_unit_id: default_unit_id || unit_id,
+            unit_family,
+            base_unit_id,
             is_custom: true
         });
         return { ingredient: created, created: true };
@@ -142,6 +190,8 @@ class MasterIngredientModel {
         return {
             master_ingredient_id: row.master_ingredient_id,
             name: row.name,
+            unit_family: row.unit_family || null,
+            base_unit_id: row.base_unit_id || null,
             default_unit_id: row.default_unit_id,
             is_custom: row.is_custom,
             created_at: row.created_at,

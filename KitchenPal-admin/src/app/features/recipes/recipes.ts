@@ -79,19 +79,22 @@ export class Recipes implements OnInit, OnDestroy {
   private uploadService = inject(UploadService);
 
   // Units
-  units: { id: number; code: string; label: string }[] = [];
+  units: { id: number; code: string; label: string; unit_family: string | null }[] = [];
+  private _allUnits: { id: number; code: string; label: string; unit_family: string | null }[] = [];
+  // Per-ingredient filtered units (Change 1 & 2): keyed by ingredient index
+  filteredUnitsMap: Map<number, { id: number; code: string; label: string; unit_family: string | null }[]> = new Map();
 
   private staticUnits = [
-    { id: 1, code: 'g', label: 'g (grams)' },
-    { id: 2, code: 'kg', label: 'kg (kilograms)' },
-    { id: 3, code: 'ml', label: 'ml (millilitres)' },
-    { id: 4, code: 'L', label: 'L (litres)' },
-    { id: 5, code: 'tsp', label: 'tsp (teaspoon)' },
-    { id: 6, code: 'tbsp', label: 'tbsp (tablespoon)' },
-    { id: 7, code: 'cup', label: 'cup' },
-    { id: 8, code: 'pcs', label: 'pcs (pieces)' },
-    { id: 9, code: 'oz', label: 'oz (ounces)' },
-    { id: 10, code: 'lb', label: 'lb (pounds)' },
+    { id: 1, code: 'g', label: 'g (grams)', unit_family: 'weight' },
+    { id: 2, code: 'kg', label: 'kg (kilograms)', unit_family: 'weight' },
+    { id: 3, code: 'ml', label: 'ml (millilitres)', unit_family: 'volume' },
+    { id: 4, code: 'L', label: 'L (litres)', unit_family: 'volume' },
+    { id: 5, code: 'tsp', label: 'tsp (teaspoon)', unit_family: 'volume' },
+    { id: 6, code: 'tbsp', label: 'tbsp (tablespoon)', unit_family: 'volume' },
+    { id: 7, code: 'cup', label: 'cup', unit_family: 'volume' },
+    { id: 8, code: 'pcs', label: 'pcs (pieces)', unit_family: 'count' },
+    { id: 9, code: 'oz', label: 'oz (ounces)', unit_family: 'weight' },
+    { id: 10, code: 'lb', label: 'lb (pounds)', unit_family: 'weight' },
   ];
 
   form: RecipeFormData = this.emptyForm();
@@ -155,14 +158,17 @@ export class Recipes implements OnInit, OnDestroy {
   private loadUnits(): void {
     this.ingredientService.getUnits().subscribe({
       next: (units) => {
-        this.units = units.map((u: any) => ({
+        this._allUnits = units.map((u: any) => ({
           id: u.unit_id,
           code: u.code,
-          label: `${u.code} (${u.name})`
+          label: `${u.code} (${u.name})`,
+          unit_family: u.unit_family || null
         }));
+        this.units = this._allUnits;
       },
       error: () => {
-        this.units = this.staticUnits;
+        this._allUnits = this.staticUnits;
+        this.units = this._allUnits;
       }
     });
   }
@@ -180,6 +186,7 @@ export class Recipes implements OnInit, OnDestroy {
     this.isEditMode = false;
     this.selectedRecipe = null;
     this.form = this.emptyForm();
+    this.filteredUnitsMap.clear();
     this.clearSearchStates();
   }
 
@@ -325,10 +332,27 @@ export class Recipes implements OnInit, OnDestroy {
     ingredient.masterIngredientId = masterIngredient.master_ingredient_id;
     ingredient.isNew = false;
 
-    // Auto-fill unit from master ingredient's default unit
+    // Change 1: filter unit dropdown to the ingredient's unit_family.
+    // If unit_family is null (legacy DB data), fall back by looking up the default_unit_id's family.
+    let familyToFilter: string | null = masterIngredient.unit_family;
+    if (!familyToFilter && masterIngredient.default_unit_id) {
+      const defaultUnit = this._allUnits.find(u => u.id === masterIngredient.default_unit_id);
+      familyToFilter = defaultUnit?.unit_family ?? null;
+    }
+
+    if (familyToFilter) {
+      const filtered = this._allUnits.filter(u => u.unit_family === familyToFilter);
+      this.filteredUnitsMap.set(index, filtered);
+    } else {
+      // Truly no family info available — show all units
+      this.filteredUnitsMap.delete(index);
+    }
+
+    // Pre-select the default unit for this ingredient
     if (masterIngredient.default_unit_id) {
       ingredient.unitId = masterIngredient.default_unit_id;
-      ingredient.unitCode = masterIngredient.defaultUnit?.code || 'g';
+      const matchingUnit = this._allUnits.find(u => u.id === masterIngredient.default_unit_id);
+      ingredient.unitCode = matchingUnit?.code || masterIngredient.defaultUnit?.code || 'g';
     }
 
     const state = this.getSearchState(index);
@@ -361,9 +385,36 @@ export class Recipes implements OnInit, OnDestroy {
     const ingredient = this.form.ingredients[index];
     ingredient.isNew = true;
     ingredient.masterIngredientId = null;
+    // For new ingredients show all units (no filter yet — filter applied on unit selection)
+    this.filteredUnitsMap.delete(index);
 
     const state = this.getSearchState(index);
     state.showDropdown = false;
+  }
+
+  /**
+   * Called when admin changes the unit dropdown for any ingredient row.
+   * Change 2: for NEW ingredients, immediately filter the dropdown to the selected unit's family.
+   */
+  onUnitChange(index: number): void {
+    const ingredient = this.form.ingredients[index];
+    if (!ingredient.isNew || !ingredient.unitId) return;
+
+    const selectedUnit = this._allUnits.find(u => u.id === Number(ingredient.unitId));
+    if (selectedUnit?.unit_family) {
+      const filtered = this._allUnits.filter(u => u.unit_family === selectedUnit.unit_family);
+      this.filteredUnitsMap.set(index, filtered);
+    } else {
+      this.filteredUnitsMap.delete(index);
+    }
+  }
+
+  /**
+   * Returns the filtered units for a given ingredient row.
+   * Change 1 & 2: returns family-filtered list when available, otherwise all units.
+   */
+  getFilteredUnits(index: number): { id: number; code: string; label: string; unit_family: string | null }[] {
+    return this.filteredUnitsMap.get(index) ?? this._allUnits;
   }
 
   private clearSearchStates(): void {
@@ -408,7 +459,7 @@ export class Recipes implements OnInit, OnDestroy {
     console.log('Form ingredients before processing:', this.form.ingredients);
 
     // Process new ingredients - create them in master ingredients first
-    const newIngredients = this.form.ingredients.filter(i => 
+    const newIngredients = this.form.ingredients.filter(i =>
       i.isNew && !i.masterIngredientId && i.name.trim() && i.quantity && i.unitId
     );
 
@@ -419,7 +470,7 @@ export class Recipes implements OnInit, OnDestroy {
           const result = await this.masterIngredientService
             .findOrCreate(ingredient.name.trim(), ingredient.unitId!)
             .toPromise();
-          
+
           if (result) {
             ingredient.masterIngredientId = result.ingredient.master_ingredient_id;
             ingredient.isNew = false;
@@ -523,7 +574,7 @@ export class Recipes implements OnInit, OnDestroy {
     this.selectedRecipe = recipe;
     this.isEditMode = true;
     this.showViewModal = false; // Close view modal
-    
+
     // Populate form with recipe data
     this.form = {
       name: recipe.name,
@@ -535,12 +586,24 @@ export class Recipes implements OnInit, OnDestroy {
       ingredients: recipe.ingredients.map(ing => ({
         name: ing.name,
         quantity: ing.quantity,
-        unitId: ing.unitId, // Use the stored unitId directly
+        unitId: ing.unitId,
         unitCode: ing.unit,
         masterIngredientId: ing.masterIngredientId || null,
         isNew: !ing.masterIngredientId
       }))
     };
+
+    // Change 1: pre-populate filteredUnitsMap for each existing (non-new) ingredient
+    this.filteredUnitsMap.clear();
+    recipe.ingredients.forEach((ing, index) => {
+      if (ing.unitId) {
+        const unit = this._allUnits.find(u => u.id === ing.unitId);
+        if (unit?.unit_family) {
+          const filtered = this._allUnits.filter(u => u.unit_family === unit.unit_family);
+          this.filteredUnitsMap.set(index, filtered);
+        }
+      }
+    });
 
     this.showCreateModal = true;
     this.clearSearchStates();

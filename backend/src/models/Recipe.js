@@ -218,8 +218,41 @@ class RecipeModel {
             const recipe = recipeResult.rows[0];
             const recipeId = recipe.recipe_id;
 
-            // 2. Insert recipe ingredients
+            // 2. Validate unit family and insert recipe ingredients
             if (ingredients && ingredients.length > 0) {
+                // Change 4: validate unit family for each ingredient before inserting
+                const validationQuery = `
+                    SELECT u.unit_family AS unit_unit_family,
+                           mi.unit_family AS ingredient_unit_family,
+                           mi.name AS ingredient_name,
+                           u.name AS unit_name
+                    FROM units u
+                    CROSS JOIN master_ingredients mi
+                    WHERE u.unit_id = $1
+                    AND mi.master_ingredient_id = $2
+                `;
+
+                for (const ing of ingredients) {
+                    const validationResult = await client.query(validationQuery, [
+                        ing.unit_id,
+                        ing.master_ingredient_id
+                    ]);
+
+                    if (validationResult.rows.length > 0) {
+                        const { unit_unit_family, ingredient_unit_family, ingredient_name, unit_name } = validationResult.rows[0];
+                        // Only reject if BOTH families are known and they don't match
+                        // (skip validation if ingredient has no unit_family set yet in DB)
+                        if (unit_unit_family && ingredient_unit_family && unit_unit_family !== ingredient_unit_family) {
+                            await client.query('ROLLBACK');
+                            const error = new Error(
+                                `Unit mismatch: ${ingredient_name} is a ${ingredient_unit_family} ingredient but ${unit_name} was selected`
+                            );
+                            error.statusCode = 400;
+                            throw error;
+                        }
+                    }
+                }
+
                 const ingredientQuery = `
                     INSERT INTO recipe_ingredients (
                         recipe_id, master_ingredient_id, quantity_required, unit_id
@@ -315,6 +348,22 @@ class RecipeModel {
             console.log('Starting transaction for recipe update:', recipe_id);
             await client.query('BEGIN');
 
+            // Change 3: Check recipe exists and is active before allowing edit
+            const activeCheckResult = await client.query(
+                'SELECT recipe_id, is_active FROM recipes WHERE recipe_id = $1 AND is_generated = false',
+                [recipe_id]
+            );
+            if (activeCheckResult.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return null;
+            }
+            if (!activeCheckResult.rows[0].is_active) {
+                await client.query('ROLLBACK');
+                const error = new Error('Recipe is inactive and cannot be edited');
+                error.statusCode = 404;
+                throw error;
+            }
+
             // 1. Update recipe
             const recipeQuery = `
                 UPDATE recipes
@@ -324,7 +373,7 @@ class RecipeModel {
                     description = $5,
                     base_price = $6,
                     updated_at = NOW()
-                WHERE recipe_id = $1 AND is_generated = false
+                WHERE recipe_id = $1 AND is_generated = false AND is_active = true
                 RETURNING recipe_id, name, image_url, cooking_time_minutes, 
                           description, base_price, created_at, updated_at
             `;
@@ -339,7 +388,7 @@ class RecipeModel {
             ]);
 
             if (recipeResult.rows.length === 0) {
-                console.log('Recipe not found or is generated, rolling back:', recipe_id);
+                console.log('Recipe not found or is generated/inactive, rolling back:', recipe_id);
                 await client.query('ROLLBACK');
                 return null;
             }
@@ -354,8 +403,39 @@ class RecipeModel {
             const deleteResult = await client.query(deleteIngredientsQuery, [recipe_id]);
             console.log('Deleted', deleteResult.rowCount, 'existing ingredients');
 
-            // 3. Insert new ingredients
+            // 3. Validate unit family and insert new ingredients
             if (ingredients && ingredients.length > 0) {
+                // Change 4: validate unit family for each ingredient before inserting
+                const validationQuery = `
+                    SELECT u.unit_family AS unit_unit_family,
+                           mi.unit_family AS ingredient_unit_family,
+                           mi.name AS ingredient_name,
+                           u.name AS unit_name
+                    FROM units u
+                    CROSS JOIN master_ingredients mi
+                    WHERE u.unit_id = $1
+                    AND mi.master_ingredient_id = $2
+                `;
+
+                for (const ing of ingredients) {
+                    const validationResult = await client.query(validationQuery, [
+                        ing.unit_id,
+                        ing.master_ingredient_id
+                    ]);
+
+                    if (validationResult.rows.length > 0) {
+                        const { unit_unit_family, ingredient_unit_family, ingredient_name, unit_name } = validationResult.rows[0];
+                        if (unit_unit_family !== ingredient_unit_family) {
+                            await client.query('ROLLBACK');
+                            const error = new Error(
+                                `Unit mismatch: ${ingredient_name} is a ${ingredient_unit_family} ingredient but ${unit_name} was selected`
+                            );
+                            error.statusCode = 400;
+                            throw error;
+                        }
+                    }
+                }
+
                 const ingredientQuery = `
                     INSERT INTO recipe_ingredients (
                         recipe_id, master_ingredient_id, quantity_required, unit_id
@@ -434,9 +514,15 @@ class RecipeModel {
         }
     }
 
-    // Delete recipe
+    // Soft delete recipe (Change 3: set is_active = false instead of hard delete)
     static async delete(recipe_id) {
-        const query = 'DELETE FROM recipes WHERE recipe_id = $1 RETURNING *';
+        const query = `
+            UPDATE recipes
+            SET is_active = false,
+                updated_at = NOW()
+            WHERE recipe_id = $1 AND is_active = true
+            RETURNING recipe_id
+        `;
         const result = await db.query(query, [recipe_id]);
         return result.rows[0];
     }

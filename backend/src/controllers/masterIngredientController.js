@@ -100,7 +100,7 @@ class MasterIngredientController {
      */
     static async findOrCreate(req, res) {
         try {
-            const { name, default_unit_id } = req.body;
+            const { name, default_unit_id, unit_id } = req.body;
 
             if (!name?.trim()) {
                 return res.status(400).json({ error: 'Name is required' });
@@ -108,7 +108,8 @@ class MasterIngredientController {
 
             const { ingredient, created } = await MasterIngredientModel.findOrCreate({
                 name: name.trim(),
-                default_unit_id
+                default_unit_id,
+                unit_id  // Change 2: passed so backend can derive unit_family and base_unit_id
             });
 
             res.status(created ? 201 : 200).json({

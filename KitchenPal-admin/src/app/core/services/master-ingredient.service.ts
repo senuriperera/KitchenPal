@@ -7,6 +7,8 @@ import { environment } from '../../../environments/environment';
 export interface MasterIngredient {
   master_ingredient_id: number;
   name: string;
+  unit_family: string | null;
+  base_unit_id: number | null;
   default_unit_id: number | null;
   is_custom: boolean;
   created_at: string;
@@ -32,7 +34,7 @@ export interface MasterIngredientResponse {
 export class MasterIngredientService {
   private apiUrl = `${environment.apiUrl}/master-ingredients`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /**
    * Search master ingredients by name
@@ -77,10 +79,10 @@ export class MasterIngredientService {
    * Find or create a master ingredient
    * Returns the ingredient (existing or newly created)
    */
-  findOrCreate(name: string, defaultUnitId?: number): Observable<{ ingredient: MasterIngredient; created: boolean }> {
+  findOrCreate(name: string, unitId?: number): Observable<{ ingredient: MasterIngredient; created: boolean }> {
     return this.http.post<MasterIngredientResponse>(
       `${this.apiUrl}/find-or-create`,
-      { name, default_unit_id: defaultUnitId }
+      { name, unit_id: unitId }   // Change 2: send unit_id so backend derives unit_family + base_unit_id
     ).pipe(
       map(response => ({
         ingredient: response.ingredient,
