@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/auth_service.dart';
 import '../services/ingredient_service.dart';
-import '../services/storage_service.dart';
 import '../models/ingredient.dart';
 import 'login.dart';
 
@@ -45,8 +44,8 @@ class _HomePageContentState extends State<HomePageContent> {
     });
 
     try {
-      final branchId = await StorageService.getBranchId();
-      final ingredients = await IngredientService.getExpiringIngredients(branchId, 7);
+      // branch_id is now in JWT — no param needed
+      final ingredients = await IngredientService.getExpiringIngredients(days: 7);
       
       setState(() {
         _expiringIngredients = ingredients.take(3).toList(); // Show only first 3
@@ -577,7 +576,7 @@ class _HomePageContentState extends State<HomePageContent> {
 
     return _buildExpiryItem(
       ingredient.name,
-      '${ingredient.quantityInStock} ${ingredient.unitCode ?? ''} • ${ingredient.storageName ?? 'Storage'}',
+      '${ingredient.quantityInStock.toInt()} ${ingredient.unitWeightUnitCode} • ${ingredient.storageTypeName}',
       expiryText,
       ingredient.imageUrl ?? '',
       isUrgent: isUrgent,

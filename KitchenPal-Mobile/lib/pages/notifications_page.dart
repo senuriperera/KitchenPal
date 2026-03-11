@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/ingredient.dart';
 import '../services/ingredient_service.dart';
-import '../services/storage_service.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -42,13 +41,9 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     });
 
     try {
-      // Load branch ID from storage (can be null for admin)
-      final branchId = await StorageService.getBranchId();
-
-      // Fetch ingredients expiring within 7 days
-      // Admin with null branch_id will get expiring ingredients from all branches
+      // branch_id is now carried by the JWT — no param needed
       final ingredients =
-          await IngredientService.getExpiringIngredients(branchId, 7);
+          await IngredientService.getExpiringIngredients(days: 7);
 
       setState(() {
         _expiringIngredients = ingredients;
@@ -335,7 +330,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${ingredient.quantityInStock} ${ingredient.unitName ?? 'units'}',
+                  '${ingredient.quantityInStock.toInt()} ${ingredient.unitWeightUnitCode}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -343,7 +338,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  ingredient.storageName ?? 'Storage',
+                  ingredient.storageTypeName,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],

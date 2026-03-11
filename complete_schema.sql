@@ -362,6 +362,16 @@ ALTER TABLE public.ingredient_batches DROP COLUMN IF EXISTS cost_per_unit;
 ALTER TABLE public.stock_ingredients
 ADD COLUMN IF NOT EXISTS name CHARACTER VARYING(200);
 -- ============================================================
+-- MIGRATION QUERIES (run if upgrading from v2 schema)
+-- ============================================================
+-- Drop removed columns
+ALTER TABLE public.stock_ingredients DROP COLUMN IF EXISTS cost_per_unit;
+ALTER TABLE public.stock_ingredients DROP COLUMN IF EXISTS reorder_level;
+ALTER TABLE public.ingredient_batches DROP COLUMN IF EXISTS cost_per_unit;
+-- Add name column if missing (added in v3 schema)
+ALTER TABLE public.stock_ingredients
+ADD COLUMN IF NOT EXISTS name CHARACTER VARYING(200);
+-- ============================================================
 -- AUTO-CLEANUP: Delete generated recipes older than 1 month
 -- Run as a scheduled job / cron on your backend
 -- ============================================================

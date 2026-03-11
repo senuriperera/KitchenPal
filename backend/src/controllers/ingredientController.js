@@ -1,14 +1,17 @@
 const IngredientModel = require('../models/Ingredient');
 const OCRService = require('../services/ocrService');
 
-
 class IngredientController {
-    // Get all ingredients for a branch
-    static async getIngredientsByBranch(req, res) {
-        try {
-            const { branch_id } = req.params;
-            const ingredients = await IngredientModel.getAllByBranch(branch_id);
 
+    // ─── GET /api/ingredients ──────────────────────────────────────────────────
+    // branch_id is extracted from the JWT payload (req.user.branch_id)
+    static async getIngredients(req, res) {
+        try {
+            const branch_id = req.user.branch_id;
+            if (!branch_id) {
+                return res.status(400).json({ error: 'No branch associated with this account' });
+            }
+            const ingredients = await IngredientModel.getAllByBranch(branch_id);
             res.json({ ingredients });
         } catch (error) {
             console.error('Get ingredients error:', error);
@@ -16,11 +19,11 @@ class IngredientController {
         }
     }
 
-    // Get ingredient by ID
+    // ─── GET /api/ingredients/:ingredient_id ──────────────────────────────────
     static async getIngredientById(req, res) {
         try {
-            const { id } = req.params;
-            const ingredient = await IngredientModel.findById(id);
+            const { ingredient_id } = req.params;
+            const ingredient = await IngredientModel.findByIdDetailed(ingredient_id);
 
             if (!ingredient) {
                 return res.status(404).json({ error: 'Ingredient not found' });
@@ -33,75 +36,91 @@ class IngredientController {
         }
     }
 
-    // Create new ingredient
+    // ─── POST /api/ingredients ────────────────────────────────────────────────
+    // All 6 steps run inside a single DB transaction in the model layer
     static async createIngredient(req, res) {
         try {
             const {
-                branch_id,
+                master_ingredient_id,   // null if new custom ingredient
                 name,
-                quantity,
-                unit_id,
+                quantity_in_stock,
+                unit_weight,
+                unit_weight_unit_id,
                 price,
-                expiry_date,
-                manufacture_date,
                 storage_type_id,
+                manufacture_date,
+                expiry_date,
                 image_url,
-                weight,
-                weight_unit_id
             } = req.body;
 
-            const ingredient = await IngredientModel.create({
-                branch_id,
+            // branch_id and added_by come exclusively from the JWT — never from the request body
+            const branch_id = req.user.branch_id;
+            const added_by = req.user.user_id;
+
+            if (!branch_id) {
+                return res.status(400).json({ error: 'No branch associated with this account' });
+            }
+
+            const ingredient = await IngredientModel.createWithTransaction({
+                master_ingredient_id: master_ingredient_id || null,
                 name,
-                quantity,
-                unit_id,
+                quantity_in_stock,
+                unit_weight,
+                unit_weight_unit_id,
                 price,
-                expiry_date,
-                manufacture_date,
                 storage_type_id,
-                image_url,
-                weight,
-                weight_unit_id
+                manufacture_date: manufacture_date || null,
+                expiry_date,
+                image_url: image_url || null,
+                added_by,
+                branch_id,
             });
 
             res.status(201).json({
-                message: 'Ingredient created successfully',
+                message: 'Ingredient added successfully',
                 ingredient,
             });
         } catch (error) {
             console.error('Create ingredient error:', error);
-            res.status(500).json({ error: 'Failed to create ingredient' });
+            res.status(500).json({ error: `Failed to create ingredient: ${error.message}` });
         }
     }
 
-    // Update ingredient
-    static async updateIngredient(req, res) {
+    // ─── GET /api/ingredients/existing ────────────────────────────────────────
+    static async getExistingIngredient(req, res) {
         try {
-            const { id } = req.params;
-            const updates = req.body;
+            const branch_id = req.user.branch_id;
+            const { master_ingredient_id } = req.query;
 
-            const ingredient = await IngredientModel.update(id, updates);
-
-            if (!ingredient) {
-                return res.status(404).json({ error: 'Ingredient not found' });
+            if (!branch_id) {
+                return res.status(400).json({ error: 'No branch associated with this account' });
             }
 
-            res.json({
-                message: 'Ingredient updated successfully',
-                ingredient,
-            });
+            if (!master_ingredient_id) {
+                return res.status(400).json({ error: 'master_ingredient_id is required' });
+            }
+
+            const existing = await IngredientModel.findExistingByMasterIngredient(
+                branch_id,
+                master_ingredient_id
+            );
+
+            if (!existing) {
+                return res.status(204).send();
+            }
+
+            res.json({ ingredient: existing });
         } catch (error) {
-            console.error('Update ingredient error:', error);
-            res.status(500).json({ error: 'Failed to update ingredient' });
+            console.error('Get existing ingredient error:', error);
+            res.status(500).json({ error: 'Failed to fetch existing ingredient' });
         }
     }
 
-    // Delete ingredient
+    // ─── DELETE /api/ingredients/:ingredient_id ───────────────────────────────
     static async deleteIngredient(req, res) {
         try {
-            const { id } = req.params;
-            await IngredientModel.delete(id);
-
+            const { ingredient_id } = req.params;
+            await IngredientModel.delete(ingredient_id);
             res.json({ message: 'Ingredient deleted successfully' });
         } catch (error) {
             console.error('Delete ingredient error:', error);
@@ -109,17 +128,15 @@ class IngredientController {
         }
     }
 
-    // Get expiring ingredients
+    // ─── GET /api/ingredients/expiring ────────────────────────────────────────
     static async getExpiringIngredients(req, res) {
         try {
-            const { branch_id } = req.params;
+            const branch_id = req.user.branch_id;
+            if (!branch_id) {
+                return res.status(400).json({ error: 'No branch associated with this account' });
+            }
             const { days = 7 } = req.query;
-
-            // Convert branch_id to number or null for admin
-            const branchIdParam = branch_id === 'all' ? null : parseInt(branch_id);
-
-            const ingredients = await IngredientModel.getExpiringIngredients(branchIdParam, days);
-
+            const ingredients = await IngredientModel.getExpiringIngredients(branch_id, days);
             res.json({ ingredients });
         } catch (error) {
             console.error('Get expiring ingredients error:', error);
@@ -127,50 +144,20 @@ class IngredientController {
         }
     }
 
-    // Get all ingredients (for admins)
-    static async getAllIngredients(req, res) {
-        try {
-            const ingredients = await IngredientModel.getAll();
-            res.json({ ingredients });
-        } catch (error) {
-            console.error('Get all ingredients error:', error);
-            res.status(500).json({ error: 'Failed to fetch all ingredients' });
-        }
-    }
-
-    // Get monthly statistics
-    static async getMonthlyStats(req, res) {
-        try {
-            const { branch_id } = req.params;
-            const { year, month } = req.query;
-
-            const currentDate = new Date();
-            const statsYear = year || currentDate.getFullYear();
-            const statsMonth = month || currentDate.getMonth() + 1;
-
-            const stats = await IngredientModel.getMonthlyStats(branch_id, statsYear, statsMonth);
-
-            res.json({ stats });
-        } catch (error) {
-            console.error('Get monthly stats error:', error);
-            res.status(500).json({ error: 'Failed to fetch statistics' });
-        }
-    }
-
-    // Scan ingredient for dates
+    // ─── POST /api/ingredients/scan ──────────────────────────────────────────
+    // Expects { imageUrl } — scans an ALREADY UPLOADED Cloudinary image
     static async scanIngredient(req, res) {
         try {
             const { imageUrl } = req.body;
-
             if (!imageUrl) {
-                return res.status(400).json({ error: 'Image URL is required' });
+                return res.status(400).json({ error: 'imageUrl is required' });
             }
 
             const dates = await OCRService.extractDatesFromUrl(imageUrl);
             res.json(dates);
         } catch (error) {
             console.error('Scan ingredient error:', error);
-            res.status(500).json({ error: 'Failed to scan ingredient' });
+            res.status(500).json({ error: `Failed to scan image: ${error.message}` });
         }
     }
 }

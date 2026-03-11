@@ -1,133 +1,101 @@
+import 'ingredient_batch.dart';
+
 class Ingredient {
   final int ingredientId;
-  final int branchId;
   final String name;
-  final double quantityInStock;
-  final int unitId;
-  final double costPerUnit;
-  final DateTime expiryDate;
-  final DateTime? manufactureDate;
-  final int storageTypeId;
   final String? imageUrl;
-  final double? weight;
-  final int? weightUnitId;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final double quantityInStock;
+  final double unitWeight;
+  final String unitWeightUnitCode;
+  final double totalBaseQuantity;
+  final String baseUnitCode;
+  final double price;
+  final DateTime? manufactureDate;
+  final DateTime expiryDate;
+  final int storageTypeId;
+  final String storageTypeName;
+  final int masterIngredientId;
+  final String unitFamily;
+  final String? addedByName;
 
-  // Joined data
-  final String? unitCode;
-  final String? unitName;
-  final String? storageCode;
-  final String? storageName;
-  final String? weightUnitCode;
-  final String? weightUnitName;
+  // Full detail — only populated on the detail screen
+  final int? unitWeightUnitId;
+  final int? baseUnitId;
+  final List<IngredientBatch> batches;
 
   Ingredient({
     required this.ingredientId,
-    required this.branchId,
     required this.name,
-    required this.quantityInStock,
-    required this.unitId,
-    required this.costPerUnit,
-    required this.expiryDate,
-    this.manufactureDate,
-    required this.storageTypeId,
     this.imageUrl,
-    this.weight,
-    this.weightUnitId,
-    required this.createdAt,
-    required this.updatedAt,
-    this.unitCode,
-    this.unitName,
-    this.storageCode,
-    this.storageName,
-    this.weightUnitCode,
-    this.weightUnitName,
+    required this.quantityInStock,
+    required this.unitWeight,
+    required this.unitWeightUnitCode,
+    required this.totalBaseQuantity,
+    required this.baseUnitCode,
+    required this.price,
+    this.manufactureDate,
+    required this.expiryDate,
+    required this.storageTypeId,
+    required this.storageTypeName,
+    required this.masterIngredientId,
+    required this.unitFamily,
+    this.addedByName,
+    this.unitWeightUnitId,
+    this.baseUnitId,
+    this.batches = const [],
   });
 
   factory Ingredient.fromJson(Map<String, dynamic> json) {
+    final batchesJson = json['batches'] as List<dynamic>? ?? [];
     return Ingredient(
       ingredientId: json['ingredient_id'] ?? 0,
-      branchId: json['branch_id'] ?? 0,
       name: json['name'] ?? '',
-      quantityInStock: _parseDouble(json['quantity_in_stock']),
-      unitId: json['unit_id'] ?? 0,
-      costPerUnit: _parseDouble(json['cost_per_unit']),
-      expiryDate: DateTime.parse(json['expiry_date']),
-      manufactureDate: json['manufacture_date'] != null
-          ? DateTime.parse(json['manufacture_date'])
-          : null,
-      storageTypeId: json['storage_type_id'] ?? 0,
       imageUrl: json['image_url'],
-      weight: json['weight'] != null ? _parseDouble(json['weight']) : null,
-      weightUnitId: json['weight_unit_id'],
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        json['updated_at'] ?? DateTime.now().toIso8601String(),
-      ),
-      unitCode: json['unit']?['code'],
-      unitName: json['unit']?['name'],
-      storageCode: json['storageType']?['code'],
-      storageName: json['storageType']?['name'],
-      weightUnitCode: json['weightUnit']?['code'],
-      weightUnitName: json['weightUnit']?['name'],
+      quantityInStock: _parseDouble(json['quantity_in_stock']),
+      unitWeight: _parseDouble(json['unit_weight']),
+      unitWeightUnitCode: json['unit_weight_unit_code'] ?? '',
+      totalBaseQuantity: _parseDouble(json['total_base_quantity']),
+      baseUnitCode: json['base_unit_code'] ?? '',
+      price: _parseDouble(json['price']),
+      manufactureDate: json['manufacture_date'] != null
+          ? DateTime.tryParse(json['manufacture_date'])
+          : null,
+      expiryDate: DateTime.parse(json['expiry_date']),
+      storageTypeId: json['storage_type_id'] ?? 0,
+      storageTypeName: json['storage_type_name'] ?? '',
+      masterIngredientId: json['master_ingredient_id'] ?? 0,
+      unitFamily: json['unit_family'] ?? 'weight',
+      addedByName: json['added_by_name'],
+      unitWeightUnitId: json['unit_weight_unit_id'],
+      baseUnitId: json['base_unit_id'],
+      batches: batchesJson.map((b) => IngredientBatch.fromJson(b)).toList(),
     );
   }
 
-  // Helper method to safely parse doubles from various types
-  static double _parseDouble(dynamic value) {
-    if (value == null) return 0.0;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value) ?? 0.0;
+  static double _parseDouble(dynamic v) {
+    if (v == null) return 0.0;
+    if (v is double) return v;
+    if (v is int) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0.0;
     return 0.0;
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'ingredient_id': ingredientId,
-      'branch_id': branchId,
-      'name': name,
-      'quantity_in_stock': quantityInStock,
-      'unit_id': unitId,
-      'cost_per_unit': costPerUnit,
-      'expiry_date': expiryDate.toIso8601String(),
-      'manufacture_date': manufactureDate?.toIso8601String(),
-      'storage_type_id': storageTypeId,
-      'image_url': imageUrl,
-      'weight': weight,
-      'weight_unit_id': weightUnitId,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
+  // Display total weight using base quantity from database
+  String get displayTotalWeight {
+    return '${totalBaseQuantity.toStringAsFixed(0)} $baseUnitCode';
   }
 
-  // Helper to get days until expiry
   int get daysUntilExpiry {
-    final now = DateTime.now();
-    final difference = expiryDate.difference(now);
-    return difference.inDays;
+    return expiryDate.difference(DateTime.now()).inDays;
   }
 
-  // Helper to check if expired
-  bool get isExpired {
-    return DateTime.now().isAfter(expiryDate);
-  }
+  bool get isExpired => DateTime.now().isAfter(expiryDate);
 
-  // Helper to format expiry date
   String get formattedExpiryDate {
-    if (isExpired) {
-      return 'Expired';
-    } else if (daysUntilExpiry == 0) {
-      return 'Expires Today';
-    } else if (daysUntilExpiry == 1) {
-      return 'Expires Tomorrow';
-    } else if (daysUntilExpiry <= 7) {
-      return 'Exp: $daysUntilExpiry Days';
-    } else {
-      return '${expiryDate.day}/${expiryDate.month}/${expiryDate.year}';
-    }
+    if (isExpired) return 'Expired';
+    if (daysUntilExpiry == 0) return 'Expires Today';
+    if (daysUntilExpiry == 1) return 'Expires Tomorrow';
+    if (daysUntilExpiry <= 7) return 'Exp: $daysUntilExpiry Days';
+    return '${expiryDate.day}/${expiryDate.month}/${expiryDate.year}';
   }
 }

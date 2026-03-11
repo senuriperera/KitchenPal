@@ -36,7 +36,6 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   String? _errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
-  int _branchId = 1; // Default branch, will be loaded from storage
 
   @override
   void initState() {
@@ -57,37 +56,29 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     });
 
     try {
-      // Load branch ID from storage (can be null for admin)
-      final branchId = await StorageService.getBranchId();
-      if (branchId != null) {
-        _branchId = branchId;
-      }
-
-      // Admin with null branch_id will get all ingredients
-      final ingredients = await IngredientService.getAllIngredients(branchId);
+      // branch_id is now carried by the JWT — no param needed
+      final ingredients = await IngredientService.getAllIngredients();
       final keywords = IngredientService.extractKeywords(ingredients);
 
       setState(() {
         _allIngredients = ingredients;
         _filteredIngredients = ingredients;
-        _keywords = keywords.take(10).toList(); // Limit to 10 keywords
+        _keywords = keywords.take(10).toList();
         _isLoading = false;
       });
     } catch (e) {
-      String errorMessage = e.toString();
-      if (errorMessage.contains('401') ||
-          errorMessage.toLowerCase().contains('token expired') ||
-          errorMessage.toLowerCase().contains('unauthorized')) {
+      final msg = e.toString();
+      if (msg.contains('401')) {
         await StorageService.clearAuthData();
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const LoginPage()),
+            MaterialPageRoute(builder: (_) => const LoginPage()),
             (route) => false,
           );
         }
       } else {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = msg;
           _isLoading = false;
         });
       }
@@ -96,40 +87,28 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
 
   void _filterIngredients() {
     List<Ingredient> filtered = _allIngredients;
-
-    // Apply search query filter
     if (_searchQuery.isNotEmpty) {
       filtered = IngredientService.searchIngredients(filtered, _searchQuery);
     }
-
-    // Apply keyword filter
     if (_selectedKeyword != null) {
-      filtered = filtered.where((ingredient) {
-        return ingredient.name.toLowerCase().contains(
-          _selectedKeyword!.toLowerCase(),
-        );
-      }).toList();
+      filtered = filtered
+          .where(
+            (i) =>
+                i.name.toLowerCase().contains(_selectedKeyword!.toLowerCase()),
+          )
+          .toList();
     }
-
-    setState(() {
-      _filteredIngredients = filtered;
-    });
+    setState(() => _filteredIngredients = filtered);
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
+  void _onSearchChanged(String q) {
+    setState(() => _searchQuery = q);
     _filterIngredients();
   }
 
   void _onKeywordTapped(String keyword) {
     setState(() {
-      if (_selectedKeyword == keyword) {
-        _selectedKeyword = null; // Deselect if already selected
-      } else {
-        _selectedKeyword = keyword;
-      }
+      _selectedKeyword = _selectedKeyword == keyword ? null : keyword;
     });
     _filterIngredients();
   }
@@ -139,7 +118,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     return SafeArea(
       child: Column(
         children: [
-          _buildSearchBar(),
+          _buildHeader(),
           if (_keywords.isNotEmpty) _buildKeywordFilters(),
           Expanded(child: _buildContent()),
         ],
@@ -147,80 +126,143 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
+  Widget _buildHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFFF9500), Color(0xFFFFB84D)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: TextField(
-          controller: _searchController,
-          onChanged: _onSearchChanged,
-          decoration: InputDecoration(
-            hintText: 'Enter search terms',
-            hintStyle: TextStyle(color: Colors.grey[400], fontSize: 16),
-            prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-            suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, color: Colors.grey),
-                    onPressed: () {
-                      _searchController.clear();
-                      _onSearchChanged('');
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'My Ingredients',
+            style: TextStyle(
+              fontSize: 23,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
-        ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search ingredients...',
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 15),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildKeywordFilters() {
-    return Container(
-      height: 50,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _keywords.length,
-        itemBuilder: (context, index) {
-          final keyword = _keywords[index];
-          final isSelected = _selectedKeyword == keyword;
+    // Add "All" option at the beginning
+    final allKeywords = ['All', ..._keywords];
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: FilterChip(
-              label: Text(keyword),
-              selected: isSelected,
-              onSelected: (_) => _onKeywordTapped(keyword),
-              backgroundColor: const Color(0xFFFFB84D),
-              selectedColor: const Color(0xFFFF9500),
-              labelStyle: TextStyle(
-                color: Colors.white,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide.none,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              '${_filteredIngredients.length} items found',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
             ),
-          );
-        },
+          ),
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: allKeywords.length,
+              itemBuilder: (context, index) {
+                final keyword = allKeywords[index];
+                final isAll = keyword == 'All';
+                final isSelected = isAll
+                    ? _selectedKeyword == null
+                    : _selectedKeyword == keyword;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      if (isAll) {
+                        setState(() {
+                          _selectedKeyword = null;
+                        });
+                        _filterIngredients();
+                      } else {
+                        _onKeywordTapped(keyword);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFFFF9500)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFFFF9500)
+                              : Colors.grey.shade300,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        keyword,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.normal,
+                          color: isSelected ? Colors.white : Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -311,9 +353,8 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _filteredIngredients.length,
-        itemBuilder: (context, index) {
-          return _buildIngredientCard(_filteredIngredients[index]);
-        },
+        itemBuilder: (context, index) =>
+            _buildIngredientCard(_filteredIngredients[index]),
       ),
     );
   }
@@ -324,14 +365,11 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         final result = await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => IngredientDetailPage(ingredient: ingredient),
+            builder: (_) =>
+                IngredientDetailPage(ingredientId: ingredient.ingredientId),
           ),
         );
-
-        // Reload ingredients if changes were made
-        if (result == true) {
-          _loadIngredients();
-        }
+        if (result == true) _loadIngredients();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -348,7 +386,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         ),
         child: Row(
           children: [
-            // Ingredient Image
+            // Image
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
@@ -364,14 +402,12 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                     ? Image.network(
                         ingredient.imageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return _buildPlaceholderImage();
-                        },
+                        errorBuilder: (_, __, ___) => _buildPlaceholder(),
                       )
-                    : _buildPlaceholderImage(),
+                    : _buildPlaceholder(),
               ),
             ),
-            // Ingredient Details
+            // Details
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
@@ -402,15 +438,16 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                       ),
                     ),
                     const SizedBox(height: 4),
+                    // Display total weight — Flutter-side calculation, never stored
                     Text(
-                      '${ingredient.quantityInStock} ${ingredient.unitName ?? 'units'}',
+                      ingredient.displayTotalWeight,
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
             ),
-            // Arrow Icon
+            // Arrow
             Padding(
               padding: const EdgeInsets.only(right: 12.0),
               child: Icon(
@@ -425,7 +462,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     );
   }
 
-  Widget _buildPlaceholderImage() {
+  Widget _buildPlaceholder() {
     return Container(
       color: Colors.grey[300],
       child: const Icon(Icons.restaurant, size: 40, color: Colors.grey),

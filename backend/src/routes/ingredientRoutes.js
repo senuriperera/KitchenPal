@@ -5,30 +5,30 @@ const authenticate = require('../middleware/auth');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 
-// Validation rules
+// ─── Validation ────────────────────────────────────────────────────────────────
 const createIngredientValidation = [
-    body('branch_id').isInt().withMessage('Valid branch_id is required'),
     body('name').trim().notEmpty().withMessage('Name is required'),
-    body('quantity').isFloat({ min: 0 }).withMessage('Quantity must be a positive number'),
-    body('unit_id').isInt().withMessage('Valid unit_id is required'),
-    body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
-    body('weight').optional().isFloat({ min: 0 }).withMessage('Weight must be a positive number'),
-    body('weight_unit_id').optional().isInt().withMessage('Valid weight_unit_id is required'),
-    body('expiry_date').isISO8601().withMessage('Valid expiry date is required'),
-    body('manufacture_date').optional().isISO8601().withMessage('Valid manufacture date is required'),
-    body('image_url').optional().isString().withMessage('Image URL must be a string'),
+    body('quantity_in_stock').isFloat({ min: 0 }).withMessage('quantity_in_stock must be ≥ 0'),
+    body('unit_weight').isFloat({ min: 0 }).withMessage('unit_weight must be ≥ 0'),
+    body('unit_weight_unit_id').isInt().withMessage('Valid unit_weight_unit_id is required'),
+    body('price').isFloat({ min: 0 }).withMessage('price must be ≥ 0'),
     body('storage_type_id').isInt().withMessage('Valid storage_type_id is required'),
+    body('expiry_date').isISO8601().withMessage('Valid expiry_date (ISO8601) is required'),
+    body('manufacture_date').optional({ nullable: true }).isISO8601().withMessage('manufacture_date must be ISO8601'),
+    body('image_url').optional({ nullable: true }).isString(),
+    body('master_ingredient_id').optional({ nullable: true }).isInt(),
     validate,
 ];
 
-// Routes
-router.post('/', authenticate, createIngredientValidation, IngredientController.createIngredient);
-router.get('/all', authenticate, IngredientController.getAllIngredients); // Admin: Get all ingredients
-router.get('/branch/:branch_id', authenticate, IngredientController.getIngredientsByBranch);
-router.get('/branch/:branch_id/expiring', authenticate, IngredientController.getExpiringIngredients);
-router.get('/:id', authenticate, IngredientController.getIngredientById);
-router.put('/:id', authenticate, IngredientController.updateIngredient);
-router.delete('/:id', authenticate, IngredientController.deleteIngredient);
+// ─── Routes ────────────────────────────────────────────────────────────────────
+// IMPORTANT: /scan, /expiring, and /existing must be declared BEFORE /:ingredient_id
 router.post('/scan', authenticate, IngredientController.scanIngredient);
+router.get('/expiring', authenticate, IngredientController.getExpiringIngredients);
+router.get('/existing', authenticate, IngredientController.getExistingIngredient);
+
+router.get('/', authenticate, IngredientController.getIngredients);
+router.get('/:ingredient_id', authenticate, IngredientController.getIngredientById);
+router.post('/', authenticate, createIngredientValidation, IngredientController.createIngredient);
+router.delete('/:ingredient_id', authenticate, IngredientController.deleteIngredient);
 
 module.exports = router;
