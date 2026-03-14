@@ -131,11 +131,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFF9500), Color(0xFFFFB84D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Color(0xFFFF9500),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

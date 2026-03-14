@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/auth_service.dart';
 import '../services/ingredient_service.dart';
+import '../services/storage_service.dart';
 import '../models/ingredient.dart';
 import 'login.dart';
 
@@ -31,11 +32,43 @@ class HomePageContent extends StatefulWidget {
 class _HomePageContentState extends State<HomePageContent> {
   List<Ingredient> _expiringIngredients = [];
   bool _isLoading = true;
+  String _userName = 'User';
 
   @override
   void initState() {
     super.initState();
     _loadExpiringIngredients();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final storedName = await StorageService.getUserName();
+    var resolvedName = (storedName ?? '').trim();
+
+    if (resolvedName.isEmpty) {
+      final currentUser = await AuthService.getCurrentUser();
+      resolvedName = _extractLoggedInUserName(currentUser);
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _userName = resolvedName.isNotEmpty ? resolvedName : 'User';
+    });
+  }
+
+  String _extractLoggedInUserName(Map<String, dynamic>? userPayload) {
+    if (userPayload == null) return '';
+
+    final directName = (userPayload['name'] as String?)?.trim() ?? '';
+    if (directName.isNotEmpty) return directName;
+
+    final nestedUser = userPayload['user'];
+    if (nestedUser is Map<String, dynamic>) {
+      return (nestedUser['name'] as String?)?.trim() ?? '';
+    }
+
+    return '';
   }
 
   Future<void> _loadExpiringIngredients() async {
@@ -154,14 +187,17 @@ class _HomePageContentState extends State<HomePageContent> {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 'Hello there,',
                 style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
               Text(
-                'Barista Joe',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                _userName,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
