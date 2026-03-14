@@ -15,6 +15,7 @@ export const routes: Routes = [
     component: DashboardComponent,
     canActivate: [authGuard],
   },
+  // W's in the Chat
   {
     path: 'inventory',
     component: InventoryComponent,
