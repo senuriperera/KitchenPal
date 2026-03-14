@@ -11,7 +11,11 @@ const db = require('./config/database');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 
+const http = require('http');
+const { Server } = require('socket.io');
+
 const app = express();
+const server = http.createServer(app);
 
 // Middleware
 app.use(helmet());
@@ -31,10 +35,29 @@ app.use(cors({
     },
     credentials: true,
 }));
+
+// Socket.IO setup (shares the same CORS allowlist)
+const io = new Server(server, {
+    cors: {
+        origin: allowedOrigins,
+        credentials: true,
+    },
+});
+
+io.on('connection', (socket) => {
+    console.log('🔌 WebSocket client connected:', socket.id);
+    socket.on('disconnect', () => {
+        console.log('🔌 WebSocket client disconnected:', socket.id);
+    });
+});
+
+// Expose io so controllers can emit events
+app.set('io', io);
+
 app.use(compression());
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Session configuration
@@ -75,7 +98,7 @@ const startServer = async () => {
         // Test database connection
         await db.testConnection();
 
-        app.listen(PORT, () => {
+        server.listen(PORT, () => {
             console.log(`
 ╔═══════════════════════════════════════════════════════╗
 ║                                                       ║

@@ -10,12 +10,33 @@ import { roleGuard } from './core/guards/role.guard';
 export const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
-  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
-  { path: 'inventory', component: InventoryComponent, canActivate: [authGuard] },
-  { path: 'expiry-alerts', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'inventory',
+    component: InventoryComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'expiry-alerts',
+    component: DashboardComponent,
+    canActivate: [authGuard],
+  }, // Placeholder
   { path: 'recipes', component: Recipes, canActivate: [authGuard] },
-  { path: 'discount-approvals', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
+  {
+    path: 'discount-approvals',
+    component: DashboardComponent,
+    canActivate: [authGuard],
+  }, // Placeholder
   { path: 'reports', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
-  { path: 'user-management', component: UserManagementComponent, canActivate: [authGuard, roleGuard], data: { allowedRoles: ['admin', 'manager'] } },
+  {
+    path: 'user-management',
+    component: UserManagementComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { allowedRoles: ['admin', 'branch_manager'] },
+  },
   { path: 'settings', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
 ];
