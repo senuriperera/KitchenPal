@@ -36,7 +36,7 @@ const filterByBranch = (req, res, next) => {
     }
 
     // If user is a manager, attach their branch_id to the request (case-insensitive check)
-    if (req.user.role?.toLowerCase() === 'manager') {
+    if (req.user.role?.toLowerCase() === 'branch_manager') {
         req.branchFilter = req.user.branch_id;
     }
     // If user is admin, no filter is applied (can access all branches)

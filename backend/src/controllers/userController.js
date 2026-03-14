@@ -16,7 +16,7 @@ class UserController {
             });
 
             // If user is a manager or staff, only get users from their branch
-            if (req.user.role === 'manager' || req.user.role === 'staff') {
+            if (req.user.role === 'branch_manager' || req.user.role === 'staff') {
                 if (!req.user.branch_id) {
                     console.error('ERROR: User without branch_id');
                     return res.status(400).json({ error: 'User must be assigned to a branch' });

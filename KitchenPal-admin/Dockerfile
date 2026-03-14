@@ -11,7 +11,7 @@ COPY package*.json ./
 FROM base AS development
 
 # Install all dependencies
-RUN npm ci
+RUN npm install
 
 # Copy application files (will be overridden by volume in dev)
 COPY . .

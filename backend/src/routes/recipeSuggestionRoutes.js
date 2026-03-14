@@ -17,9 +17,9 @@ const generateSuggestionValidation = [
 router.get('/branch/:branch_id', authenticate, RecipeSuggestionController.getAllSuggestions);
 router.get('/:id', authenticate, RecipeSuggestionController.getSuggestionById);
 router.post('/generate', authenticate, generateSuggestionValidation, RecipeSuggestionController.generateSuggestion);
-router.put('/:id/approve', authenticate, authorize('admin', 'manager'), RecipeSuggestionController.approveSuggestion);
-router.put('/:id/reject', authenticate, authorize('admin', 'manager'), RecipeSuggestionController.rejectSuggestion);
-router.put('/:id/discount', authenticate, authorize('admin', 'manager'), RecipeSuggestionController.updateSuggestionDiscount);
+router.put('/:id/approve', authenticate, authorize('admin', 'branch_manager'), RecipeSuggestionController.approveSuggestion);
+router.put('/:id/reject', authenticate, authorize('admin', 'branch_manager'), RecipeSuggestionController.rejectSuggestion);
+router.put('/:id/discount', authenticate, authorize('admin', 'branch_manager'), RecipeSuggestionController.updateSuggestionDiscount);
 router.delete('/:id', authenticate, RecipeSuggestionController.deleteSuggestion);
 
 module.exports = router;

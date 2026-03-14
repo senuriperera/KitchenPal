@@ -91,6 +91,13 @@ class RecipeController {
                 message: 'Recipe created successfully',
                 recipe
             });
+
+            // Fetch full recipe with ingredients for the WebSocket payload
+            const io = req.app.get('io');
+            if (io) {
+                const fullRecipe = await Recipe.getStandardRecipeById(recipe.recipe_id);
+                if (fullRecipe) io.emit('recipe:created', fullRecipe);
+            }
         } catch (error) {
             console.error('Create recipe error:', error);
 
@@ -178,6 +185,13 @@ class RecipeController {
                 message: 'Recipe updated successfully',
                 recipe
             });
+
+            // Fetch full recipe with ingredients for the WebSocket payload
+            const io = req.app.get('io');
+            if (io) {
+                const fullRecipe = await Recipe.getStandardRecipeById(recipe.recipe_id);
+                if (fullRecipe) io.emit('recipe:updated', fullRecipe);
+            }
         } catch (error) {
             console.error('Update recipe error:', error);
 
@@ -209,6 +223,10 @@ class RecipeController {
             }
 
             res.json({ message: 'Recipe deleted successfully' });
+
+            // Emit WebSocket event for real-time update
+            const io = req.app.get('io');
+            if (io) io.emit('recipe:deleted', { id: Number(id) });
         } catch (error) {
             console.error('Delete recipe error:', error);
             res.status(500).json({ error: 'Failed to delete recipe' });

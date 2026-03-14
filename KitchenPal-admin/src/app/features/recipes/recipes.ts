@@ -1,13 +1,33 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectorRef,
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of, Subject, Subscription } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  switchMap,
+} from 'rxjs/operators';
 import { HeaderComponent } from '../../shared/components/header/header';
-import { MasterIngredientService, MasterIngredient } from '../../core/services/master-ingredient.service';
+import {
+  MasterIngredientService,
+  MasterIngredient,
+} from '../../core/services/master-ingredient.service';
 import { IngredientService } from '../../core/services/ingredient.service';
-import { RecipeService, Recipe as ApiRecipe, RecipeIngredient as ApiRecipeIngredient } from '../../core/services/recipe.service';
+import {
+  RecipeService,
+  Recipe as ApiRecipe,
+  RecipeIngredient as ApiRecipeIngredient,
+} from '../../core/services/recipe.service';
 import { UploadService } from '../../core/services/upload.service';
+import { AuthService } from '../../core/services/auth.service';
+import { WebSocketService } from '../../core/services/websocket.service';
 
 export interface RecipeIngredient {
   name: string;
@@ -59,7 +79,7 @@ export interface Recipe {
   standalone: true,
   imports: [CommonModule, FormsModule, HeaderComponent],
   templateUrl: './recipes.html',
-  styleUrl: './recipes.scss'
+  styleUrl: './recipes.scss',
 })
 export class Recipes implements OnInit, OnDestroy {
   searchQuery: string = '';
@@ -77,12 +97,32 @@ export class Recipes implements OnInit, OnDestroy {
   private ingredientService = inject(IngredientService);
   private recipeService = inject(RecipeService);
   private uploadService = inject(UploadService);
+  private authService = inject(AuthService);
+  private wsService = inject(WebSocketService);
+  private cdr = inject(ChangeDetectorRef);
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
 
   // Units
-  units: { id: number; code: string; label: string; unit_family: string | null }[] = [];
-  private _allUnits: { id: number; code: string; label: string; unit_family: string | null }[] = [];
+  units: {
+    id: number;
+    code: string;
+    label: string;
+    unit_family: string | null;
+  }[] = [];
+  private _allUnits: {
+    id: number;
+    code: string;
+    label: string;
+    unit_family: string | null;
+  }[] = [];
   // Per-ingredient filtered units (Change 1 & 2): keyed by ingredient index
-  filteredUnitsMap: Map<number, { id: number; code: string; label: string; unit_family: string | null }[]> = new Map();
+  filteredUnitsMap: Map<
+    number,
+    { id: number; code: string; label: string; unit_family: string | null }[]
+  > = new Map();
 
   private staticUnits = [
     { id: 1, code: 'g', label: 'g (grams)', unit_family: 'weight' },
@@ -114,44 +154,71 @@ export class Recipes implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadRecipes();
+    this.subscribeToWebSocketEvents();
   }
 
   ngOnDestroy(): void {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-    this.searchSubjects.forEach(subject => subject.complete());
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
+    this.searchSubjects.forEach((subject) => subject.complete());
   }
 
   private loadRecipes(): void {
     this.isLoading = true;
     this.recipeService.getAllRecipes().subscribe({
       next: (apiRecipes) => {
-        this.recipes = apiRecipes.map(r => this.mapApiRecipeToRecipe(r));
+        this.recipes = apiRecipes.map((r) => this.mapApiRecipeToRecipe(r));
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Failed to load recipes:', error);
         this.errorMessage = 'Failed to load recipes. Please try again.';
         this.isLoading = false;
-      }
+      },
     });
+  }
+
+  private subscribeToWebSocketEvents(): void {
+    this.subscriptions.push(
+      this.wsService.on<ApiRecipe>('recipe:created').subscribe((recipe) => {
+        this.recipes = [...this.recipes, this.mapApiRecipeToRecipe(recipe)];
+        this.cdr.detectChanges();
+      }),
+      this.wsService.on<ApiRecipe>('recipe:updated').subscribe((recipe) => {
+        const index = this.recipes.findIndex((r) => r.id === recipe.recipe_id);
+        if (index !== -1) {
+          const updated = [...this.recipes];
+          updated[index] = this.mapApiRecipeToRecipe(recipe);
+          this.recipes = updated;
+          this.cdr.detectChanges();
+        }
+      }),
+      this.wsService
+        .on<{ id: number }>('recipe:deleted')
+        .subscribe(({ id }) => {
+          this.recipes = this.recipes.filter((r) => r.id !== id);
+          this.cdr.detectChanges();
+        }),
+    );
   }
 
   private mapApiRecipeToRecipe(apiRecipe: ApiRecipe): Recipe {
     return {
       id: apiRecipe.recipe_id,
       name: apiRecipe.recipe_name,
-      image: apiRecipe.image_url || 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&q=80',
+      image:
+        apiRecipe.image_url ||
+        'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400&q=80',
       totalCost: apiRecipe.base_price,
       cookingTime: apiRecipe.cooking_time_minutes || 0,
       description: apiRecipe.description || '',
       showIngredients: false,
-      ingredients: apiRecipe.ingredients.map(ing => ({
+      ingredients: (apiRecipe.ingredients || []).map((ing) => ({
         name: ing.name,
         quantity: ing.quantity_required,
         unit: ing.unit_code,
         unitId: ing.unit_id,
-        masterIngredientId: ing.master_ingredient_id
-      }))
+        masterIngredientId: ing.master_ingredient_id,
+      })),
     };
   }
 
@@ -162,21 +229,21 @@ export class Recipes implements OnInit, OnDestroy {
           id: u.unit_id,
           code: u.code,
           label: `${u.code} (${u.name})`,
-          unit_family: u.unit_family || null
+          unit_family: u.unit_family || null,
         }));
         this.units = this._allUnits;
       },
       error: () => {
         this._allUnits = this.staticUnits;
         this.units = this._allUnits;
-      }
+      },
     });
   }
 
   get filteredRecipes(): Recipe[] {
     if (!this.searchQuery.trim()) return this.recipes;
     const q = this.searchQuery.toLowerCase();
-    return this.recipes.filter(r => r.name.toLowerCase().includes(q));
+    return this.recipes.filter((r) => r.name.toLowerCase().includes(q));
   }
 
   // ─── Modal Methods ────────────────────────────────────────────────────────────
@@ -214,7 +281,7 @@ export class Recipes implements OnInit, OnDestroy {
       description: '',
       imageFile: null,
       imagePreview: null,
-      ingredients: [this.newIngredient()]
+      ingredients: [this.newIngredient()],
     };
   }
 
@@ -225,14 +292,17 @@ export class Recipes implements OnInit, OnDestroy {
       unitId: null,
       unitCode: 'g',
       masterIngredientId: null,
-      isNew: false
+      isNew: false,
     };
   }
 
   addIngredient(): void {
     const newIng = this.newIngredient();
     this.form.ingredients.push(newIng);
-    console.log('Added new ingredient, total count:', this.form.ingredients.length);
+    console.log(
+      'Added new ingredient, total count:',
+      this.form.ingredients.length,
+    );
   }
 
   removeIngredient(index: number): void {
@@ -252,7 +322,7 @@ export class Recipes implements OnInit, OnDestroy {
         query: '',
         suggestions: [],
         isLoading: false,
-        showDropdown: false
+        showDropdown: false,
       });
     }
     return this.ingredientSearchStates.get(index)!;
@@ -263,26 +333,28 @@ export class Recipes implements OnInit, OnDestroy {
       const subject = new Subject<string>();
       this.searchSubjects.set(index, subject);
 
-      const subscription = subject.pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-        switchMap(query => {
+      const subscription = subject
+        .pipe(
+          debounceTime(300),
+          distinctUntilChanged(),
+          switchMap((query) => {
+            const state = this.getSearchState(index);
+            if (query.length < 2) {
+              state.suggestions = [];
+              state.isLoading = false;
+              return of([]);
+            }
+            state.isLoading = true;
+            return this.masterIngredientService
+              .search(query)
+              .pipe(catchError(() => of([])));
+          }),
+        )
+        .subscribe((suggestions) => {
           const state = this.getSearchState(index);
-          if (query.length < 2) {
-            state.suggestions = [];
-            state.isLoading = false;
-            return of([]);
-          }
-          state.isLoading = true;
-          return this.masterIngredientService.search(query).pipe(
-            catchError(() => of([]))
-          );
-        })
-      ).subscribe(suggestions => {
-        const state = this.getSearchState(index);
-        state.suggestions = suggestions;
-        state.isLoading = false;
-      });
+          state.suggestions = suggestions;
+          state.isLoading = false;
+        });
 
       this.subscriptions.push(subscription);
     }
@@ -336,12 +408,16 @@ export class Recipes implements OnInit, OnDestroy {
     // If unit_family is null (legacy DB data), fall back by looking up the default_unit_id's family.
     let familyToFilter: string | null = masterIngredient.unit_family;
     if (!familyToFilter && masterIngredient.default_unit_id) {
-      const defaultUnit = this._allUnits.find(u => u.id === masterIngredient.default_unit_id);
+      const defaultUnit = this._allUnits.find(
+        (u) => u.id === masterIngredient.default_unit_id,
+      );
       familyToFilter = defaultUnit?.unit_family ?? null;
     }
 
     if (familyToFilter) {
-      const filtered = this._allUnits.filter(u => u.unit_family === familyToFilter);
+      const filtered = this._allUnits.filter(
+        (u) => u.unit_family === familyToFilter,
+      );
       this.filteredUnitsMap.set(index, filtered);
     } else {
       // Truly no family info available — show all units
@@ -351,8 +427,11 @@ export class Recipes implements OnInit, OnDestroy {
     // Pre-select the default unit for this ingredient
     if (masterIngredient.default_unit_id) {
       ingredient.unitId = masterIngredient.default_unit_id;
-      const matchingUnit = this._allUnits.find(u => u.id === masterIngredient.default_unit_id);
-      ingredient.unitCode = matchingUnit?.code || masterIngredient.defaultUnit?.code || 'g';
+      const matchingUnit = this._allUnits.find(
+        (u) => u.id === masterIngredient.default_unit_id,
+      );
+      ingredient.unitCode =
+        matchingUnit?.code || masterIngredient.defaultUnit?.code || 'g';
     }
 
     const state = this.getSearchState(index);
@@ -367,7 +446,12 @@ export class Recipes implements OnInit, OnDestroy {
   isDropdownVisible(index: number): boolean {
     const state = this.getSearchState(index);
     const ingredient = this.form.ingredients[index];
-    return state.showDropdown && (state.suggestions.length > 0 || state.isLoading || ingredient.name.length >= 2);
+    return (
+      state.showDropdown &&
+      (state.suggestions.length > 0 ||
+        state.isLoading ||
+        ingredient.name.length >= 2)
+    );
   }
 
   isSearchLoading(index: number): boolean {
@@ -377,8 +461,14 @@ export class Recipes implements OnInit, OnDestroy {
   canCreateNewIngredient(index: number): boolean {
     const ingredient = this.form.ingredients[index];
     const state = this.getSearchState(index);
-    return ingredient.name.length >= 2 && !ingredient.masterIngredientId && !state.isLoading &&
-      !state.suggestions.some(s => s.name.toLowerCase() === ingredient.name.toLowerCase());
+    return (
+      ingredient.name.length >= 2 &&
+      !ingredient.masterIngredientId &&
+      !state.isLoading &&
+      !state.suggestions.some(
+        (s) => s.name.toLowerCase() === ingredient.name.toLowerCase(),
+      )
+    );
   }
 
   createNewIngredient(index: number): void {
@@ -400,9 +490,13 @@ export class Recipes implements OnInit, OnDestroy {
     const ingredient = this.form.ingredients[index];
     if (!ingredient.isNew || !ingredient.unitId) return;
 
-    const selectedUnit = this._allUnits.find(u => u.id === Number(ingredient.unitId));
+    const selectedUnit = this._allUnits.find(
+      (u) => u.id === Number(ingredient.unitId),
+    );
     if (selectedUnit?.unit_family) {
-      const filtered = this._allUnits.filter(u => u.unit_family === selectedUnit.unit_family);
+      const filtered = this._allUnits.filter(
+        (u) => u.unit_family === selectedUnit.unit_family,
+      );
       this.filteredUnitsMap.set(index, filtered);
     } else {
       this.filteredUnitsMap.delete(index);
@@ -413,15 +507,17 @@ export class Recipes implements OnInit, OnDestroy {
    * Returns the filtered units for a given ingredient row.
    * Change 1 & 2: returns family-filtered list when available, otherwise all units.
    */
-  getFilteredUnits(index: number): { id: number; code: string; label: string; unit_family: string | null }[] {
+  getFilteredUnits(
+    index: number,
+  ): { id: number; code: string; label: string; unit_family: string | null }[] {
     return this.filteredUnitsMap.get(index) ?? this._allUnits;
   }
 
   private clearSearchStates(): void {
     this.ingredientSearchStates.clear();
-    this.searchSubjects.forEach(subject => subject.complete());
+    this.searchSubjects.forEach((subject) => subject.complete());
     this.searchSubjects.clear();
-    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
     this.subscriptions = [];
     this.activeDropdownIndex = null;
   }
@@ -442,12 +538,18 @@ export class Recipes implements OnInit, OnDestroy {
   }
 
   triggerFileInput(): void {
-    const fileInput = document.getElementById('recipeImageInput') as HTMLInputElement;
+    const fileInput = document.getElementById(
+      'recipeImageInput',
+    ) as HTMLInputElement;
     fileInput?.click();
   }
 
   isFormValid(): boolean {
-    return !!(this.form.name.trim() && this.form.cookingTime && this.form.price);
+    return !!(
+      this.form.name.trim() &&
+      this.form.cookingTime &&
+      this.form.price
+    );
   }
 
   // ─── Recipe CRUD ────────────────────────────────────────────
@@ -459,8 +561,13 @@ export class Recipes implements OnInit, OnDestroy {
     console.log('Form ingredients before processing:', this.form.ingredients);
 
     // Process new ingredients - create them in master ingredients first
-    const newIngredients = this.form.ingredients.filter(i =>
-      i.isNew && !i.masterIngredientId && i.name.trim() && i.quantity && i.unitId
+    const newIngredients = this.form.ingredients.filter(
+      (i) =>
+        i.isNew &&
+        !i.masterIngredientId &&
+        i.name.trim() &&
+        i.quantity &&
+        i.unitId,
     );
 
     if (newIngredients.length > 0) {
@@ -472,43 +579,57 @@ export class Recipes implements OnInit, OnDestroy {
             .toPromise();
 
           if (result) {
-            ingredient.masterIngredientId = result.ingredient.master_ingredient_id;
+            ingredient.masterIngredientId =
+              result.ingredient.master_ingredient_id;
             ingredient.isNew = false;
-            console.log(`Created/found master ingredient: ${ingredient.name} (ID: ${ingredient.masterIngredientId})`);
+            console.log(
+              `Created/found master ingredient: ${ingredient.name} (ID: ${ingredient.masterIngredientId})`,
+            );
           }
         }
       } catch (error) {
         console.error('Failed to create master ingredients:', error);
-        this.errorMessage = 'Failed to create new ingredients. Please try again.';
+        this.errorMessage =
+          'Failed to create new ingredients. Please try again.';
         this.isSaving = false;
         return;
       }
     }
 
     const validIngredients = this.form.ingredients
-      .filter(i => i.name.trim() && i.quantity && i.unitId && i.masterIngredientId)
-      .map(i => ({
+      .filter(
+        (i) => i.name.trim() && i.quantity && i.unitId && i.masterIngredientId,
+      )
+      .map((i) => ({
         master_ingredient_id: i.masterIngredientId!,
         quantity_required: i.quantity!,
-        unit_id: i.unitId!
+        unit_id: i.unitId!,
       }));
 
     console.log('Valid ingredients after processing:', validIngredients);
 
     if (validIngredients.length === 0) {
-      this.errorMessage = 'Please add at least one valid ingredient with quantity and unit';
+      this.errorMessage =
+        'Please add at least one valid ingredient with quantity and unit';
       this.isSaving = false;
       return;
     }
 
     // Upload image to Cloudinary if a new image file is selected
-    let imageUrl: string | undefined = this.form.imagePreview || undefined;
+    // Never send a base64 data URL as image_url — only use real hosted URLs
+    const existingUrl = this.form.imagePreview?.startsWith('http') ? this.form.imagePreview : undefined;
+    let imageUrl: string | undefined = existingUrl;
     if (this.form.imageFile) {
       try {
-        imageUrl = await this.uploadService.uploadImage(this.form.imageFile).toPromise();
+        imageUrl = await this.uploadService
+          .uploadImage(this.form.imageFile)
+          .toPromise();
       } catch (uploadError) {
-        console.warn('Image upload failed, using existing or no image:', uploadError);
-        // Continue with existing image or without image - don't block recipe save
+        console.warn(
+          'Image upload failed, saving recipe without image:',
+          uploadError,
+        );
+        imageUrl = existingUrl; // keep previous hosted URL, or undefined
       }
     }
 
@@ -518,30 +639,38 @@ export class Recipes implements OnInit, OnDestroy {
       cooking_time_minutes: this.form.cookingTime || undefined,
       description: this.form.description || undefined,
       base_price: this.form.price!,
-      ingredients: validIngredients
+      ingredients: validIngredients,
     };
 
-    console.log('Saving recipe:', { isEditMode: this.isEditMode, recipeId: this.selectedRecipe?.id, recipeData });
+    console.log('Saving recipe:', {
+      isEditMode: this.isEditMode,
+      recipeId: this.selectedRecipe?.id,
+      recipeData,
+    });
 
     if (this.isEditMode && this.selectedRecipe) {
       // Update existing recipe
       console.log('Updating recipe ID:', this.selectedRecipe.id);
-      this.recipeService.updateRecipe(this.selectedRecipe.id, recipeData).subscribe({
-        next: (response) => {
-          console.log('Recipe updated successfully:', response);
-          this.loadRecipes();
-          this.showCreateModal = false;
-          this.showViewModal = false;
-          this.isSaving = false;
-          this.isEditMode = false;
-          this.selectedRecipe = null;
-        },
-        error: (error) => {
-          console.error('Failed to update recipe:', error);
-          this.errorMessage = error.error?.error || 'Failed to update recipe. Please try again.';
-          this.isSaving = false;
-        }
-      });
+      this.recipeService
+        .updateRecipe(this.selectedRecipe.id, recipeData)
+        .subscribe({
+          next: (response) => {
+            console.log('Recipe updated successfully:', response);
+            this.loadRecipes();
+            this.showCreateModal = false;
+            this.showViewModal = false;
+            this.isSaving = false;
+            this.isEditMode = false;
+            this.selectedRecipe = null;
+          },
+          error: (error) => {
+            console.error('Failed to update recipe:', error);
+            this.errorMessage =
+              error.error?.error ||
+              'Failed to update recipe. Please try again.';
+            this.isSaving = false;
+          },
+        });
     } else {
       // Create new recipe
       console.log('Creating new recipe');
@@ -554,9 +683,10 @@ export class Recipes implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Failed to create recipe:', error);
-          this.errorMessage = error.error?.error || 'Failed to create recipe. Please try again.';
+          this.errorMessage =
+            error.error?.error || 'Failed to create recipe. Please try again.';
           this.isSaving = false;
-        }
+        },
       });
     }
   }
@@ -583,23 +713,25 @@ export class Recipes implements OnInit, OnDestroy {
       description: recipe.description,
       imageFile: null,
       imagePreview: recipe.image,
-      ingredients: recipe.ingredients.map(ing => ({
+      ingredients: recipe.ingredients.map((ing) => ({
         name: ing.name,
         quantity: ing.quantity,
         unitId: ing.unitId,
         unitCode: ing.unit,
         masterIngredientId: ing.masterIngredientId || null,
-        isNew: !ing.masterIngredientId
-      }))
+        isNew: !ing.masterIngredientId,
+      })),
     };
 
     // Change 1: pre-populate filteredUnitsMap for each existing (non-new) ingredient
     this.filteredUnitsMap.clear();
     recipe.ingredients.forEach((ing, index) => {
       if (ing.unitId) {
-        const unit = this._allUnits.find(u => u.id === ing.unitId);
+        const unit = this._allUnits.find((u) => u.id === ing.unitId);
         if (unit?.unit_family) {
-          const filtered = this._allUnits.filter(u => u.unit_family === unit.unit_family);
+          const filtered = this._allUnits.filter(
+            (u) => u.unit_family === unit.unit_family,
+          );
           this.filteredUnitsMap.set(index, filtered);
         }
       }
@@ -610,7 +742,7 @@ export class Recipes implements OnInit, OnDestroy {
   }
 
   private getUnitIdFromCode(code: string): number | null {
-    const unit = this.units.find(u => u.code === code);
+    const unit = this.units.find((u) => u.code === code);
     return unit ? unit.id : null;
   }
 
@@ -635,7 +767,7 @@ export class Recipes implements OnInit, OnDestroy {
         this.errorMessage = 'Failed to delete recipe. Please try again.';
         this.isSaving = false;
         this.closeDeleteModal();
-      }
+      },
     });
   }
 

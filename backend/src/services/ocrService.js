@@ -3,21 +3,13 @@ const vision = require('@google-cloud/vision');
 // Lazy client initialization to prevent crashes on startup
 let client = null;
 
-// Load credentials as object (avoids OpenSSL 3 key-format issues with keyFilename)
-let CREDENTIALS = null;
-
-try {
-    CREDENTIALS = require('../../google-credentials.json');
-} catch {
-    console.warn('Google Vision credentials not found. OCR disabled in this environment.');
-}
-
 const getClient = () => {
     if (!client) {
         try {
-            client = new vision.ImageAnnotatorClient(
-                CREDENTIALS ? { credentials: CREDENTIALS } : {}
-            );
+            const CREDENTIALS = require('../../google-credentials.json');
+            client = new vision.ImageAnnotatorClient({
+                credentials: CREDENTIALS,
+            });
         } catch (error) {
             console.warn('Google Vision client initialization failed:', error.message);
             return null;
