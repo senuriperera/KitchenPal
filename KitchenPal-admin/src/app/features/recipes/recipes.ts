@@ -8,6 +8,7 @@ import { MasterIngredientService, MasterIngredient } from '../../core/services/m
 import { IngredientService } from '../../core/services/ingredient.service';
 import { RecipeService, Recipe as ApiRecipe, RecipeIngredient as ApiRecipeIngredient } from '../../core/services/recipe.service';
 import { UploadService } from '../../core/services/upload.service';
+import { AuthService } from '../../core/services/auth.service';
 
 export interface RecipeIngredient {
   name: string;
@@ -77,6 +78,11 @@ export class Recipes implements OnInit, OnDestroy {
   private ingredientService = inject(IngredientService);
   private recipeService = inject(RecipeService);
   private uploadService = inject(UploadService);
+  private authService = inject(AuthService);
+
+  get isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
 
   // Units
   units: { id: number; code: string; label: string; unit_family: string | null }[] = [];
