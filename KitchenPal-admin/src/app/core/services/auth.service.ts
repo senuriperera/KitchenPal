@@ -6,120 +6,127 @@ import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 
 export interface User {
-    user_id: string; // Backend sends user_id
-    email: string;
-    name: string;
-    role: string;
-    branch_id?: number; // Branch ID for managers
+  user_id: string; // Backend sends user_id
+  email: string;
+  name: string;
+  role: string;
+  branch_id?: number; // Branch ID for managers
 }
 
 export interface AuthResponse {
-    accessToken: string;
-    refreshToken: string;
-    user: User;
+  accessToken: string;
+  refreshToken: string;
+  user: User;
 }
 
 @Injectable({
-    providedIn: 'root'
+  providedIn: 'root',
 })
 export class AuthService {
-    private apiUrl = `${environment.apiUrl}/auth`;
-    private currentUserSubject: BehaviorSubject<User | null>;
-    public currentUser$: Observable<User | null>;
+  private apiUrl = `${environment.apiUrl}/auth`;
+  private currentUserSubject: BehaviorSubject<User | null>;
+  public currentUser$: Observable<User | null>;
 
-    constructor(private http: HttpClient, private router: Router) {
-        const savedUser = localStorage.getItem('currentUser');
-        this.currentUserSubject = new BehaviorSubject<User | null>(savedUser ? JSON.parse(savedUser) : null);
-        this.currentUser$ = this.currentUserSubject.asObservable();
+  constructor(
+    private http: HttpClient,
+    private router: Router,
+  ) {
+    const savedUser = localStorage.getItem('currentUser');
+    this.currentUserSubject = new BehaviorSubject<User | null>(
+      savedUser ? JSON.parse(savedUser) : null,
+    );
+    this.currentUser$ = this.currentUserSubject.asObservable();
+  }
+
+  public get currentUserValue(): User | null {
+    return this.currentUserSubject.value;
+  }
+
+  login(email: string, password: string): Observable<User> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
+      .pipe(
+        tap((response) => {
+          localStorage.setItem('accessToken', response.accessToken);
+          localStorage.setItem('refreshToken', response.refreshToken);
+          localStorage.setItem('currentUser', JSON.stringify(response.user));
+          this.currentUserSubject.next(response.user);
+        }),
+        map((response) => response.user),
+      );
+  }
+
+  logout() {
+    const accessToken = localStorage.getItem('accessToken');
+
+    // Call backend logout endpoint
+    if (accessToken) {
+      this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
+        error: (err) => console.error('Logout error:', err),
+      });
     }
 
-    public get currentUserValue(): User | null {
-        return this.currentUserSubject.value;
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('currentUser');
+    this.currentUserSubject.next(null);
+    this.router.navigate(['/login']);
+  }
+
+  refreshToken(): Observable<string> {
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
     }
 
-    login(email: string, password: string): Observable<User> {
-        return this.http.post<AuthResponse>(`${this.apiUrl}/login`, { email, password })
-            .pipe(
-                tap(response => {
-                    localStorage.setItem('accessToken', response.accessToken);
-                    localStorage.setItem('refreshToken', response.refreshToken);
-                    localStorage.setItem('currentUser', JSON.stringify(response.user));
-                    this.currentUserSubject.next(response.user);
-                }),
-                map(response => response.user)
-            );
-    }
+    return this.http
+      .post<{ accessToken: string }>(`${this.apiUrl}/refresh`, { refreshToken })
+      .pipe(
+        tap((response) => {
+          localStorage.setItem('accessToken', response.accessToken);
+        }),
+        map((response) => response.accessToken),
+      );
+  }
 
-    logout() {
-        const accessToken = localStorage.getItem('accessToken');
+  isAuthenticated(): boolean {
+    return !!this.currentUserValue && !!localStorage.getItem('accessToken');
+  }
 
-        // Call backend logout endpoint
-        if (accessToken) {
-            this.http.post(`${this.apiUrl}/logout`, {}).subscribe({
-                error: (err) => console.error('Logout error:', err)
-            });
-        }
+  getAccessToken(): string | null {
+    return localStorage.getItem('accessToken');
+  }
 
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('currentUser');
-        this.currentUserSubject.next(null);
-        this.router.navigate(['/login']);
-    }
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
 
-    refreshToken(): Observable<string> {
-        const refreshToken = localStorage.getItem('refreshToken');
+  /**
+   * Get the current user's branch ID
+   */
+  getUserBranchId(): number | null {
+    return this.currentUserValue?.branch_id || null;
+  }
 
-        if (!refreshToken) {
-            throw new Error('No refresh token available');
-        }
+  /**
+   * Check if the current user has a specific role
+   */
+  hasRole(role: string): boolean {
+    return this.currentUserValue?.role?.toLowerCase() === role.toLowerCase();
+  }
 
-        return this.http.post<{ accessToken: string }>(`${this.apiUrl}/refresh`, { refreshToken })
-            .pipe(
-                tap(response => {
-                    localStorage.setItem('accessToken', response.accessToken);
-                }),
-                map(response => response.accessToken)
-            );
-    }
+  /**
+   * Check if the current user is an admin
+   */
+  isAdmin(): boolean {
+    return this.hasRole('admin');
+  }
 
-    isAuthenticated(): boolean {
-        return !!this.currentUserValue && !!localStorage.getItem('accessToken');
-    }
-
-    getAccessToken(): string | null {
-        return localStorage.getItem('accessToken');
-    }
-
-    getRefreshToken(): string | null {
-        return localStorage.getItem('refreshToken');
-    }
-
-    /**
-     * Get the current user's branch ID
-     */
-    getUserBranchId(): number | null {
-        return this.currentUserValue?.branch_id || null;
-    }
-
-    /**
-     * Check if the current user has a specific role
-     */
-    hasRole(role: string): boolean {
-        return this.currentUserValue?.role?.toLowerCase() === role.toLowerCase();
-    }
-
-    /**
-     * Check if the current user is an admin
-     */
-    isAdmin(): boolean {
-        return this.hasRole('admin');
-    }
-
-    /**
-     * Check if the current user is a manager
-     */
-    isManager(): boolean {
-        return this.hasRole('manager');
-    }
+  /**
+   * Check if the current user is a manager
+   */
+  isManager(): boolean {
+    return this.hasRole('branch_manager');
+  }
 }

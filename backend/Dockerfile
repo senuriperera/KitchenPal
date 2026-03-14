@@ -11,7 +11,7 @@ COPY package*.json ./
 FROM base AS test
 
 # Install all dependencies (including devDependencies for testing)
-RUN npm ci
+RUN npm install
 
 # Copy application files
 COPY . .
@@ -29,7 +29,7 @@ CMD ["npm", "test"]
 FROM base AS production
 
 # Install only production dependencies
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy application files
 COPY . .

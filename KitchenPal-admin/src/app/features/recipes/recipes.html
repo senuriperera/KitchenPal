@@ -32,7 +32,7 @@
         <button class="btn btn-secondary">
           <span class="material-icons btn-icon">filter_list</span> Filter
         </button>
-        <button class="btn btn-primary" (click)="openCreateModal()">
+        <button *ngIf="isAdmin" class="btn btn-primary" (click)="openCreateModal()">
           <span class="btn-icon">+</span> Create Recipe
         </button>
       </div>
@@ -68,6 +68,7 @@
                 <span class="material-icons">visibility</span>
               </button>
               <button
+                *ngIf="isAdmin"
                 class="action-btn edit-btn"
                 (click)="editRecipe(recipe)"
                 title="Edit"
@@ -75,6 +76,7 @@
                 <span class="material-icons">edit</span>
               </button>
               <button
+                *ngIf="isAdmin"
                 class="action-btn delete-btn"
                 (click)="deleteRecipe(recipe)"
                 title="Delete"
@@ -436,7 +438,7 @@
       <!-- Footer -->
       <div class="modal-footer">
         <button class="btn btn-secondary" (click)="closeModal()">Close</button>
-        <button class="btn btn-primary" (click)="editRecipe(selectedRecipe!)">
+        <button *ngIf="isAdmin" class="btn btn-primary" (click)="editRecipe(selectedRecipe!)">
           <span class="material-icons btn-icon-small">edit</span>
           Edit Recipe
         </button>

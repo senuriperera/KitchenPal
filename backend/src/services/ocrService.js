@@ -3,12 +3,10 @@ const vision = require('@google-cloud/vision');
 // Lazy client initialization to prevent crashes on startup
 let client = null;
 
-// Load credentials as object (avoids OpenSSL 3 key-format issues with keyFilename)
-const CREDENTIALS = require('../../google-credentials.json');
-
 const getClient = () => {
     if (!client) {
         try {
+            const CREDENTIALS = require('../../google-credentials.json');
             client = new vision.ImageAnnotatorClient({
                 credentials: CREDENTIALS,
             });
