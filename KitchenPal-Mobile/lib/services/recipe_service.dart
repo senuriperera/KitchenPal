@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/recipe.dart';
+import '../models/recipe_suggestion.dart';
 import 'storage_service.dart';
 
 class RecipeService {
   static const String _baseUrl = 'http://192.168.1.61:3000/api/recipes';
+  static const String _suggestionsBaseUrl =
+      'http://192.168.1.61:3000/api/recipe-suggestions';
 
   /// Get all standard recipes (is_generated = false)
   static Future<List<Recipe>> getAllRecipes() async {
@@ -113,6 +116,43 @@ class RecipeService {
       }
     } catch (e) {
       throw Exception('Error creating recipe: $e');
+    }
+  }
+
+  /// Get generated recipe suggestions for a branch
+  static Future<List<RecipeSuggestion>> getGeneratedRecipes(
+    int branchId,
+  ) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$_suggestionsBaseUrl/branch/$branchId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final List<dynamic> suggestionsJson =
+            jsonResponse['suggestions'] ?? [];
+        return suggestionsJson
+            .map((json) => RecipeSuggestion.fromJson(json))
+            .toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized: Please login again');
+      } else {
+        throw Exception(
+          'Failed to load generated recipes: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error fetching generated recipes: $e');
     }
   }
 
