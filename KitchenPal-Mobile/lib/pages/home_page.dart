@@ -22,7 +22,7 @@ class HomePage extends StatelessWidget {
 // Extracted content widget for use in MainContainer
 class HomePageContent extends StatefulWidget {
   final Function(int)? onNavigate;
-  
+
   const HomePageContent({super.key, this.onNavigate});
 
   @override
@@ -78,10 +78,14 @@ class _HomePageContentState extends State<HomePageContent> {
 
     try {
       // branch_id is now in JWT — no param needed
-      final ingredients = await IngredientService.getExpiringIngredients(days: 7);
-      
+      final ingredients = await IngredientService.getExpiringIngredients(
+        days: 7,
+      );
+
       setState(() {
-        _expiringIngredients = ingredients.take(3).toList(); // Show only first 3
+        _expiringIngredients = ingredients
+            .take(3)
+            .toList(); // Show only first 3
         _isLoading = false;
       });
     } catch (e) {
@@ -109,23 +113,23 @@ class _HomePageContentState extends State<HomePageContent> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _expiringIngredients.isEmpty
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: Text(
-                              'No items nearing expiry',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        )
-                      : Column(
-                          children: _expiringIngredients.map((ingredient) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _buildExpiryItemFromData(ingredient),
-                            );
-                          }).toList(),
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Text(
+                          'No items nearing expiry',
+                          style: TextStyle(color: Colors.grey),
                         ),
+                      ),
+                    )
+                  : Column(
+                      children: _expiringIngredients.map((ingredient) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildExpiryItemFromData(ingredient),
+                        );
+                      }).toList(),
+                    ),
               const SizedBox(height: 16),
             ],
           ),
@@ -209,7 +213,8 @@ class _HomePageContentState extends State<HomePageContent> {
               onPressed: () {
                 // Navigate to notifications page (index 4 in MainContainer)
                 // Find the MainContainer ancestor and update its index
-                final mainContainerState = context.findAncestorStateOfType<State<StatefulWidget>>();
+                final mainContainerState = context
+                    .findAncestorStateOfType<State<StatefulWidget>>();
                 if (mainContainerState != null && mainContainerState.mounted) {
                   // Use a callback to notify parent to change index
                   // Since we're in MainContainer, we can access it through context
@@ -600,7 +605,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildExpiryItemFromData(Ingredient ingredient) {
     final daysUntilExpiry = ingredient.daysUntilExpiry;
     final isUrgent = daysUntilExpiry <= 1;
-    
+
     String expiryText;
     if (daysUntilExpiry == 0) {
       expiryText = 'Expires Today';

@@ -130,9 +130,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFF9500),
-      ),
+      decoration: const BoxDecoration(color: Color(0xFFFF9500)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
