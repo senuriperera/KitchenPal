@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/ingredient.dart';
 import '../services/ingredient_service.dart';
+import '../services/recipe_service.dart';
 import '../services/websocket_service.dart';
+import 'recipe_suggestions_page.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -48,9 +50,11 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     });
 
     try {
-      // branch_id is now carried by the JWT — no param needed
+      // For now we keep using the existing expiring ingredients endpoint
+      // to avoid changing the Ingredient model. In a follow-up we can
+      // switch this to the new /api/notifications response shape.
       final ingredients = await IngredientService.getExpiringIngredients(
-        days: 7,
+        days: 3,
       );
 
       setState(() {
@@ -75,7 +79,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     });
   }
 
-  void _generateRecipe() {
+  Future<void> _generateRecipe() async {
     if (_selectedIngredients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -86,15 +90,50 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
       return;
     }
 
-    // TODO: Implement recipe generation functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Generating recipe with ${_selectedIngredients.length} ingredient(s)...',
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Build selected_items payload as specified
+      final selectedItems = _expiringIngredients
+          .where((ing) => _selectedIngredients.contains(ing.ingredientId))
+          .map(
+            (ing) => {
+              'batch_id':
+                  ing.ingredientId, // placeholder, actual batch_id not in model
+              'ingredient_id': ing.ingredientId,
+              'name': ing.name,
+              'days_until_expiry': ing.daysUntilExpiry,
+            },
+          )
+          .toList();
+
+      final recipes = await RecipeService.generateRecipes(selectedItems);
+
+      if (!mounted) return;
+
+      // Navigate to suggestions list so user can see matches.
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RecipeSuggestionsPage(suggestions: recipes),
         ),
-        backgroundColor: const Color(0xFF00C853),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to generate recipe: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override

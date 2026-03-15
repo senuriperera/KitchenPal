@@ -10,9 +10,11 @@ const config = require('./config/config');
 const db = require('./config/database');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
+const { runExpiryNotificationsJob } = require('./cron/expiryNotificationsJob');
 
 const http = require('http');
 const { Server } = require('socket.io');
+const cron = require('node-cron');
 
 const app = express();
 const server = http.createServer(app);
@@ -113,6 +115,8 @@ const startServer = async () => {
 ║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
       `);
+            // Schedule daily expiry notifications job at midnight server time
+            scheduleDailyExpiryJob();
         });
     } catch (error) {
         console.error('❌ Failed to start server:', error);
@@ -150,3 +154,15 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
+// Schedule the daily cron job (runs at 00:00 every day)
+function scheduleDailyExpiryJob() {
+    cron.schedule('0 0 * * *', async () => {
+        try {
+            console.log('⏰ Cron: starting daily expiry notifications job');
+            await runExpiryNotificationsJob();
+        } catch (err) {
+            console.error('❌ Cron: expiry notifications job failed', err);
+        }
+    });
+}

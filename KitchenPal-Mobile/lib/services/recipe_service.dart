@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/api_constants.dart';
 import '../models/recipe.dart';
 import '../models/recipe_suggestion.dart';
 import 'storage_service.dart';
 
 class RecipeService {
-  static const String _baseUrl = 'http://192.168.1.61:3000/api/recipes';
-  static const String _suggestionsBaseUrl =
-      'http://192.168.1.61:3000/api/recipe-suggestions';
+  static final String _baseUrl = '${ApiConstants.baseUrl}/recipes';
+  static final String _suggestionsBaseUrl =
+      '${ApiConstants.baseUrl}/suggestions';
 
   /// Get all standard recipes (is_generated = false)
   static Future<List<Recipe>> getAllRecipes() async {
@@ -139,8 +140,7 @@ class RecipeService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        final List<dynamic> suggestionsJson =
-            jsonResponse['suggestions'] ?? [];
+        final List<dynamic> suggestionsJson = jsonResponse['suggestions'] ?? [];
         return suggestionsJson
             .map((json) => RecipeSuggestion.fromJson(json))
             .toList();
@@ -153,6 +153,99 @@ class RecipeService {
       }
     } catch (e) {
       throw Exception('Error fetching generated recipes: $e');
+    }
+  }
+
+  /// Generate a recipe suggestion from selected ingredient IDs
+  /// (legacy) Kept for backwards compatibility with old /suggestions flow.
+  static Future<RecipeSuggestion> generateRecipeSuggestion(
+    List<int> ingredientIds,
+  ) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final branchId = await StorageService.getBranchId();
+      if (branchId == null) {
+        throw Exception('No branch assigned to your account');
+      }
+
+      final response = await http.post(
+        Uri.parse('$_suggestionsBaseUrl/generate'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'branch_id': branchId,
+          'ingredient_ids': ingredientIds,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        return RecipeSuggestion.fromJson(jsonResponse['suggestion']);
+      } else if (response.statusCode == 404) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw Exception(errorResponse['error'] ?? 'No matching recipes found');
+      } else if (response.statusCode == 400) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw Exception(
+          errorResponse['error'] ?? 'Invalid data for suggestion',
+        );
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized: Please login again');
+      } else {
+        throw Exception(
+          'Failed to generate recipe suggestion: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Error generating recipe suggestion: $e');
+    }
+  }
+
+  /// Generate recipe suggestions using Jaccard similarity.
+  /// Expects the exact payload described in the backend spec.
+  static Future<List<Map<String, dynamic>>> generateRecipes(
+    List<Map<String, dynamic>> selectedItems,
+  ) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/generate'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({'selected_items': selectedItems}),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = json.decode(response.body);
+        final List<dynamic> list = jsonResponse['recipes'] ?? [];
+        return list.cast<Map<String, dynamic>>();
+      } else if (response.statusCode == 404) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw Exception(errorResponse['error'] ?? 'No matching recipes found');
+      } else if (response.statusCode == 400) {
+        final Map<String, dynamic> errorResponse = json.decode(response.body);
+        throw Exception(
+          errorResponse['error'] ?? 'Invalid data for suggestion',
+        );
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized: Please login again');
+      } else {
+        throw Exception('Failed to generate recipes: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error generating recipes: $e');
     }
   }
 
