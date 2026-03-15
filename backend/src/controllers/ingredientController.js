@@ -76,6 +76,16 @@ class IngredientController {
                 branch_id,
             });
 
+            // Broadcast inventory change to all connected clients
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('inventory:changed', {
+                    action: 'created',
+                    branch_id,
+                    ingredient,
+                });
+            }
+
             res.status(201).json({
                 message: 'Ingredient added successfully',
                 ingredient,
@@ -121,6 +131,17 @@ class IngredientController {
         try {
             const { ingredient_id } = req.params;
             await IngredientModel.delete(ingredient_id);
+            // Broadcast inventory change to all connected clients
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            const branch_id = req.user ? req.user.branch_id : undefined;
+            if (io) {
+                io.emit('inventory:changed', {
+                    action: 'deleted',
+                    branch_id,
+                    ingredient_id,
+                });
+            }
+
             res.json({ message: 'Ingredient deleted successfully' });
         } catch (error) {
             console.error('Delete ingredient error:', error);

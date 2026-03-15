@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/ingredient.dart';
 import '../services/ingredient_service.dart';
+import '../services/websocket_service.dart';
 
 class NotificationsPage extends StatelessWidget {
   const NotificationsPage({super.key});
@@ -32,6 +33,12 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
   void initState() {
     super.initState();
     _loadExpiringIngredients();
+
+    // Keep expiry notifications page in sync with inventory changes
+    WebSocketService.instance.connect();
+    WebSocketService.instance.inventoryChanged.listen((_) {
+      _loadExpiringIngredients();
+    });
   }
 
   Future<void> _loadExpiringIngredients() async {
@@ -42,8 +49,9 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
 
     try {
       // branch_id is now carried by the JWT — no param needed
-      final ingredients =
-          await IngredientService.getExpiringIngredients(days: 7);
+      final ingredients = await IngredientService.getExpiringIngredients(
+        days: 7,
+      );
 
       setState(() {
         _expiringIngredients = ingredients;
@@ -116,82 +124,82 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _errorMessage != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 64,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Error loading ingredients',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[800],
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: _loadExpiringIngredients,
-                                child: const Text('Retry'),
-                              ),
-                            ],
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error loading ingredients',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadExpiringIngredients,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _expiringIngredients.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 64,
+                          color: Colors.green[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No items nearing expiry',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[800],
                           ),
                         ),
-                      )
-                    : _expiringIngredients.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.check_circle_outline,
-                                  size: 64,
-                                  color: Colors.green[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No items nearing expiry',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'All your ingredients are fresh!',
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              ],
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: _loadExpiringIngredients,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                                vertical: 8.0,
-                              ),
-                              itemCount: _expiringIngredients.length,
-                              itemBuilder: (context, index) {
-                                final ingredient = _expiringIngredients[index];
-                                return _buildExpiryItem(ingredient);
-                              },
-                            ),
-                          ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'All your ingredients are fresh!',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  )
+                : RefreshIndicator(
+                    onRefresh: _loadExpiringIngredients,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 8.0,
+                      ),
+                      itemCount: _expiringIngredients.length,
+                      itemBuilder: (context, index) {
+                        final ingredient = _expiringIngredients[index];
+                        return _buildExpiryItem(ingredient);
+                      },
+                    ),
+                  ),
           ),
 
           // Generate Recipe Button
@@ -212,10 +220,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                   ),
                   child: const Text(
                     'Generate Recipe',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -262,11 +267,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                 color: isSelected ? const Color(0xFFF59E0B) : Colors.white,
               ),
               child: isSelected
-                  ? const Icon(
-                      Icons.check,
-                      size: 16,
-                      color: Colors.white,
-                    )
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
                   : null,
             ),
           ),
@@ -279,8 +280,8 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
               width: 70,
               height: 70,
               color: Colors.grey[200],
-              child: ingredient.imageUrl != null &&
-                      ingredient.imageUrl!.isNotEmpty
+              child:
+                  ingredient.imageUrl != null && ingredient.imageUrl!.isNotEmpty
                   ? Image.network(
                       ingredient.imageUrl!,
                       fit: BoxFit.cover,
@@ -323,26 +324,17 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                 const SizedBox(height: 4),
                 Text(
                   'Expires: ${ingredient.expiryDate.year}-${ingredient.expiryDate.month.toString().padLeft(2, '0')}-${ingredient.expiryDate.day.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${ingredient.quantityInStock.toInt()} ${ingredient.unitWeightUnitCode}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   ingredient.storageTypeName,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -350,10 +342,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
 
           // Days until expiry badge
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: daysUntilExpiry <= 3
                   ? const Color(0xFFFFEBEE)

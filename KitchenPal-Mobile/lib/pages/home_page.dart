@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
 import '../models/ingredient.dart';
+import '../services/websocket_service.dart';
 import 'login.dart';
 
 // Main HomePage wrapper for backward compatibility
@@ -39,6 +40,12 @@ class _HomePageContentState extends State<HomePageContent> {
     super.initState();
     _loadExpiringIngredients();
     _loadUserName();
+
+    // Connect to WebSocket and refresh nearing-expiry section
+    WebSocketService.instance.connect();
+    WebSocketService.instance.inventoryChanged.listen((_) {
+      _loadExpiringIngredients();
+    });
   }
 
   Future<void> _loadUserName() async {

@@ -47,6 +47,16 @@ class NotificationController {
                 expiry_date,
             });
 
+            // Broadcast notification/inventory-related change
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'created',
+                    branch_id,
+                    notification,
+                });
+            }
+
             res.status(201).json({
                 message: 'Notification created successfully',
                 notification,
@@ -67,6 +77,15 @@ class NotificationController {
                 return res.status(404).json({ error: 'Notification not found' });
             }
 
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'resolved',
+                    branch_id: notification.branch_id,
+                    notification,
+                });
+            }
+
             res.json({
                 message: 'Notification resolved successfully',
                 notification,
@@ -82,6 +101,13 @@ class NotificationController {
         try {
             const { id } = req.params;
             await NotificationModel.delete(id);
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'deleted',
+                    id,
+                });
+            }
 
             res.json({ message: 'Notification deleted successfully' });
         } catch (error) {
@@ -97,6 +123,15 @@ class NotificationController {
             const { days = 7 } = req.body;
 
             const notifications = await NotificationModel.createExpiryNotifications(branch_id, days);
+
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'expiry_batch_created',
+                    branch_id,
+                    notifications,
+                });
+            }
 
             res.json({
                 message: `Created ${notifications.length} expiry notifications`,

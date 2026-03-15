@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/ingredient.dart';
 import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
+import '../services/websocket_service.dart';
 import 'login.dart';
 import 'ingredient_detail_page.dart';
 
@@ -41,6 +42,13 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   void initState() {
     super.initState();
     _loadIngredients();
+
+    // Connect to WebSocket and listen for inventory changes
+    WebSocketService.instance.connect();
+    WebSocketService.instance.inventoryChanged.listen((_) {
+      // Refresh inventory list when backend reports a change
+      _loadIngredients();
+    });
   }
 
   @override
