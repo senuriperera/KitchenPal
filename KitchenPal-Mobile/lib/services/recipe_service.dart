@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_constants.dart';
 import '../models/recipe.dart';
 import '../models/recipe_suggestion.dart';
+import '../models/generated_recipe.dart';
 import 'storage_service.dart';
 
 class RecipeService {
@@ -120,10 +121,8 @@ class RecipeService {
     }
   }
 
-  /// Get generated recipe suggestions for a branch
-  static Future<List<RecipeSuggestion>> getGeneratedRecipes(
-    int branchId,
-  ) async {
+  /// Get generated recipes for the current branch (generated_recipes table)
+  static Future<List<GeneratedRecipe>> getGeneratedRecipes() async {
     try {
       final token = await StorageService.getToken();
       if (token == null) {
@@ -131,7 +130,7 @@ class RecipeService {
       }
 
       final response = await http.get(
-        Uri.parse('$_suggestionsBaseUrl/branch/$branchId'),
+        Uri.parse('${ApiConstants.baseUrl}/generated-recipes'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -140,10 +139,8 @@ class RecipeService {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
-        final List<dynamic> suggestionsJson = jsonResponse['suggestions'] ?? [];
-        return suggestionsJson
-            .map((json) => RecipeSuggestion.fromJson(json))
-            .toList();
+        final List<dynamic> list = jsonResponse['recipes'] ?? [];
+        return list.map((json) => GeneratedRecipe.fromJson(json)).toList();
       } else if (response.statusCode == 401) {
         throw Exception('Unauthorized: Please login again');
       } else {
@@ -153,6 +150,42 @@ class RecipeService {
       }
     } catch (e) {
       throw Exception('Error fetching generated recipes: $e');
+    }
+  }
+
+  /// Save a chosen suggested recipe as a generated recipe (pending approval)
+  static Future<void> saveGeneratedRecipe({
+    required int recipeId,
+    required double suggestedDiscountPercent,
+    required double suggestedDiscountPrice,
+    required List<Map<String, dynamic>> selectedBatches,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/generated-recipes'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'recipe_id': recipeId,
+          'suggested_discount_percent': suggestedDiscountPercent,
+          'suggested_discount_price': suggestedDiscountPrice,
+          'selected_batches': selectedBatches,
+        }),
+      );
+
+      if (response.statusCode != 201) {
+        final Map<String, dynamic> error = json.decode(response.body);
+        throw Exception(error['error'] ?? 'Failed to save generated recipe');
+      }
+    } catch (e) {
+      throw Exception('Error saving generated recipe: $e');
     }
   }
 

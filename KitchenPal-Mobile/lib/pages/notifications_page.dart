@@ -102,22 +102,37 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
           .map(
             (ing) => {
               'batch_id':
-                  ing.ingredientId, // placeholder, actual batch_id not in model
+                  ing.ingredientId, // placeholder, batch_id not in model
               'ingredient_id': ing.ingredientId,
               'name': ing.name,
               'days_until_expiry': ing.daysUntilExpiry,
+              'expiry_date': ing.expiryDate.toIso8601String().split('T').first,
             },
           )
           .toList();
 
       final recipes = await RecipeService.generateRecipes(selectedItems);
 
+      final selectedBatches = selectedItems
+          .map(
+            (item) => {
+              'batch_id': item['batch_id'],
+              'ingredient_id': item['ingredient_id'],
+              'expiry_date': item['expiry_date'],
+            },
+          )
+          .toList();
+
       if (!mounted) return;
 
-      // Navigate to suggestions list so user can see matches.
+      // Navigate to suggestions list so user can see matches
+      // and pick one to save as a generated recipe.
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => RecipeSuggestionsPage(suggestions: recipes),
+          builder: (_) => RecipeSuggestionsPage(
+            suggestions: recipes,
+            selectedBatches: selectedBatches,
+          ),
         ),
       );
     } catch (e) {

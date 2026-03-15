@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import '../services/recipe_service.dart';
+import 'recipes_page.dart';
 
 /// Displays a list of generated recipe suggestions returned from
 /// the /api/recipes/generate endpoint.
 class RecipeSuggestionsPage extends StatelessWidget {
   final List<Map<String, dynamic>> suggestions;
+  final List<Map<String, dynamic>> selectedBatches;
 
-  const RecipeSuggestionsPage({super.key, required this.suggestions});
+  const RecipeSuggestionsPage({
+    super.key,
+    required this.suggestions,
+    required this.selectedBatches,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -222,13 +229,62 @@ class RecipeSuggestionsPage extends StatelessWidget {
                               .toList(),
                         ),
                       const SizedBox(height: 12),
-                      // Primary / secondary button (non-functional yet)
+                      // Primary / secondary button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Saving to generated recipes will be implemented
-                            // in the second half of the flow.
+                          onPressed: () async {
+                            try {
+                              final recipeId = s['recipe_id'] as int?;
+                              final percent =
+                                  (s['suggested_discount_percent'] as num?)
+                                      ?.toDouble() ??
+                                  0.0;
+                              final price =
+                                  (s['suggested_discount_price'] as num?)
+                                      ?.toDouble() ??
+                                  0.0;
+
+                              if (recipeId == null) {
+                                return;
+                              }
+
+                              await RecipeService.saveGeneratedRecipe(
+                                recipeId: recipeId,
+                                suggestedDiscountPercent: percent,
+                                suggestedDiscountPrice: price,
+                                selectedBatches: selectedBatches,
+                              );
+
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Recipe sent for discount approval',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const RecipesPage(initialTabIndex: 1),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Failed to save generated recipe: $e',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isBestMatch
