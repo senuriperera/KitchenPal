@@ -1,0 +1,77 @@
+{
+  "columns": [
+    {
+      "column_name": "notification_id",
+      "column_default": null,
+      "is_nullable": "NO",
+      "data_type": "integer"
+    },
+    {
+      "column_name": "branch_id",
+      "column_default": null,
+      "is_nullable": "NO",
+      "data_type": "integer"
+    },
+    {
+      "column_name": "user_id",
+      "column_default": null,
+      "is_nullable": "YES",
+      "data_type": "integer"
+    },
+    {
+      "column_name": "ingredient_id",
+      "column_default": null,
+      "is_nullable": "YES",
+      "data_type": "integer"
+    },
+    {
+      "column_name": "notification_type",
+      "column_default": "'EXPIRY_ALERT'::character varying",
+      "is_nullable": "NO",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "title",
+      "column_default": null,
+      "is_nullable": "NO",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "message",
+      "column_default": null,
+      "is_nullable": "YES",
+      "data_type": "text"
+    },
+    {
+      "column_name": "status",
+      "column_default": "'UNREAD'::character varying",
+      "is_nullable": "NO",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "days_until_expiry",
+      "column_default": null,
+      "is_nullable": "YES",
+      "data_type": "integer"
+    },
+    {
+      "column_name": "created_at",
+      "column_default": "now()",
+      "is_nullable": "YES",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "column_name": "acknowledged_at",
+      "column_default": null,
+      "is_nullable": "YES",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "column_name": "is_read",
+      "column_default": "false",
+      "is_nullable": "YES",
+      "data_type": "boolean"
+    }
+  ],
+  "sequences": []
+}
