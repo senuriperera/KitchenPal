@@ -65,7 +65,7 @@ class RecipeDetailPage extends StatelessWidget {
                       const SizedBox(width: 12),
                       _buildInfoChip(
                         icon: Icons.attach_money,
-                        label: '\$${recipe.basePrice.toStringAsFixed(2)}',
+                        label: 'Rs ${recipe.basePrice.toStringAsFixed(2)}',
                         color: const Color(0xFF4CAF50),
                       ),
                     ],

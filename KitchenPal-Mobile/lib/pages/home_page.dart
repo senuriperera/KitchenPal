@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/auth_service.dart';
 import '../services/ingredient_service.dart';
+import '../services/storage_service.dart';
 import '../models/ingredient.dart';
+import '../services/websocket_service.dart';
 import 'login.dart';
 
 // Main HomePage wrapper for backward compatibility
@@ -21,7 +23,7 @@ class HomePage extends StatelessWidget {
 // Extracted content widget for use in MainContainer
 class HomePageContent extends StatefulWidget {
   final Function(int)? onNavigate;
-  
+
   const HomePageContent({super.key, this.onNavigate});
 
   @override
@@ -31,11 +33,49 @@ class HomePageContent extends StatefulWidget {
 class _HomePageContentState extends State<HomePageContent> {
   List<Ingredient> _expiringIngredients = [];
   bool _isLoading = true;
+  String _userName = 'User';
 
   @override
   void initState() {
     super.initState();
     _loadExpiringIngredients();
+    _loadUserName();
+
+    // Connect to WebSocket and refresh nearing-expiry section
+    WebSocketService.instance.connect();
+    WebSocketService.instance.inventoryChanged.listen((_) {
+      _loadExpiringIngredients();
+    });
+  }
+
+  Future<void> _loadUserName() async {
+    final storedName = await StorageService.getUserName();
+    var resolvedName = (storedName ?? '').trim();
+
+    if (resolvedName.isEmpty) {
+      final currentUser = await AuthService.getCurrentUser();
+      resolvedName = _extractLoggedInUserName(currentUser);
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _userName = resolvedName.isNotEmpty ? resolvedName : 'User';
+    });
+  }
+
+  String _extractLoggedInUserName(Map<String, dynamic>? userPayload) {
+    if (userPayload == null) return '';
+
+    final directName = (userPayload['name'] as String?)?.trim() ?? '';
+    if (directName.isNotEmpty) return directName;
+
+    final nestedUser = userPayload['user'];
+    if (nestedUser is Map<String, dynamic>) {
+      return (nestedUser['name'] as String?)?.trim() ?? '';
+    }
+
+    return '';
   }
 
   Future<void> _loadExpiringIngredients() async {
@@ -45,10 +85,14 @@ class _HomePageContentState extends State<HomePageContent> {
 
     try {
       // branch_id is now in JWT — no param needed
-      final ingredients = await IngredientService.getExpiringIngredients(days: 7);
-      
+      final ingredients = await IngredientService.getExpiringIngredients(
+        days: 7,
+      );
+
       setState(() {
-        _expiringIngredients = ingredients.take(3).toList(); // Show only first 3
+        _expiringIngredients = ingredients
+            .take(3)
+            .toList(); // Show only first 3
         _isLoading = false;
       });
     } catch (e) {
@@ -76,23 +120,23 @@ class _HomePageContentState extends State<HomePageContent> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _expiringIngredients.isEmpty
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(32.0),
-                            child: Text(
-                              'No items nearing expiry',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        )
-                      : Column(
-                          children: _expiringIngredients.map((ingredient) {
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _buildExpiryItemFromData(ingredient),
-                            );
-                          }).toList(),
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Text(
+                          'No items nearing expiry',
+                          style: TextStyle(color: Colors.grey),
                         ),
+                      ),
+                    )
+                  : Column(
+                      children: _expiringIngredients.map((ingredient) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildExpiryItemFromData(ingredient),
+                        );
+                      }).toList(),
+                    ),
               const SizedBox(height: 16),
             ],
           ),
@@ -154,14 +198,17 @@ class _HomePageContentState extends State<HomePageContent> {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
+            children: [
+              const Text(
                 'Hello there,',
                 style: TextStyle(fontSize: 14, color: Colors.black54),
               ),
               Text(
-                'Barista Joe',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                _userName,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
@@ -173,7 +220,8 @@ class _HomePageContentState extends State<HomePageContent> {
               onPressed: () {
                 // Navigate to notifications page (index 4 in MainContainer)
                 // Find the MainContainer ancestor and update its index
-                final mainContainerState = context.findAncestorStateOfType<State<StatefulWidget>>();
+                final mainContainerState = context
+                    .findAncestorStateOfType<State<StatefulWidget>>();
                 if (mainContainerState != null && mainContainerState.mounted) {
                   // Use a callback to notify parent to change index
                   // Since we're in MainContainer, we can access it through context
@@ -564,7 +612,7 @@ class _HomePageContentState extends State<HomePageContent> {
   Widget _buildExpiryItemFromData(Ingredient ingredient) {
     final daysUntilExpiry = ingredient.daysUntilExpiry;
     final isUrgent = daysUntilExpiry <= 1;
-    
+
     String expiryText;
     if (daysUntilExpiry == 0) {
       expiryText = 'Expires Today';

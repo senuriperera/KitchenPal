@@ -289,11 +289,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFFF9500), Color(0xFFFFB84D)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: const Color(0xFFFFB84D),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -629,9 +625,10 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             ...batches.asMap().entries.map((entry) {
               final idx = entry.key;
               final batch = entry.value;
-              final daysLeft = batch.expiryDate
-                  .difference(DateTime.now())
-                  .inDays;
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              final bExpiry = DateTime(batch.expiryDate.year, batch.expiryDate.month, batch.expiryDate.day);
+              final daysLeft = bExpiry.difference(today).inDays;
 
               // Format the remaining quantity nicely
               String formattedQty;

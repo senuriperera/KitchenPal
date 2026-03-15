@@ -82,11 +82,7 @@ class KitchenPalBottomNavBar extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFFF9500), Color(0xFFFFB84D)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: Color(0xFFFF9500),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.add, color: Colors.white, size: 32),
