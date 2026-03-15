@@ -86,10 +86,18 @@ class Ingredient {
   }
 
   int get daysUntilExpiry {
-    return expiryDate.difference(DateTime.now()).inDays;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final expiry = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+    return expiry.difference(today).inDays;
   }
 
-  bool get isExpired => DateTime.now().isAfter(expiryDate);
+  bool get isExpired {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final expiry = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+    return expiry.isBefore(today);
+  }
 
   String get formattedExpiryDate {
     if (isExpired) return 'Expired';

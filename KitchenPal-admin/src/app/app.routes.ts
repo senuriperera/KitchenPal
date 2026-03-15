@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './features/dashboard/dashboard';
 import { InventoryComponent } from './features/inventory/inventory';
+import { DiscountApprovalComponent } from './features/discount-approval/discount-approval';
 import { UserManagementComponent } from './features/user-management/user-management';
 import { LoginComponent } from './features/auth/login/login';
 import { Recipes } from './features/recipes/recipes';
@@ -29,9 +30,10 @@ export const routes: Routes = [
   { path: 'recipes', component: Recipes, canActivate: [authGuard] },
   {
     path: 'discount-approvals',
-    component: DashboardComponent,
-    canActivate: [authGuard],
-  }, // Placeholder
+    component: DiscountApprovalComponent,
+    canActivate: [authGuard, roleGuard],
+    data: { allowedRoles: ['admin'] },
+  },
   { path: 'reports', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
   {
     path: 'user-management',

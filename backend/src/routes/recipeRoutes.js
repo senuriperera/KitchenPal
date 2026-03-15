@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const RecipeController = require('../controllers/recipeController');
 const authenticate = require('../middleware/auth');
+const { generateRecipes } = require('../controllers/recipeGenerationController');
 
 // GET /api/recipes - Get all standard recipes with ingredients (public)
 router.get('/', RecipeController.getAllRecipes);
@@ -17,5 +18,8 @@ router.put('/:id', authenticate, RecipeController.updateRecipe);
 
 // DELETE /api/recipes/:id - Delete recipe (soft delete, auth required)
 router.delete('/:id', authenticate, RecipeController.deleteRecipe);
+
+// Jaccard-based recipe suggestions (does not persist)
+router.post('/generate', authenticate, generateRecipes);
 
 module.exports = router;

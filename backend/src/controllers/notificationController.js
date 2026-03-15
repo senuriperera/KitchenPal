@@ -1,6 +1,54 @@
 const NotificationModel = require('../models/Notification');
+const db = require('../config/database');
 
 class NotificationController {
+    // Get expiry-nearing notifications for the logged-in user
+    // GET /api/notifications
+    static async getExpiryNotificationsForUser(req, res) {
+        try {
+            const user_id = req.user.user_id;
+            const branch_id = req.user.branch_id;
+
+            if (!user_id || !branch_id) {
+                return res.status(400).json({ error: 'User branch context missing' });
+            }
+
+            const query = `
+                                SELECT
+                                    ib.batch_id,
+                                    ib.ingredient_id,
+                                    ib.expiry_date,
+                                    ib.remaining_base_quantity,
+                                    si.name,
+                                    si.image_url,
+                                    st.name AS storage_type_name,
+                                    bu.code AS base_unit_code,
+                                    (ib.expiry_date - CURRENT_DATE) AS days_until_expiry,
+                                    n.notification_id,
+                                    n.is_read,
+                                    n.acknowledged_at
+                                FROM ingredient_batches ib
+                                JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
+                                JOIN notifications n ON n.ingredient_id = si.ingredient_id
+                                    AND n.user_id = $1
+                                    AND n.notification_type = 'expiry_alert'
+                                    AND n.status = 'unread'
+                                JOIN storage_types st ON si.storage_type_id = st.storage_type_id
+                                JOIN units bu ON ib.base_unit_id = bu.unit_id
+                                WHERE si.branch_id = $2
+                                    AND ib.is_depleted = false
+                                    AND (ib.expiry_date - CURRENT_DATE) <= 3
+                                    AND (ib.expiry_date - CURRENT_DATE) >= 0
+                                ORDER BY ib.expiry_date ASC
+                        `;
+
+            const result = await db.query(query, [user_id, branch_id]);
+            res.json({ items: result.rows });
+        } catch (error) {
+            console.error('Get expiry notifications error:', error);
+            res.status(500).json({ error: 'Failed to fetch expiry notifications' });
+        }
+    }
     // Get all notifications for a branch
     static async getAllNotifications(req, res) {
         try {
@@ -47,6 +95,16 @@ class NotificationController {
                 expiry_date,
             });
 
+            // Broadcast notification/inventory-related change
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'created',
+                    branch_id,
+                    notification,
+                });
+            }
+
             res.status(201).json({
                 message: 'Notification created successfully',
                 notification,
@@ -67,6 +125,15 @@ class NotificationController {
                 return res.status(404).json({ error: 'Notification not found' });
             }
 
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'resolved',
+                    branch_id: notification.branch_id,
+                    notification,
+                });
+            }
+
             res.json({
                 message: 'Notification resolved successfully',
                 notification,
@@ -82,6 +149,13 @@ class NotificationController {
         try {
             const { id } = req.params;
             await NotificationModel.delete(id);
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'deleted',
+                    id,
+                });
+            }
 
             res.json({ message: 'Notification deleted successfully' });
         } catch (error) {
@@ -98,6 +172,15 @@ class NotificationController {
 
             const notifications = await NotificationModel.createExpiryNotifications(branch_id, days);
 
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('notifications:changed', {
+                    action: 'expiry_batch_created',
+                    branch_id,
+                    notifications,
+                });
+            }
+
             res.json({
                 message: `Created ${notifications.length} expiry notifications`,
                 notifications,
@@ -105,6 +188,35 @@ class NotificationController {
         } catch (error) {
             console.error('Create expiry notifications error:', error);
             res.status(500).json({ error: 'Failed to create expiry notifications' });
+        }
+    }
+
+    // Acknowledge a single expiry notification for the logged-in user
+    static async acknowledgeNotification(req, res) {
+        try {
+            const { id } = req.params;
+            const user_id = req.user.user_id;
+
+            const result = await db.query(
+                `UPDATE notifications SET
+                   status = 'read',
+                   is_read = true,
+                   acknowledged_at = NOW()
+                 WHERE notification_id = $1
+                   AND user_id = $2
+                   AND notification_type = 'expiry_alert'
+                 RETURNING notification_id`,
+                [id, user_id]
+            );
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: 'Notification not found' });
+            }
+
+            res.json({ message: 'Notification acknowledged' });
+        } catch (error) {
+            console.error('Acknowledge notification error:', error);
+            res.status(500).json({ error: 'Failed to acknowledge notification' });
         }
     }
 }

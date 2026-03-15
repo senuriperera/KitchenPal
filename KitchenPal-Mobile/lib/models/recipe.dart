@@ -19,7 +19,7 @@ class RecipeIngredient {
     return RecipeIngredient(
       masterIngredientId: json['master_ingredient_id'] ?? 0,
       name: json['name'] ?? '',
-      quantityRequired: (json['quantity_required'] ?? 0).toDouble(),
+      quantityRequired: double.parse((json['quantity_required'] ?? 0).toString()),
       unitCode: json['unit_code'] ?? '',
       unitName: json['unit_name'] ?? '',
       unitId: json['unit_id'] ?? 0,
@@ -70,7 +70,7 @@ class Recipe {
       imageUrl: json['image_url'],
       cookingTimeMinutes: json['cooking_time_minutes'],
       description: json['description'],
-      basePrice: (json['base_price'] ?? 0).toDouble(),
+      basePrice: double.parse((json['base_price'] ?? 0).toString()),
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),

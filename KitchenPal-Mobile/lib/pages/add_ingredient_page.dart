@@ -54,8 +54,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   UnitModel? _selectedWeightUnit;
   StorageType? _selectedStorageType;
 
-  DateTime _manufactureDate = DateTime(DateTime.now().year - 1, 1, 1);
-  DateTime _expiryDate = DateTime(DateTime.now().year + 1, 1, 1);
+  DateTime _manufactureDate = DateTime.now();
+  DateTime _expiryDate = DateTime.now();
 
   File? _selectedImage;
   String? _cloudinaryImageUrl;
@@ -677,8 +677,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       _selectedStorageType = _storageTypes.isNotEmpty
           ? _storageTypes.first
           : null;
-      _manufactureDate = DateTime(DateTime.now().year - 1, 1, 1);
-      _expiryDate = DateTime(DateTime.now().year + 1, 1, 1);
+      _manufactureDate = DateTime.now();
+      _expiryDate = DateTime.now();
       _selectedImage = null;
       _cloudinaryImageUrl = null;
       _ocrImage = null;
