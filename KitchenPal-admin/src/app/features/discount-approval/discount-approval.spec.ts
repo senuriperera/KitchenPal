@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 import { DiscountApprovalComponent } from './discount-approval';
 
@@ -8,7 +9,7 @@ describe('DiscountApprovalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DiscountApprovalComponent],
+      imports: [DiscountApprovalComponent, HttpClientTestingModule],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DiscountApprovalComponent);
