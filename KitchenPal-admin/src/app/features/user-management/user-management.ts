@@ -123,11 +123,43 @@ export class UserManagementComponent implements OnInit {
 
     this.userService.getUsers().subscribe({
       next: (users) => {
-        this.users = users;
+        // Admins can see all users; non-admins only see their own profile
+        if (this.isAdmin) {
+          this.users = users;
+        } else {
+          const currentEmail = this.authService.currentUserValue?.email;
+          if (currentEmail) {
+            const currentUser = users.find(
+              (u) => u.email.toLowerCase() === currentEmail.toLowerCase(),
+            );
+            this.users = currentUser ? [currentUser] : [];
+          } else {
+            this.users = [];
+          }
+        }
         this.isLoading = false;
       },
       error: (error) => {
         console.error('Error loading users:', error);
+        // If non-admin cannot access the users endpoint, fall back to showing their own profile only
+        if (!this.isAdmin) {
+          const current = this.authService.currentUserValue;
+          if (current) {
+            this.users = [
+              {
+                id: 0,
+                name: current.name,
+                email: current.email,
+                role: current.role,
+                branch: '',
+                lastLogin: '',
+              },
+            ];
+            this.userErrorMessage = '';
+            this.isLoading = false;
+            return;
+          }
+        }
         this.userErrorMessage = 'Failed to load users. Please try again.';
         this.isLoading = false;
       },

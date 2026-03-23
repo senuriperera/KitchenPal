@@ -30,7 +30,7 @@
     <!-- Manage Users Section -->
     <div class="section" *ngIf="activeTab === 'users'">
       <div class="section-header">
-        <h2 class="section-title">Manage Users</h2>
+        <h2 class="section-title">{{ isAdmin ? 'Manage Users' : 'My Profile' }}</h2>
         <button class="add-button" *ngIf="isAdmin" (click)="addUser()">
           <span class="add-icon">+</span>
           <span>Add User</span>
@@ -105,7 +105,8 @@
 
         <!-- Empty State -->
         <div class="empty-state" *ngIf="users.length === 0 && !isLoading">
-          <p>No users found. Click "Add User" to create one.</p>
+          <p *ngIf="isAdmin">No users found. Click "Add User" to create one.</p>
+          <p *ngIf="!isAdmin">Profile information is not available.</p>
         </div>
       </div>
     </div>
@@ -190,7 +191,7 @@
         <button class="close-button" (click)="closeModal()">×</button>
       </div>
 
-      <form class="modal-form" (ngSubmit)="submitUser()">
+      <form class="modal-form" (ngSubmit)="submitUser()" autocomplete="off">
         <!-- Error Message in Modal -->
         <div class="alert alert-error" *ngIf="userErrorMessage">
           {{ userErrorMessage }}
@@ -214,8 +215,9 @@
             type="email"
             id="email"
             [(ngModel)]="userFormData.email"
-            name="email"
+            name="newUserEmail"
             class="form-input"
+            autocomplete="off"
             required
           />
         </div>
@@ -258,8 +260,9 @@
             type="password"
             id="password"
             [(ngModel)]="userFormData.password"
-            name="password"
+            name="newUserPassword"
             class="form-input"
+            autocomplete="new-password"
             required
           />
         </div>
