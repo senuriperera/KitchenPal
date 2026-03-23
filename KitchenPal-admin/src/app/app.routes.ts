@@ -39,7 +39,7 @@ export const routes: Routes = [
     path: 'user-management',
     component: UserManagementComponent,
     canActivate: [authGuard, roleGuard],
-    data: { allowedRoles: ['admin', 'branch_manager'] },
+    data: { allowedRoles: ['admin', 'branch_manager', 'manager', 'staff'] },
   },
   { path: 'settings', component: DashboardComponent, canActivate: [authGuard] }, // Placeholder
 ];

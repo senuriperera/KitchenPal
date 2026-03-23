@@ -127,6 +127,7 @@ export class AuthService {
    * Check if the current user is a manager
    */
   isManager(): boolean {
-    return this.hasRole('branch_manager');
+    // Support both 'branch_manager' and 'manager' role names
+    return this.hasRole('branch_manager') || this.hasRole('manager');
   }
 }

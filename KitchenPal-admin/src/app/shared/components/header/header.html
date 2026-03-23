@@ -10,7 +10,7 @@
       </button>
       <div class="user-profile">
         <span class="material-icons icon">account_circle</span>
-        <span class="user-name">Admin User</span>
+        <span class="user-name">{{ (currentUser$ | async)?.name || 'User' }}</span>
       </div>
       <button class="logout-btn" (click)="logout()" title="Logout">
         <span class="material-icons icon">logout</span>
