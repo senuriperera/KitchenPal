@@ -15,10 +15,43 @@ export interface PendingGeneratedRecipe {
   cooking_time_minutes?: number;
   generated_by_name: string;
   branch_name: string;
+  recipe_id: number;
+  recipe_type: 'Auto-suggested' | 'Predefined';
+}
+
+export interface ApprovedGeneratedRecipe {
+  generated_id: number;
+  final_discount_percent: number;
+  final_discount_price: number;
+  reviewed_at: string;
+  name: string;
+  image_url?: string;
+  base_price: number;
+  cooking_time_minutes?: number;
+  generated_by_name: string;
+  branch_name: string;
+  recipe_id: number;
+  recipe_type: 'Auto-suggested' | 'Predefined';
+}
+
+export interface RecipeIngredient {
+  recipe_ingredient_id: number;
+  quantity: number;
+  unit: string;
+  ingredient_id: number;
+  name: string;
 }
 
 interface PendingResponse {
   items?: PendingGeneratedRecipe[];
+}
+
+interface ApprovedResponse {
+  items?: ApprovedGeneratedRecipe[];
+}
+
+interface IngredientsResponse {
+  ingredients?: RecipeIngredient[];
 }
 
 interface ApproveRejectBody {
@@ -39,6 +72,18 @@ export class GeneratedRecipeService {
     return this.http
       .get<PendingResponse>(`${this.baseUrl}/pending`)
       .pipe(map((res) => res.items || []));
+  }
+
+  getRecentlyApproved(): Observable<ApprovedGeneratedRecipe[]> {
+    return this.http
+      .get<ApprovedResponse>(`${this.baseUrl}/recently-approved`)
+      .pipe(map((res) => res.items || []));
+  }
+
+  getIngredients(generatedId: number): Observable<RecipeIngredient[]> {
+    return this.http
+      .get<IngredientsResponse>(`${this.baseUrl}/${generatedId}/ingredients`)
+      .pipe(map((res) => res.ingredients || []));
   }
 
   approve(

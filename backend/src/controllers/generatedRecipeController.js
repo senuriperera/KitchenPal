@@ -1,4 +1,5 @@
 const db = require('../config/database');
+const RecipeModel = require('../models/Recipe');
 
 /**
  * POST /api/generated-recipes
@@ -126,7 +127,35 @@ async function createGeneratedRecipe(req, res) {
             );
         }
 
+        // 5) Fetch the newly created recipe details for WebSocket
+        const recipeDetailsResult = await client.query(
+            `SELECT
+         gr.generated_id,
+         gr.suggested_discount_percent,
+         gr.suggested_discount_price,
+         gr.created_at,
+         r.name,
+         r.image_url,
+         r.base_price,
+         r.cooking_time_minutes,
+         u.name AS generated_by_name,
+         b.name AS branch_name,
+         r.recipe_id
+       FROM generated_recipes gr
+       JOIN recipes r ON gr.recipe_id = r.recipe_id
+       JOIN users u ON gr.generated_by = u.user_id
+       JOIN branches b ON gr.branch_id = b.branch_id
+       WHERE gr.generated_id = $1`,
+            [generatedId]
+        );
+
         await client.query('COMMIT');
+
+        // 6) Emit WebSocket event to notify admins
+        const io = req.app.get('io');
+        if (io && recipeDetailsResult.rows[0]) {
+            io.emit('recipe:pending', recipeDetailsResult.rows[0]);
+        }
 
         return res.status(201).json({ generated_id: generatedId });
     } catch (err) {
@@ -205,8 +234,16 @@ async function getPendingGeneratedRecipes(req, res) {
          r.image_url,
          r.base_price,
          r.cooking_time_minutes,
+         r.recipe_id,
          u.name AS generated_by_name,
-         b.name AS branch_name
+         b.name AS branch_name,
+         CASE
+           WHEN EXISTS (
+             SELECT 1 FROM generated_recipe_triggers grt
+             WHERE grt.generated_id = gr.generated_id
+           ) THEN 'Auto-suggested'
+           ELSE 'Predefined'
+         END AS recipe_type
        FROM generated_recipes gr
        JOIN recipes r ON gr.recipe_id = r.recipe_id
        JOIN users u ON gr.generated_by = u.user_id
@@ -429,10 +466,96 @@ async function rejectGeneratedRecipe(req, res) {
     }
 }
 
+/**
+ * GET /api/generated-recipes/recently-approved
+ * Admin: list recently approved generated recipes (last 10).
+ */
+async function getRecentlyApprovedRecipes(req, res) {
+    try {
+        const result = await db.query(
+            `SELECT
+         gr.generated_id,
+         gr.final_discount_percent,
+         gr.final_discount_price,
+         gr.reviewed_at,
+         r.name,
+         r.image_url,
+         r.base_price,
+         r.cooking_time_minutes,
+         r.recipe_id,
+         u.name AS generated_by_name,
+         b.name AS branch_name,
+         CASE
+           WHEN EXISTS (
+             SELECT 1 FROM generated_recipe_triggers grt
+             WHERE grt.generated_id = gr.generated_id
+           ) THEN 'Auto-suggested'
+           ELSE 'Predefined'
+         END AS recipe_type
+       FROM generated_recipes gr
+       JOIN recipes r ON gr.recipe_id = r.recipe_id
+       JOIN users u ON gr.generated_by = u.user_id
+       JOIN branches b ON gr.branch_id = b.branch_id
+       WHERE gr.status = 'approved'
+       ORDER BY gr.reviewed_at DESC
+       LIMIT 10`
+        );
+
+        return res.json({ items: result.rows });
+    } catch (err) {
+        console.error('Error fetching recently approved recipes:', err);
+        return res.status(500).json({ error: 'Failed to fetch recently approved recipes' });
+    }
+}
+
+/**
+ * GET /api/generated-recipes/:id/ingredients
+ * Get ingredients for a generated recipe.
+ */
+async function getGeneratedRecipeIngredients(req, res) {
+    const generatedId = parseInt(req.params.id, 10);
+
+    if (!generatedId) {
+        return res.status(400).json({ error: 'Invalid generated_id' });
+    }
+
+    try {
+        // First get the recipe_id from generated_recipes
+        const generatedRecipeResult = await db.query(
+            `SELECT recipe_id FROM generated_recipes WHERE generated_id = $1`,
+            [generatedId]
+        );
+
+        if (generatedRecipeResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Generated recipe not found' });
+        }
+
+        const recipeId = generatedRecipeResult.rows[0].recipe_id;
+
+        // Reuse the central Recipe model to fetch ingredients
+        const recipeIngredients = await RecipeModel.getIngredients(recipeId);
+
+        const ingredients = recipeIngredients.map((row) => ({
+            recipe_ingredient_id: row.recipe_ingredient_id,
+            quantity: Number(row.quantity_required),
+            unit: row.unit_code || row.unit_name || '',
+            ingredient_id: row.master_ingredient_id,
+            name: row.ingredient_name || 'Unknown ingredient',
+        }));
+
+        return res.json({ ingredients });
+    } catch (err) {
+        console.error('Error fetching generated recipe ingredients:', err);
+        return res.status(500).json({ error: 'Failed to fetch ingredients' });
+    }
+}
+
 module.exports = {
     createGeneratedRecipe,
     getGeneratedRecipesForBranch,
     getPendingGeneratedRecipes,
     approveGeneratedRecipe,
     rejectGeneratedRecipe,
+    getRecentlyApprovedRecipes,
+    getGeneratedRecipeIngredients,
 };

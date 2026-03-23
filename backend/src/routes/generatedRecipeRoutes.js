@@ -8,6 +8,8 @@ const {
     getPendingGeneratedRecipes,
     approveGeneratedRecipe,
     rejectGeneratedRecipe,
+    getRecentlyApprovedRecipes,
+    getGeneratedRecipeIngredients,
 } = require('../controllers/generatedRecipeController');
 
 // Staff: save chosen recipe as generated (pending)
@@ -20,6 +22,12 @@ router.get('/', authenticate, getGeneratedRecipesForBranch);
 
 // Admin: list all pending generated recipes for discount approvals
 router.get('/pending', authenticate, authorize('admin'), getPendingGeneratedRecipes);
+
+// Admin: list recently approved generated recipes
+router.get('/recently-approved', authenticate, authorize('admin'), getRecentlyApprovedRecipes);
+
+// Get ingredients for a generated recipe
+router.get('/:id/ingredients', authenticate, getGeneratedRecipeIngredients);
 
 // Admin: approve generated recipe
 router.put('/:id/approve', authenticate, authorize('admin'), approveGeneratedRecipe);
