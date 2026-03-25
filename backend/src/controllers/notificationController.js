@@ -43,7 +43,24 @@ class NotificationController {
                         `;
 
             const result = await db.query(query, [user_id, branch_id]);
-            res.json({ items: result.rows });
+
+            // Map to match Flutter's ExpiryNotification model field names
+            const items = result.rows.map(row => ({
+                batch_id: row.batch_id,
+                ingredient_id: row.ingredient_id,
+                expiry_date: row.expiry_date,
+                remaining_base_quantity: row.remaining_base_quantity,
+                name: row.name,
+                image_url: row.image_url,
+                storage_type_name: row.storage_type_name,
+                base_unit_code: row.base_unit_code,
+                days_until_expiry: parseInt(row.days_until_expiry, 10),
+                notification_id: row.notification_id,
+                is_read: row.is_read,
+                acknowledged_at: row.acknowledged_at
+            }));
+
+            res.json({ items });
         } catch (error) {
             console.error('Get expiry notifications error:', error);
             res.status(500).json({ error: 'Failed to fetch expiry notifications' });

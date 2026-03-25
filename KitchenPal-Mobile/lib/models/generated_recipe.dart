@@ -15,6 +15,8 @@ class GeneratedRecipe {
   final String? description;
   final double basePrice;
   final String generatedByName;
+  final int totalServings;
+  final String? servingDescription;
 
   GeneratedRecipe({
     required this.generatedId,
@@ -33,6 +35,8 @@ class GeneratedRecipe {
     this.description,
     required this.basePrice,
     required this.generatedByName,
+    required this.totalServings,
+    this.servingDescription,
   });
 
   factory GeneratedRecipe.fromJson(Map<String, dynamic> json) {
@@ -67,6 +71,8 @@ class GeneratedRecipe {
       description: json['description'],
       basePrice: double.tryParse(json['base_price']?.toString() ?? '0') ?? 0,
       generatedByName: json['generated_by_name'] ?? '',
+      totalServings: json['suggested_servings'] ?? 1,
+      servingDescription: json['serving_description'],
     );
   }
 }

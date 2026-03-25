@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../config/api_constants.dart';
 import '../models/recipe.dart';
 import '../models/recipe_suggestion.dart';
 import '../models/generated_recipe.dart';
@@ -559,9 +562,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // New Sale flow can be wired here.
-                      },
+                      onPressed: () => _processSale(recipe),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF9500),
                         foregroundColor: Colors.white,
@@ -767,6 +768,164 @@ class _RecipesPageContentState extends State<RecipesPageContent>
           ),
         ],
       ),
+    );
+  }
+
+  // ─── Sale Processing ──────────────────────────────────────────────────────
+
+  Future<void> _processSale(GeneratedRecipe recipe) async {
+    final totalServings = recipe.totalServings;
+    int quantitySold = 1;
+
+    // If multi-serve recipe, show dialog to ask for quantity
+    if (totalServings > 1) {
+      final result = await showDialog<int>(
+        context: context,
+        builder: (context) => _buildSaleQuantityDialog(recipe),
+      );
+      if (result == null) return; // User canceled
+      quantitySold = result;
+    }
+
+    // Show loading indicator
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/sales'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'recipe_id': recipe.recipeId,
+          'generated_id': recipe.generatedId,
+          'quantity_sold': quantitySold,
+        }),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      if (response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sale recorded: $quantitySold serving${quantitySold > 1 ? 's' : ''}',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        final error = json.decode(response.body);
+        throw Exception(error['error'] ?? 'Failed to create sale');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error creating sale: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildSaleQuantityDialog(GeneratedRecipe recipe) {
+    int quantity = 1;
+    final servingDescription = recipe.servingDescription;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return AlertDialog(
+          title: const Text('How many servings?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                recipe.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              if (servingDescription != null)
+                Text(
+                  'Serving: $servingDescription',
+                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      if (quantity > 1) {
+                        setState(() => quantity--);
+                      }
+                    },
+                    icon: const Icon(Icons.remove_circle_outline),
+                    color: const Color(0xFFFF9500),
+                  ),
+                  Container(
+                    width: 60,
+                    alignment: Alignment.center,
+                    child: Text(
+                      '$quantity',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      if (quantity < recipe.totalServings) {
+                        setState(() => quantity++);
+                      }
+                    },
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: const Color(0xFFFF9500),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: Text(
+                  'Max: ${recipe.totalServings} servings',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(quantity),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF9500),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
     );
   }
 

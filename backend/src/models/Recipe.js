@@ -111,6 +111,8 @@ class RecipeModel {
                 r.cooking_time_minutes,
                 r.description,
                 r.base_price,
+                r.total_servings,
+                r.serving_description,
                 r.created_at,
                 r.updated_at,
                 COALESCE(
@@ -149,6 +151,8 @@ class RecipeModel {
                 r.cooking_time_minutes,
                 r.description,
                 r.base_price,
+                r.total_servings,
+                r.serving_description,
                 r.created_at,
                 r.updated_at,
                 COALESCE(
@@ -199,11 +203,13 @@ class RecipeModel {
             const recipeQuery = `
                 INSERT INTO recipes (
                     name, image_url, cooking_time_minutes, description, 
-                    base_price, is_generated, created_by, branch_id
+                    base_price, is_generated, created_by, branch_id,
+                    total_servings, serving_description
                 )
-                VALUES ($1, $2, $3, $4, $5, false, $6, NULL)
+                VALUES ($1, $2, $3, $4, $5, false, $6, NULL, $7, $8)
                 RETURNING recipe_id, name, image_url, cooking_time_minutes, 
-                          description, base_price, created_at, updated_at
+                          description, base_price, total_servings, serving_description,
+                          created_at, updated_at
             `;
 
             const recipeResult = await client.query(recipeQuery, [
@@ -212,7 +218,9 @@ class RecipeModel {
                 recipeData.cooking_time_minutes || null,
                 recipeData.description || null,
                 recipeData.base_price,
-                recipeData.created_by || null
+                recipeData.created_by || null,
+                recipeData.total_servings || 1,
+                recipeData.serving_description || null,
             ]);
 
             const recipe = recipeResult.rows[0];
@@ -372,10 +380,13 @@ class RecipeModel {
                     cooking_time_minutes = $4,
                     description = $5,
                     base_price = $6,
+                    total_servings = $7,
+                    serving_description = $8,
                     updated_at = NOW()
                 WHERE recipe_id = $1 AND is_generated = false AND is_active = true
                 RETURNING recipe_id, name, image_url, cooking_time_minutes, 
-                          description, base_price, created_at, updated_at
+                          description, base_price, total_servings, serving_description,
+                          created_at, updated_at
             `;
 
             const recipeResult = await client.query(recipeQuery, [
@@ -384,7 +395,9 @@ class RecipeModel {
                 recipeData.image_url || null,
                 recipeData.cooking_time_minutes || null,
                 recipeData.description || null,
-                recipeData.base_price
+                recipeData.base_price,
+                recipeData.total_servings || 1,
+                recipeData.serving_description || null,
             ]);
 
             if (recipeResult.rows.length === 0) {

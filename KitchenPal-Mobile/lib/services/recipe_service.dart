@@ -159,6 +159,7 @@ class RecipeService {
     required double suggestedDiscountPercent,
     required double suggestedDiscountPrice,
     required List<Map<String, dynamic>> selectedBatches,
+    required int suggestedServings,
   }) async {
     try {
       final token = await StorageService.getToken();
@@ -177,6 +178,7 @@ class RecipeService {
           'suggested_discount_percent': suggestedDiscountPercent,
           'suggested_discount_price': suggestedDiscountPrice,
           'selected_batches': selectedBatches,
+          'suggested_servings': suggestedServings,
         }),
       );
 

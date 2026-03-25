@@ -6,7 +6,7 @@ const RecipeModel = require('../models/Recipe');
  * Save staff's chosen recipe as a generated recipe (pending admin approval).
  */
 async function createGeneratedRecipe(req, res) {
-    const { recipe_id, suggested_discount_percent, suggested_discount_price, selected_batches } =
+    const { recipe_id, suggested_discount_percent, suggested_discount_price, selected_batches, suggested_servings } =
         req.body || {};
 
     if (!recipe_id || !suggested_discount_percent || !suggested_discount_price) {
@@ -41,14 +41,15 @@ async function createGeneratedRecipe(req, res) {
          suggested_discount_price,
          final_discount_percent,
          final_discount_price,
+         suggested_servings,
          status,
          is_active,
          created_at
        ) VALUES (
-         $1, $2, $3, $4, $5, NULL, NULL, 'pending', true, NOW()
+         $1, $2, $3, $4, $5, NULL, NULL, $6, 'pending', true, NOW()
        )
        RETURNING generated_id`,
-            [branchId, recipe_id, userId, suggested_discount_percent, suggested_discount_price]
+            [branchId, recipe_id, userId, suggested_discount_percent, suggested_discount_price, suggested_servings || 1]
         );
 
         const generatedId = insertRecipeResult.rows[0].generated_id;
@@ -186,6 +187,7 @@ async function getGeneratedRecipesForBranch(req, res) {
          gr.suggested_discount_price,
          gr.final_discount_percent,
          gr.final_discount_price,
+         gr.suggested_servings,
          gr.status,
          gr.admin_note,
          gr.generated_by,
@@ -195,6 +197,8 @@ async function getGeneratedRecipesForBranch(req, res) {
          r.cooking_time_minutes,
          r.description,
          r.base_price,
+         r.total_servings,
+         r.serving_description,
          u.name AS generated_by_name
        FROM generated_recipes gr
        JOIN recipes r ON gr.recipe_id = r.recipe_id

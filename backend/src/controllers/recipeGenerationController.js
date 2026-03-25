@@ -6,13 +6,13 @@ const db = require('../config/database');
  * Body:
  * {
  *   selected_items: [
- *     { batch_id, ingredient_id, name, days_until_expiry }, ...
+ *     { batch_id, ingredient_id, name, days_until_expiry, remaining_base_quantity }, ...
  *   ]
  * }
  *
  * Uses Jaccard similarity over recipe_keywords to find matching recipes,
- * checks ingredient availability, computes suggested discounts, and
- * returns a ranked list of suggestions. Does not persist anything.
+ * checks ingredient availability, computes suggested discounts and per-serving
+ * quantities, and returns a ranked list of suggestions. Does not persist anything.
  */
 async function generateRecipes(req, res) {
     try {
@@ -99,52 +99,7 @@ async function generateRecipes(req, res) {
         const topCandidates = jaccardCandidates.slice(0, 5);
         const topRecipeIds = topCandidates.map((c) => c.recipeId);
 
-        // Step 4 — Check ingredient availability at this branch
-        const availabilityByRecipe = new Map();
-        const availabilityResult = await db.query(
-            `SELECT
-         ri.recipe_id,
-         ri.master_ingredient_id,
-         ri.quantity_required,
-         ri.unit_id,
-         u.to_base_factor,
-         si.total_base_quantity,
-         mi.name AS ingredient_name,
-         u.code AS unit_code
-       FROM recipe_ingredients ri
-       JOIN units u ON ri.unit_id = u.unit_id
-       JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
-       LEFT JOIN stock_ingredients si ON si.master_ingredient_id = ri.master_ingredient_id
-         AND si.branch_id = $1
-       WHERE ri.recipe_id = ANY($2)`,
-            [branchId, topRecipeIds]
-        );
-
-        for (const row of availabilityResult.rows) {
-            const {
-                recipe_id,
-                ingredient_name,
-                quantity_required,
-                to_base_factor,
-                total_base_quantity,
-                unit_code,
-            } = row;
-            const requiredBase = Number(quantity_required) * Number(to_base_factor);
-            const availableBase = total_base_quantity != null ? Number(total_base_quantity) : 0;
-            const isAvailable = availableBase >= requiredBase;
-
-            if (!availabilityByRecipe.has(recipe_id)) {
-                availabilityByRecipe.set(recipe_id, []);
-            }
-            availabilityByRecipe.get(recipe_id).push({
-                name: ingredient_name,
-                quantity_required: Number(quantity_required),
-                unit_code,
-                is_available: isAvailable,
-            });
-        }
-
-        // Step 5 — Calculate suggested discount based on most urgent expiry
+        // Step 4 — Calculate suggested discount based on most urgent expiry
         const minDaysUntilExpiry = Math.min(
             ...selectedItems.map((i) => Number(i.days_until_expiry))
         );
@@ -153,7 +108,7 @@ async function generateRecipes(req, res) {
         else if (minDaysUntilExpiry <= 2) suggestedDiscountPercent = 20;
         else suggestedDiscountPercent = 10;
 
-        // Step 6 — Fetch full recipe details for top candidates
+        // Step 5 — Fetch full recipe details for top candidates (including total_servings)
         const detailsResult = await db.query(
             `SELECT
          r.recipe_id,
@@ -161,7 +116,8 @@ async function generateRecipes(req, res) {
          r.image_url,
          r.cooking_time_minutes,
          r.description,
-         r.base_price
+         r.base_price,
+         r.total_servings
        FROM recipes r
        WHERE r.recipe_id = ANY($1)
          AND r.is_active = true`,
@@ -173,20 +129,142 @@ async function generateRecipes(req, res) {
             detailsById.set(row.recipe_id, row);
         }
 
-        // Step 7 — Build response array
+        // Step 6 — Fetch ingredient availability + per-serving quantities at this branch
+        const availabilityResult = await db.query(
+            `SELECT
+         ri.recipe_id,
+         ri.master_ingredient_id,
+         ri.quantity_required,
+         ri.is_optional,
+         u.to_base_factor,
+         si.total_base_quantity,
+         si.ingredient_id AS stock_ingredient_id,
+         mi.name AS ingredient_name,
+         u.code AS unit_code
+       FROM recipe_ingredients ri
+       JOIN units u ON ri.unit_id = u.unit_id
+       JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
+       LEFT JOIN stock_ingredients si ON si.master_ingredient_id = ri.master_ingredient_id
+         AND si.branch_id = $1
+       WHERE ri.recipe_id = ANY($2)`,
+            [branchId, topRecipeIds]
+        );
+
+        // Build a lookup: master_ingredient_id → expiring quantity from selected_items
+        // We need to join via stock_ingredients to map ingredient_id → master_ingredient_id
+        const stockIngredientIdToMaster = new Map();
+        if (selectedItems.length > 0) {
+            const siIds = selectedItems.map((s) => s.ingredient_id).filter(Boolean);
+            if (siIds.length > 0) {
+                const siResult = await db.query(
+                    `SELECT ingredient_id, master_ingredient_id FROM stock_ingredients WHERE ingredient_id = ANY($1)`,
+                    [siIds]
+                );
+                for (const row of siResult.rows) {
+                    stockIngredientIdToMaster.set(row.ingredient_id, row.master_ingredient_id);
+                }
+            }
+        }
+
+        // Build map: master_ingredient_id → remaining_base_quantity from expiring batches
+        const expiringByMaster = new Map();
+        for (const item of selectedItems) {
+            const masterId = stockIngredientIdToMaster.get(item.ingredient_id);
+            if (masterId) {
+                const existing = expiringByMaster.get(masterId) || 0;
+                expiringByMaster.set(masterId, existing + Number(item.remaining_base_quantity || 0));
+            }
+        }
+
+        // Group availability results by recipe
+        const ingredientsByRecipe = new Map();
+        for (const row of availabilityResult.rows) {
+            if (!ingredientsByRecipe.has(row.recipe_id)) {
+                ingredientsByRecipe.set(row.recipe_id, []);
+            }
+            ingredientsByRecipe.get(row.recipe_id).push(row);
+        }
+
+        // Step 7 — Build response array with serving calculations
         const responseItems = [];
         for (const candidate of topCandidates) {
             const details = detailsById.get(candidate.recipeId);
             if (!details) continue;
 
-            const ingredients = availabilityByRecipe.get(candidate.recipeId) || [];
-            const ingredientsTotal = ingredients.length;
-            const ingredientsAvailable = ingredients.filter((i) => i.is_available).length;
+            const totalServings = Number(details.total_servings) || 1;
+            const rawIngredients = ingredientsByRecipe.get(candidate.recipeId) || [];
+
+            // Compute per-serving base quantities and availability status
+            let recipeIsInfeasible = true; // Assume infeasible until proven otherwise
+            let hasAtLeastOneNonOptional = false;
+            let hasStockWarning = false;
+            let suggestedServings = Infinity;
+
+            const ingredientDetails = [];
+            for (const row of rawIngredients) {
+                const baseQtyTotal = Number(row.quantity_required) * Number(row.to_base_factor);
+                const baseQtyPerServing = baseQtyTotal / totalServings;
+                const totalAvailable = row.total_base_quantity != null ? Number(row.total_base_quantity) : 0;
+                const expiringAvailable = expiringByMaster.get(row.master_ingredient_id) || 0;
+                const isOptional = row.is_optional || false;
+
+                let availabilityStatus;
+                if (expiringAvailable >= baseQtyPerServing) {
+                    availabilityStatus = 'sufficient_expiring';
+                } else if (totalAvailable >= baseQtyPerServing) {
+                    availabilityStatus = 'needs_non_expiring';
+                } else {
+                    availabilityStatus = 'insufficient';
+                }
+
+                if (!isOptional) {
+                    hasAtLeastOneNonOptional = true;
+                    if (availabilityStatus !== 'insufficient') {
+                        recipeIsInfeasible = false; // at least one non-optional ingredient is available
+                    }
+                    if (availabilityStatus === 'needs_non_expiring') {
+                        hasStockWarning = true;
+                    }
+                    // Calculate how many servings expiring stock can cover for this ingredient
+                    if (expiringAvailable > 0 && baseQtyPerServing > 0 && expiringByMaster.has(row.master_ingredient_id)) {
+                        const servingsFromBatch = Math.floor(expiringAvailable / baseQtyPerServing);
+                        suggestedServings = Math.min(suggestedServings, servingsFromBatch);
+                    }
+                }
+
+                ingredientDetails.push({
+                    name: row.ingredient_name,
+                    quantity_required: Number(row.quantity_required),
+                    unit_code: row.unit_code,
+                    available: availabilityStatus !== 'insufficient',
+                    availability_status: availabilityStatus,
+                    required_base_qty: parseFloat(baseQtyPerServing.toFixed(4)),
+                    available_base_qty: parseFloat(totalAvailable.toFixed(4)),
+                });
+            }
+
+            // If ALL non-optional ingredients are insufficient, exclude this recipe
+            if (hasAtLeastOneNonOptional && recipeIsInfeasible) {
+                continue;
+            }
+
+            // Finalise suggested servings
+            if (!isFinite(suggestedServings) || suggestedServings <= 0) {
+                suggestedServings = 1;
+            }
+            suggestedServings = Math.min(suggestedServings, 50);
+
+            // Coverage calculation
+            const coveragePercent = Math.min(100,
+                Math.round((suggestedServings / totalServings) * 100)
+            );
 
             const basePrice = Number(details.base_price);
             const suggestedDiscountPrice = parseFloat(
                 (basePrice - (basePrice * suggestedDiscountPercent) / 100).toFixed(2)
             );
+
+            const ingredientsAvailable = ingredientDetails.filter((i) => i.available).length;
 
             responseItems.push({
                 recipe_id: details.recipe_id,
@@ -195,12 +273,17 @@ async function generateRecipes(req, res) {
                 cooking_time_minutes: details.cooking_time_minutes,
                 description: details.description,
                 base_price: basePrice,
+                total_servings: totalServings,
                 jaccard_score: Math.round(candidate.jaccardScore * 100),
                 suggested_discount_percent: suggestedDiscountPercent,
                 suggested_discount_price: suggestedDiscountPrice,
                 ingredients_available: ingredientsAvailable,
-                ingredients_total: ingredientsTotal,
-                ingredients,
+                ingredients_total: ingredientDetails.length,
+                suggested_servings: suggestedServings,
+                coverage_percent: coveragePercent,
+                has_stock_warning: hasStockWarning,
+                warning_message: hasStockWarning ? 'Some ingredients require non-expiring stock' : null,
+                ingredients: ingredientDetails,
             });
         }
 

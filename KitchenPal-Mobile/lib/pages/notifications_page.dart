@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/ingredient.dart';
-import '../services/ingredient_service.dart';
+import '../models/expiry_notification.dart';
+import '../services/notification_service.dart';
 import '../services/recipe_service.dart';
 import '../services/websocket_service.dart';
 import 'recipe_suggestions_page.dart';
@@ -26,39 +26,34 @@ class NotificationsPageContent extends StatefulWidget {
 }
 
 class _NotificationsPageContentState extends State<NotificationsPageContent> {
-  List<Ingredient> _expiringIngredients = [];
-  Set<int> _selectedIngredients = {};
+  List<ExpiryNotification> _expiringNotifications = [];
+  Set<int> _selectedBatchIds = {};
   bool _isLoading = true;
   String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadExpiringIngredients();
+    _loadExpiringNotifications();
 
-    // Keep expiry notifications page in sync with inventory changes
+    // Keep expiry notifications in sync with inventory changes
     WebSocketService.instance.connect();
     WebSocketService.instance.inventoryChanged.listen((_) {
-      _loadExpiringIngredients();
+      _loadExpiringNotifications();
     });
   }
 
-  Future<void> _loadExpiringIngredients() async {
+  Future<void> _loadExpiringNotifications() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      // For now we keep using the existing expiring ingredients endpoint
-      // to avoid changing the Ingredient model. In a follow-up we can
-      // switch this to the new /api/notifications response shape.
-      final ingredients = await IngredientService.getExpiringIngredients(
-        days: 3,
-      );
+      final notifications = await NotificationService.getExpiryNotifications();
 
       setState(() {
-        _expiringIngredients = ingredients;
+        _expiringNotifications = notifications;
         _isLoading = false;
       });
     } catch (e) {
@@ -69,18 +64,18 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     }
   }
 
-  void _toggleSelection(int ingredientId) {
+  void _toggleSelection(int batchId) {
     setState(() {
-      if (_selectedIngredients.contains(ingredientId)) {
-        _selectedIngredients.remove(ingredientId);
+      if (_selectedBatchIds.contains(batchId)) {
+        _selectedBatchIds.remove(batchId);
       } else {
-        _selectedIngredients.add(ingredientId);
+        _selectedBatchIds.add(batchId);
       }
     });
   }
 
   Future<void> _generateRecipe() async {
-    if (_selectedIngredients.isEmpty) {
+    if (_selectedBatchIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select at least one ingredient'),
@@ -96,17 +91,17 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     });
 
     try {
-      // Build selected_items payload as specified
-      final selectedItems = _expiringIngredients
-          .where((ing) => _selectedIngredients.contains(ing.ingredientId))
+      // Build selected_items payload using real batch_id
+      final selectedItems = _expiringNotifications
+          .where((n) => _selectedBatchIds.contains(n.batchId))
           .map(
-            (ing) => {
-              'batch_id':
-                  ing.ingredientId, // placeholder, batch_id not in model
-              'ingredient_id': ing.ingredientId,
-              'name': ing.name,
-              'days_until_expiry': ing.daysUntilExpiry,
-              'expiry_date': ing.expiryDate.toIso8601String().split('T').first,
+            (n) => {
+              'batch_id': n.batchId,
+              'ingredient_id': n.ingredientId,
+              'name': n.name,
+              'days_until_expiry': n.daysUntilExpiry,
+              'expiry_date': n.expiryDate.toIso8601String().split('T').first,
+              'remaining_base_quantity': n.remainingBaseQuantity,
             },
           )
           .toList();
@@ -125,8 +120,6 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
 
       if (!mounted) return;
 
-      // Navigate to suggestions list so user can see matches
-      // and pick one to save as a generated recipe.
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => RecipeSuggestionsPage(
@@ -206,14 +199,14 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: _loadExpiringIngredients,
+                            onPressed: _loadExpiringNotifications,
                             child: const Text('Retry'),
                           ),
                         ],
                       ),
                     ),
                   )
-                : _expiringIngredients.isEmpty
+                : _expiringNotifications.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -241,23 +234,23 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                     ),
                   )
                 : RefreshIndicator(
-                    onRefresh: _loadExpiringIngredients,
+                    onRefresh: _loadExpiringNotifications,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 8.0,
                       ),
-                      itemCount: _expiringIngredients.length,
+                      itemCount: _expiringNotifications.length,
                       itemBuilder: (context, index) {
-                        final ingredient = _expiringIngredients[index];
-                        return _buildExpiryItem(ingredient);
+                        final notification = _expiringNotifications[index];
+                        return _buildExpiryItem(notification);
                       },
                     ),
                   ),
           ),
 
           // Generate Recipe Button
-          if (_expiringIngredients.isNotEmpty)
+          if (_expiringNotifications.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
@@ -284,9 +277,15 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     );
   }
 
-  Widget _buildExpiryItem(Ingredient ingredient) {
-    final isSelected = _selectedIngredients.contains(ingredient.ingredientId);
-    final daysUntilExpiry = ingredient.daysUntilExpiry;
+  Widget _buildExpiryItem(ExpiryNotification notification) {
+    final isSelected = _selectedBatchIds.contains(notification.batchId);
+    final daysUntilExpiry = notification.daysUntilExpiry;
+
+    // Format the quantity display
+    final qty = notification.remainingBaseQuantity;
+    final qtyStr = qty == qty.roundToDouble()
+        ? qty.toInt().toString()
+        : qty.toStringAsFixed(1);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -306,7 +305,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
         children: [
           // Checkbox
           GestureDetector(
-            onTap: () => _toggleSelection(ingredient.ingredientId),
+            onTap: () => _toggleSelection(notification.batchId),
             child: Container(
               width: 24,
               height: 24,
@@ -335,9 +334,10 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
               height: 70,
               color: Colors.grey[200],
               child:
-                  ingredient.imageUrl != null && ingredient.imageUrl!.isNotEmpty
+                  notification.imageUrl != null &&
+                      notification.imageUrl!.isNotEmpty
                   ? Image.network(
-                      ingredient.imageUrl!,
+                      notification.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
@@ -362,13 +362,13 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
           ),
           const SizedBox(width: 12),
 
-          // Ingredient Details
+          // Notification Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  ingredient.name,
+                  notification.name,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -377,17 +377,17 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Expires: ${ingredient.expiryDate.year}-${ingredient.expiryDate.month.toString().padLeft(2, '0')}-${ingredient.expiryDate.day.toString().padLeft(2, '0')}',
+                  'Expires: ${notification.expiryDate.year}-${notification.expiryDate.month.toString().padLeft(2, '0')}-${notification.expiryDate.day.toString().padLeft(2, '0')}',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${ingredient.quantityInStock.toInt()} ${ingredient.unitWeightUnitCode}',
+                  '$qtyStr ${notification.baseUnitCode} remaining',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  ingredient.storageTypeName,
+                  notification.storageTypeName,
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],

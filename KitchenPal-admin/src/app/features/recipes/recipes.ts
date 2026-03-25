@@ -46,7 +46,10 @@ export interface RecipeFormData {
   imageFile: File | null;
   imagePreview: string | null;
   ingredients: RecipeIngredient[];
+  totalServings: number | null;
+  servingDescription: string;
 }
+
 
 interface IngredientSearchState {
   query: string;
@@ -72,6 +75,8 @@ export interface Recipe {
   showIngredients: boolean;
   cookingTime: number;
   description: string;
+  totalServings: number;
+  servingDescription: string;
 }
 
 @Component({
@@ -211,6 +216,8 @@ export class Recipes implements OnInit, OnDestroy {
       totalCost: apiRecipe.base_price,
       cookingTime: apiRecipe.cooking_time_minutes || 0,
       description: apiRecipe.description || '',
+      totalServings: (apiRecipe as any).total_servings || 1,
+      servingDescription: (apiRecipe as any).serving_description || '',
       showIngredients: false,
       ingredients: (apiRecipe.ingredients || []).map((ing) => ({
         name: ing.name,
@@ -282,6 +289,8 @@ export class Recipes implements OnInit, OnDestroy {
       imageFile: null,
       imagePreview: null,
       ingredients: [this.newIngredient()],
+      totalServings: 1,
+      servingDescription: '',
     };
   }
 
@@ -640,6 +649,8 @@ export class Recipes implements OnInit, OnDestroy {
       description: this.form.description || undefined,
       base_price: this.form.price!,
       ingredients: validIngredients,
+      total_servings: this.form.totalServings || 1,
+      serving_description: this.form.servingDescription || undefined,
     };
 
     console.log('Saving recipe:', {
@@ -713,6 +724,8 @@ export class Recipes implements OnInit, OnDestroy {
       description: recipe.description,
       imageFile: null,
       imagePreview: recipe.image,
+      totalServings: recipe.totalServings || 1,
+      servingDescription: recipe.servingDescription || '',
       ingredients: recipe.ingredients.map((ing) => ({
         name: ing.name,
         quantity: ing.quantity,

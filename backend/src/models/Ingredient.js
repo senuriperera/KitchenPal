@@ -332,10 +332,20 @@ class IngredientModel {
                 si.unit_weight,
                 wu.code AS unit_weight_unit_code,
                 si.total_base_quantity,
-                bu.code AS base_unit_code
+                bu.code AS base_unit_code,
+                si.storage_type_id,
+                st.name AS storage_type_name,
+                si.master_ingredient_id,
+                si.unit_family,
+                si.added_by,
+                si.manufacture_date,
+                si.price,
+                si.unit_weight_unit_id,
+                si.base_unit_id
             FROM stock_ingredients si
             JOIN units AS wu ON si.unit_weight_unit_id = wu.unit_id
             LEFT JOIN units AS bu ON si.base_unit_id   = bu.unit_id
+            LEFT JOIN storage_types AS st ON si.storage_type_id = st.storage_type_id
             WHERE si.branch_id = $1
               AND si.expiry_date <= CURRENT_DATE + ($2 || ' days')::INTERVAL
               AND si.expiry_date >= CURRENT_DATE

@@ -45,7 +45,7 @@ class RecipeController {
      */
     static async createRecipe(req, res) {
         try {
-            const { name, image_url, cooking_time_minutes, description, base_price, ingredients } = req.body;
+            const { name, image_url, cooking_time_minutes, description, base_price, ingredients, total_servings, serving_description } = req.body;
 
             // Validation
             if (!name || name.trim() === '') {
@@ -82,7 +82,9 @@ class RecipeController {
                 cooking_time_minutes,
                 description,
                 base_price,
-                created_by
+                created_by,
+                total_servings: total_servings || 1,
+                serving_description: serving_description || null,
             };
 
             const recipe = await Recipe.createStandardRecipe(recipeData, ingredients);
@@ -125,7 +127,7 @@ class RecipeController {
     static async updateRecipe(req, res) {
         try {
             const { id } = req.params;
-            const { name, image_url, cooking_time_minutes, description, base_price, ingredients } = req.body;
+            const { name, image_url, cooking_time_minutes, description, base_price, ingredients, total_servings, serving_description } = req.body;
 
             console.log('Update recipe request:', { id, name, base_price, ingredientsCount: ingredients?.length });
 
@@ -161,7 +163,9 @@ class RecipeController {
                 image_url,
                 cooking_time_minutes,
                 description,
-                base_price
+                base_price,
+                total_servings: total_servings || 1,
+                serving_description: serving_description || null,
             };
 
             let recipe;

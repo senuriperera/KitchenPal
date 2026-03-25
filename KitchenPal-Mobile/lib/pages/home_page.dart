@@ -622,9 +622,15 @@ class _HomePageContentState extends State<HomePageContent> {
       expiryText = 'Exp: $daysUntilExpiry Days';
     }
 
+    // Format the quantity display using total_base_quantity
+    final qty = ingredient.totalBaseQuantity;
+    final qtyStr = qty == qty.roundToDouble()
+        ? qty.toInt().toString()
+        : qty.toStringAsFixed(1);
+
     return _buildExpiryItem(
       ingredient.name,
-      '${ingredient.quantityInStock.toInt()} ${ingredient.unitWeightUnitCode} • ${ingredient.storageTypeName}',
+      '$qtyStr ${ingredient.baseUnitCode} • ${ingredient.storageTypeName}',
       expiryText,
       ingredient.imageUrl ?? '',
       isUrgent: isUrgent,
