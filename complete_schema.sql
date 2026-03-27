@@ -1,11 +1,4 @@
 -- ============================================================
--- KitchenPal Database Schema (v3 - FINAL)
--- ============================================================
--- Changes from v2:
---  - stock_ingredients : removed cost_per_unit (price IS the cost per unit)
---  - stock_ingredients : removed reorder_level (not used)
---  - ingredient_batches: removed cost_per_unit
--- ============================================================
 -- Tables:
 --  1. branches
 --  2. units
@@ -184,6 +177,8 @@ CREATE TABLE IF NOT EXISTS public.recipes (
     cooking_time_minutes INTEGER,
     description TEXT,
     base_price NUMERIC(12, 4) NOT NULL,
+    total_servings INTEGER NOT NULL DEFAULT 1,
+    serving_description CHARACTER VARYING(100),
     is_generated BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     created_by INTEGER REFERENCES public.users(user_id),
@@ -228,6 +223,7 @@ CREATE TABLE IF NOT EXISTS public.generated_recipes (
     generated_by INTEGER NOT NULL REFERENCES public.users(user_id),
     suggested_discount_percent NUMERIC(5, 2) NOT NULL,
     suggested_discount_price NUMERIC(10, 2) NOT NULL,
+    suggested_servings INTEGER NOT NULL DEFAULT 1,
     final_discount_percent NUMERIC(5, 2),
     final_discount_price NUMERIC(10, 2),
     status CHARACTER VARYING(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -257,6 +253,9 @@ CREATE TABLE IF NOT EXISTS public.sales (
     branch_id INTEGER NOT NULL REFERENCES public.branches(branch_id),
     recipe_id INTEGER NOT NULL REFERENCES public.recipes(recipe_id),
     generated_id INTEGER REFERENCES public.generated_recipes(generated_id),
+    quantity_sold INTEGER NOT NULL DEFAULT 1,
+    base_price_per_unit NUMERIC(12, 4),
+    total_revenue NUMERIC(12, 4),
     sold_by INTEGER NOT NULL REFERENCES public.users(user_id),
     sold_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -352,15 +351,20 @@ VALUES (
 UPDATE
 SET password_hash = EXCLUDED.password_hash;
 -- ============================================================
--- MIGRATION QUERIES (run if upgrading from v2 schema)
+-- MIGRATION QUERIES (run if upgrading from v3 schema)
 -- ============================================================
--- Drop removed columns
-ALTER TABLE public.stock_ingredients DROP COLUMN IF EXISTS cost_per_unit;
-ALTER TABLE public.stock_ingredients DROP COLUMN IF EXISTS reorder_level;
-ALTER TABLE public.ingredient_batches DROP COLUMN IF EXISTS cost_per_unit;
--- Add name column if missing (added in v3 schema)
-ALTER TABLE public.stock_ingredients
-ADD COLUMN IF NOT EXISTS name CHARACTER VARYING(200);
--- ============================================================
--- MIGRATION QUERIES (run if upgrading from v2 schema)
--- ============================================================
+-- Add new columns to sales table
+ALTER TABLE public.sales
+ADD COLUMN IF NOT EXISTS quantity_sold INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE public.sales
+ADD COLUMN IF NOT EXISTS base_price_per_unit NUMERIC(12, 4);
+ALTER TABLE public.sales
+ADD COLUMN IF NOT EXISTS total_revenue NUMERIC(12, 4);
+-- Add new columns to recipes table
+ALTER TABLE public.recipes
+ADD COLUMN IF NOT EXISTS total_servings INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE public.recipes
+ADD COLUMN IF NOT EXISTS serving_description CHARACTER VARYING(100);
+-- Add new column to generated_recipes table
+ALTER TABLE public.generated_recipes
+ADD COLUMN IF NOT EXISTS suggested_servings INTEGER NOT NULL DEFAULT 1;

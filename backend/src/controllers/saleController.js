@@ -1,67 +1,37 @@
 const SaleModel = require('../models/Sale');
-const RecipeModel = require('../models/Recipe');
 
 class SaleController {
     // Create new sale
     static async createSale(req, res) {
         try {
-            const {
-                branch_id,
-                recipe_id,
-                suggestion_id,
-                discount_id,
-                quantity_sold,
-                notes,
-            } = req.body;
+            const { recipe_id, generated_id, quantity_sold } = req.body;
+            const branch_id = req.user.branch_id;
+            const sold_by = req.user.user_id;
 
-            // Get recipe details
-            const recipe = await RecipeModel.findById(recipe_id);
-
-            if (!recipe) {
-                return res.status(404).json({ error: 'Recipe not found' });
-            }
-
-            // Calculate prices
-            const base_price_per_unit = parseFloat(recipe.base_price);
-            let final_price_per_unit = base_price_per_unit;
-
-            // If there's a discount, fetch it
-            if (discount_id) {
-                const DiscountModel = require('../models/Discount');
-                const discount = await DiscountModel.findById(discount_id);
-
-                if (discount) {
-                    final_price_per_unit = parseFloat(discount.final_discounted_price);
-                }
-            }
-
-            const total_revenue = final_price_per_unit * quantity_sold;
-            const recipe_type = recipe.is_generated ? 'generated' : 'standard';
-
-            // Create sale and deduct inventory
             const sale = await SaleModel.create({
                 branch_id,
                 recipe_id,
-                suggestion_id,
-                discount_id,
-                quantity_sold,
-                base_price_per_unit,
-                final_price_per_unit,
-                total_revenue,
-                recipe_type,
-                sold_by_user_id: req.user.user_id,
-                notes,
+                generated_id: generated_id || null,
+                quantity_sold: quantity_sold || 1,
+                sold_by,
             });
 
             res.status(201).json({
-                message: 'Sale created successfully and inventory deducted',
+                message: 'Sale recorded successfully',
                 sale,
             });
         } catch (error) {
             console.error('Create sale error:', error);
 
-            if (error.message.includes('Insufficient quantity')) {
-                return res.status(400).json({ error: error.message });
+            if (error.code === 'INSUFFICIENT_STOCK') {
+                return res.status(400).json({
+                    error: 'insufficient_stock',
+                    details: error.details,
+                });
+            }
+
+            if (error.message.includes('Recipe not found') || error.message.includes('not active')) {
+                return res.status(404).json({ error: error.message });
             }
 
             res.status(500).json({ error: 'Failed to create sale' });

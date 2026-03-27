@@ -71,7 +71,9 @@ class GeneratedRecipe {
       description: json['description'],
       basePrice: double.tryParse(json['base_price']?.toString() ?? '0') ?? 0,
       generatedByName: json['generated_by_name'] ?? '',
-      totalServings: json['suggested_servings'] ?? 1,
+      totalServings: json['suggested_servings'] != null
+          ? int.tryParse(json['suggested_servings'].toString()) ?? 1
+          : (json['total_servings'] != null ? int.tryParse(json['total_servings'].toString()) ?? 1 : 1),
       servingDescription: json['serving_description'],
     );
   }

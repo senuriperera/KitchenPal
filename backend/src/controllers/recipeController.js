@@ -236,6 +236,75 @@ class RecipeController {
             res.status(500).json({ error: 'Failed to delete recipe' });
         }
     }
+
+    /**
+     * Check recipe availability based on current stock
+     * GET /api/recipes/availability
+     * Returns which recipes can be made with current stock
+     */
+    static async checkAvailability(req, res) {
+        try {
+            const branch_id = req.user.branch_id;
+            const db = require('../config/database');
+
+            // Fetch all recipe ingredients with their required quantities and available stock
+            const query = `
+                SELECT
+                    ri.recipe_id,
+                    ri.master_ingredient_id,
+                    ri.quantity_required,
+                    ri.is_optional,
+                    u.to_base_factor,
+                    mi.name AS ingredient_name,
+                    COALESCE(si.total_base_quantity, 0) AS available_base_quantity,
+                    r.total_servings
+                FROM recipe_ingredients ri
+                JOIN units u ON ri.unit_id = u.unit_id
+                JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
+                JOIN recipes r ON ri.recipe_id = r.recipe_id
+                LEFT JOIN stock_ingredients si
+                    ON si.master_ingredient_id = ri.master_ingredient_id
+                    AND si.branch_id = $1
+                WHERE r.is_active = true
+                AND (r.branch_id = $1 OR r.branch_id IS NULL)
+                ORDER BY ri.recipe_id
+            `;
+
+            const result = await db.query(query, [branch_id]);
+
+            // Group by recipe_id and check availability
+            const recipeMap = {};
+
+            for (const row of result.rows) {
+                const recipeId = row.recipe_id;
+
+                if (!recipeMap[recipeId]) {
+                    recipeMap[recipeId] = {
+                        available: true,
+                        short_ingredients: [],
+                    };
+                }
+
+                // Skip optional ingredients
+                if (row.is_optional) continue;
+
+                // Calculate required base quantity (for 1 full recipe = total_servings)
+                const required_base = parseFloat(row.quantity_required) * parseFloat(row.to_base_factor);
+                const available_base = parseFloat(row.available_base_quantity);
+
+                // Check if sufficient stock exists
+                if (available_base < required_base) {
+                    recipeMap[recipeId].available = false;
+                    recipeMap[recipeId].short_ingredients.push(row.ingredient_name);
+                }
+            }
+
+            res.json({ availability: recipeMap });
+        } catch (error) {
+            console.error('Check availability error:', error);
+            res.status(500).json({ error: 'Failed to check availability' });
+        }
+    }
 }
 
 module.exports = RecipeController;

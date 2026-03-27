@@ -19,7 +19,9 @@ class RecipeIngredient {
     return RecipeIngredient(
       masterIngredientId: json['master_ingredient_id'] ?? 0,
       name: json['name'] ?? '',
-      quantityRequired: double.parse((json['quantity_required'] ?? 0).toString()),
+      quantityRequired: double.parse(
+        (json['quantity_required'] ?? 0).toString(),
+      ),
       unitCode: json['unit_code'] ?? '',
       unitName: json['unit_name'] ?? '',
       unitId: json['unit_id'] ?? 0,
@@ -45,6 +47,8 @@ class Recipe {
   final int? cookingTimeMinutes;
   final String? description;
   final double basePrice;
+  final int totalServings;
+  final String? servingDescription;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<RecipeIngredient> ingredients;
@@ -56,6 +60,8 @@ class Recipe {
     this.cookingTimeMinutes,
     this.description,
     required this.basePrice,
+    this.totalServings = 1,
+    this.servingDescription,
     required this.createdAt,
     required this.updatedAt,
     required this.ingredients,
@@ -71,6 +77,8 @@ class Recipe {
       cookingTimeMinutes: json['cooking_time_minutes'],
       description: json['description'],
       basePrice: double.parse((json['base_price'] ?? 0).toString()),
+      totalServings: json['total_servings'] ?? 1,
+      servingDescription: json['serving_description'],
       createdAt: DateTime.parse(
         json['created_at'] ?? DateTime.now().toIso8601String(),
       ),
@@ -91,6 +99,8 @@ class Recipe {
       'cooking_time_minutes': cookingTimeMinutes,
       'description': description,
       'base_price': basePrice,
+      'total_servings': totalServings,
+      'serving_description': servingDescription,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'ingredients': ingredients.map((ing) => ing.toJson()).toList(),

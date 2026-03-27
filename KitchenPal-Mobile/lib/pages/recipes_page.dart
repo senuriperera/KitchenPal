@@ -52,6 +52,10 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   String? _generatedError;
   bool _generatedLoaded = false;
 
+  // Availability tracking
+  Map<int, Map<String, dynamic>> _recipeAvailability = {};
+  bool _isLoadingAvailability = false;
+
   @override
   void initState() {
     super.initState();
@@ -101,6 +105,8 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         _filteredStandardRecipes = recipes;
         _isLoadingStandard = false;
       });
+      // Load availability after recipes are loaded
+      _loadAvailability();
     } catch (e) {
       setState(() {
         _standardError = e.toString();
@@ -127,6 +133,44 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         _generatedError = e.toString();
         _isLoadingGenerated = false;
       });
+    }
+  }
+
+  Future<void> _loadAvailability() async {
+    setState(() => _isLoadingAvailability = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/recipes/availability'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> availability = data['availability'] ?? {};
+
+        // Convert string keys to int keys
+        final Map<int, Map<String, dynamic>> parsedAvailability = {};
+        availability.forEach((key, value) {
+          final recipeId = int.tryParse(key);
+          if (recipeId != null) {
+            parsedAvailability[recipeId] = value as Map<String, dynamic>;
+          }
+        });
+
+        setState(() {
+          _recipeAvailability = parsedAvailability;
+          _isLoadingAvailability = false;
+        });
+      }
+    } catch (e) {
+      print('Failed to load availability: $e');
+      setState(() => _isLoadingAvailability = false);
     }
   }
 
@@ -272,6 +316,14 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   }
 
   Widget _buildStandardCard(Recipe recipe) {
+    // Check availability
+    final availabilityInfo = _recipeAvailability[recipe.recipeId];
+    final isAvailable = availabilityInfo?['available'] ?? true;
+    final shortIngredients =
+        (availabilityInfo?['short_ingredients'] as List<dynamic>?)
+                ?.cast<String>() ??
+            [];
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -347,6 +399,39 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                         ),
                       ),
                     ],
+                  ),
+                  if (!isAvailable && shortIngredients.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      '⚠ Insufficient stock',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.red[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isAvailable
+                          ? () => _processSale(
+                                recipeId: recipe.recipeId,
+                                recipeName: recipe.recipeName,
+                                totalServings: recipe.totalServings,
+                                servingDescription: recipe.servingDescription,
+                                generatedId: null,
+                              )
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isAvailable
+                            ? const Color(0xFFFF9500)
+                            : Colors.grey,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('New Sale'),
+                    ),
                   ),
                 ],
               ),
@@ -562,7 +647,13 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => _processSale(recipe),
+                      onPressed: () => _processSale(
+                        recipeId: recipe.recipeId,
+                        recipeName: recipe.name,
+                        totalServings: recipe.totalServings,
+                        servingDescription: recipe.servingDescription,
+                        generatedId: recipe.generatedId,
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF9500),
                         foregroundColor: Colors.white,
@@ -773,22 +864,66 @@ class _RecipesPageContentState extends State<RecipesPageContent>
 
   // ─── Sale Processing ──────────────────────────────────────────────────────
 
-  Future<void> _processSale(GeneratedRecipe recipe) async {
-    final totalServings = recipe.totalServings;
+  Future<void> _processSale({
+    required int recipeId,
+    required String recipeName,
+    required int totalServings,
+    String? servingDescription,
+    int? generatedId,
+  }) async {
+    print('🔵 [_processSale] START');
+    print('🔵 [_processSale] recipeId=$recipeId');
+    print('🔵 [_processSale] recipeName=$recipeName');
+    print('🔵 [_processSale] totalServings=$totalServings');
+    print('🔵 [_processSale] servingDescription=$servingDescription');
+    print('🔵 [_processSale] generatedId=$generatedId');
+
+    // Safeguard: ensure totalServings is at least 1
+    final servings = totalServings > 0 ? totalServings : 1;
     int quantitySold = 1;
 
+    print('🔵 [_processSale] Servings after safeguard: $servings');
+
     // If multi-serve recipe, show dialog to ask for quantity
-    if (totalServings > 1) {
-      final result = await showDialog<int>(
-        context: context,
-        builder: (context) => _buildSaleQuantityDialog(recipe),
-      );
-      if (result == null) return; // User canceled
-      quantitySold = result;
+    if (servings > 1) {
+      print('🔵 [_processSale] Multi-serve recipe detected, showing dialog...');
+      try {
+        final result = await showDialog<int>(
+          context: context,
+          builder: (context) {
+            print('🔵 [_processSale] Building dialog...');
+            return _buildSaleQuantityDialog(
+              recipeName: recipeName,
+              totalServings: servings,
+              servingDescription: servingDescription,
+            );
+          },
+        );
+        print('🔵 [_processSale] Dialog closed, result: $result');
+        if (result == null) {
+          print('🔵 [_processSale] User canceled dialog, returning');
+          return;
+        }
+        quantitySold = result;
+        print('🔵 [_processSale] User selected quantity: $quantitySold');
+      } catch (e) {
+        print('🔴 [_processSale] ERROR in dialog: $e');
+        print('🔴 [_processSale] Stack trace: ${StackTrace.current}');
+        rethrow;
+      }
+    } else {
+      print('🔵 [_processSale] Single-serve recipe, skipping dialog');
     }
 
+    print('🔵 [_processSale] Final quantity to sell: $quantitySold');
+
     // Show loading indicator
-    if (!mounted) return;
+    if (!mounted) {
+      print('🔴 [_processSale] Widget not mounted after dialog, returning');
+      return;
+    }
+
+    print('🔵 [_processSale] Showing loading dialog...');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -798,28 +933,47 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     );
 
     try {
+      print('🔵 [_processSale] Getting auth token...');
       final token = await StorageService.getToken();
       if (token == null) {
+        print('🔴 [_processSale] No token found!');
         throw Exception('No authentication token found');
       }
+      print('🔵 [_processSale] Token obtained (length: ${token.length})');
+
+      final requestBody = {
+        'recipe_id': recipeId,
+        'generated_id': generatedId,
+        'quantity_sold': quantitySold,
+      };
+      print('🔵 [_processSale] Request body: $requestBody');
+
+      final url = '${ApiConstants.baseUrl}/sales';
+      print('🔵 [_processSale] Sending POST to: $url');
 
       final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/sales'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: json.encode({
-          'recipe_id': recipe.recipeId,
-          'generated_id': recipe.generatedId,
-          'quantity_sold': quantitySold,
-        }),
+        body: json.encode(requestBody),
       );
 
-      if (!mounted) return;
+      print('🟢 [_processSale] Response received!');
+      print('🟢 [_processSale] Status code: ${response.statusCode}');
+      print('🟢 [_processSale] Response body: ${response.body}');
+
+      if (!mounted) {
+        print('🔴 [_processSale] Widget not mounted after request');
+        return;
+      }
+
+      print('🔵 [_processSale] Closing loading dialog...');
       Navigator.of(context).pop(); // Close loading dialog
 
       if (response.statusCode == 201) {
+        print('🟢 [_processSale] SUCCESS! Showing success message');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -828,13 +982,39 @@ class _RecipesPageContentState extends State<RecipesPageContent>
             backgroundColor: Colors.green,
           ),
         );
+        print('🔵 [_processSale] Refreshing availability...');
+        _loadAvailability();
       } else {
+        print('🔴 [_processSale] Error response: ${response.statusCode}');
         final error = json.decode(response.body);
-        throw Exception(error['error'] ?? 'Failed to create sale');
+        final errorMsg = error['error'] ?? 'Failed to create sale';
+
+        // Handle insufficient stock error
+        if (errorMsg == 'insufficient_stock') {
+          final details = error['details'] as List<dynamic>? ?? [];
+          final ingredientsList = details
+              .map((d) => d['ingredient'] as String? ?? '')
+              .join(', ');
+          print('🔴 [_processSale] Insufficient stock: $ingredientsList');
+          throw Exception('Insufficient stock for: $ingredientsList');
+        }
+
+        print('🔴 [_processSale] Error message: $errorMsg');
+        throw Exception(errorMsg);
       }
-    } catch (e) {
-      if (!mounted) return;
+    } catch (e, stackTrace) {
+      print('🔴 [_processSale] EXCEPTION CAUGHT: $e');
+      print('🔴 [_processSale] Stack trace: $stackTrace');
+
+      if (!mounted) {
+        print('🔴 [_processSale] Widget not mounted in catch block');
+        return;
+      }
+
+      print('🔵 [_processSale] Closing loading dialog after error...');
       Navigator.of(context).pop(); // Close loading dialog
+
+      print('🔵 [_processSale] Showing error snackbar...');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error creating sale: $e'),
@@ -842,11 +1022,15 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         ),
       );
     }
+    print('🔵 [_processSale] END');
   }
 
-  Widget _buildSaleQuantityDialog(GeneratedRecipe recipe) {
+  Widget _buildSaleQuantityDialog({
+    required String recipeName,
+    required int totalServings,
+    String? servingDescription,
+  }) {
     int quantity = 1;
-    final servingDescription = recipe.servingDescription;
 
     return StatefulBuilder(
       builder: (context, setState) {
@@ -857,7 +1041,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                recipe.name,
+                recipeName,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
@@ -877,7 +1061,6 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                       }
                     },
                     icon: const Icon(Icons.remove_circle_outline),
-                    color: const Color(0xFFFF9500),
                   ),
                   Container(
                     width: 60,
@@ -892,19 +1075,17 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                   ),
                   IconButton(
                     onPressed: () {
-                      if (quantity < recipe.totalServings) {
+                      if (quantity < totalServings) {
                         setState(() => quantity++);
                       }
                     },
                     icon: const Icon(Icons.add_circle_outline),
-                    color: const Color(0xFFFF9500),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'Max: ${recipe.totalServings} servings',
+                  'Max: $totalServings servings',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ),
@@ -917,10 +1098,6 @@ class _RecipesPageContentState extends State<RecipesPageContent>
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(quantity),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF9500),
-                foregroundColor: Colors.white,
-              ),
               child: const Text('Confirm'),
             ),
           ],

@@ -7,6 +7,9 @@ const { generateRecipes } = require('../controllers/recipeGenerationController')
 // GET /api/recipes - Get all standard recipes with ingredients (public)
 router.get('/', RecipeController.getAllRecipes);
 
+// GET /api/recipes/availability - Check recipe availability based on stock (auth required)
+router.get('/availability', authenticate, RecipeController.checkAvailability);
+
 // GET /api/recipes/:id - Get single recipe by ID (public)
 router.get('/:id', RecipeController.getRecipeById);
 
