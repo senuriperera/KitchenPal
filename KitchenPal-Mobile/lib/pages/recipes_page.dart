@@ -989,6 +989,8 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         final error = json.decode(response.body);
         final errorMsg = error['error'] ?? 'Failed to create sale';
 
+        String errorDisplay = errorMsg;
+
         // Handle insufficient stock error
         if (errorMsg == 'insufficient_stock') {
           final details = error['details'] as List<dynamic>? ?? [];
@@ -996,11 +998,17 @@ class _RecipesPageContentState extends State<RecipesPageContent>
               .map((d) => d['ingredient'] as String? ?? '')
               .join(', ');
           print('🔴 [_processSale] Insufficient stock: $ingredientsList');
-          throw Exception('Insufficient stock for: $ingredientsList');
+          errorDisplay = 'Insufficient stock for: $ingredientsList';
         }
 
-        print('🔴 [_processSale] Error message: $errorMsg');
-        throw Exception(errorMsg);
+        print('🔴 [_processSale] Showing error: $errorDisplay');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorDisplay),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     } catch (e, stackTrace) {
       print('🔴 [_processSale] EXCEPTION CAUGHT: $e');
@@ -1012,13 +1020,16 @@ class _RecipesPageContentState extends State<RecipesPageContent>
       }
 
       print('🔵 [_processSale] Closing loading dialog after error...');
-      Navigator.of(context).pop(); // Close loading dialog
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loading dialog only if it exists
+      }
 
       print('🔵 [_processSale] Showing error snackbar...');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error creating sale: $e'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
