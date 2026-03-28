@@ -321,8 +321,8 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     final isAvailable = availabilityInfo?['available'] ?? true;
     final shortIngredients =
         (availabilityInfo?['short_ingredients'] as List<dynamic>?)
-                ?.cast<String>() ??
-            [];
+            ?.cast<String>() ??
+        [];
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -401,13 +401,28 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                     ],
                   ),
                   if (!isAvailable && shortIngredients.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      '⚠ Insufficient stock',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red[700],
-                        fontWeight: FontWeight.w500,
+                    const SizedBox(height: 7),
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          WidgetSpan(
+                            child: Icon(
+                              Icons.warning,
+                              size: 12,
+                              color: Colors.red[700],
+                            ),
+                            alignment: PlaceholderAlignment.middle,
+                          ),
+
+                          TextSpan(
+                            text: ' Insufficient stock',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.red[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -417,12 +432,12 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                     child: ElevatedButton(
                       onPressed: isAvailable
                           ? () => _processSale(
-                                recipeId: recipe.recipeId,
-                                recipeName: recipe.recipeName,
-                                totalServings: recipe.totalServings,
-                                servingDescription: recipe.servingDescription,
-                                generatedId: null,
-                              )
+                              recipeId: recipe.recipeId,
+                              recipeName: recipe.recipeName,
+                              totalServings: recipe.totalServings,
+                              servingDescription: recipe.servingDescription,
+                              generatedId: null,
+                            )
                           : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isAvailable
@@ -871,22 +886,22 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     String? servingDescription,
     int? generatedId,
   }) async {
-    print('🔵 [_processSale] START');
-    print('🔵 [_processSale] recipeId=$recipeId');
-    print('🔵 [_processSale] recipeName=$recipeName');
-    print('🔵 [_processSale] totalServings=$totalServings');
-    print('🔵 [_processSale] servingDescription=$servingDescription');
-    print('🔵 [_processSale] generatedId=$generatedId');
+    print('[_processSale] START');
+    print('[_processSale] recipeId=$recipeId');
+    print('[_processSale] recipeName=$recipeName');
+    print('[_processSale] totalServings=$totalServings');
+    print('[_processSale] servingDescription=$servingDescription');
+    print('[_processSale] generatedId=$generatedId');
 
     // Safeguard: ensure totalServings is at least 1
     final servings = totalServings > 0 ? totalServings : 1;
     int quantitySold = 1;
 
-    print('🔵 [_processSale] Servings after safeguard: $servings');
+    print('[_processSale] Servings after safeguard: $servings');
 
     // If multi-serve recipe, show dialog to ask for quantity
     if (servings > 1) {
-      print('🔵 [_processSale] Multi-serve recipe detected, showing dialog...');
+      print('[_processSale] Multi-serve recipe detected, showing dialog...');
       try {
         final result = await showDialog<int>(
           context: context,
@@ -899,57 +914,55 @@ class _RecipesPageContentState extends State<RecipesPageContent>
             );
           },
         );
-        print('🔵 [_processSale] Dialog closed, result: $result');
+        print('[_processSale] Dialog closed, result: $result');
         if (result == null) {
-          print('🔵 [_processSale] User canceled dialog, returning');
+          print('[_processSale] User canceled dialog, returning');
           return;
         }
         quantitySold = result;
-        print('🔵 [_processSale] User selected quantity: $quantitySold');
+        print('[_processSale] User selected quantity: $quantitySold');
       } catch (e) {
-        print('🔴 [_processSale] ERROR in dialog: $e');
-        print('🔴 [_processSale] Stack trace: ${StackTrace.current}');
+        print('[_processSale] ERROR in dialog: $e');
+        print('[_processSale] Stack trace: ${StackTrace.current}');
         rethrow;
       }
     } else {
-      print('🔵 [_processSale] Single-serve recipe, skipping dialog');
+      print('[_processSale] Single-serve recipe, skipping dialog');
     }
 
-    print('🔵 [_processSale] Final quantity to sell: $quantitySold');
+    print('[_processSale] Final quantity to sell: $quantitySold');
 
     // Show loading indicator
     if (!mounted) {
-      print('🔴 [_processSale] Widget not mounted after dialog, returning');
+      print('[_processSale] Widget not mounted after dialog, returning');
       return;
     }
 
-    print('🔵 [_processSale] Showing loading dialog...');
+    print('[_processSale] Showing loading dialog...');
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      print('🔵 [_processSale] Getting auth token...');
+      print('[_processSale] Getting auth token...');
       final token = await StorageService.getToken();
       if (token == null) {
-        print('🔴 [_processSale] No token found!');
+        print('[_processSale] No token found!');
         throw Exception('No authentication token found');
       }
-      print('🔵 [_processSale] Token obtained (length: ${token.length})');
+      print('[_processSale] Token obtained (length: ${token.length})');
 
       final requestBody = {
         'recipe_id': recipeId,
         'generated_id': generatedId,
         'quantity_sold': quantitySold,
       };
-      print('🔵 [_processSale] Request body: $requestBody');
+      print('[_processSale] Request body: $requestBody');
 
       final url = '${ApiConstants.baseUrl}/sales';
-      print('🔵 [_processSale] Sending POST to: $url');
+      print('[_processSale] Sending POST to: $url');
 
       final response = await http.post(
         Uri.parse(url),
@@ -960,20 +973,20 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         body: json.encode(requestBody),
       );
 
-      print('🟢 [_processSale] Response received!');
-      print('🟢 [_processSale] Status code: ${response.statusCode}');
-      print('🟢 [_processSale] Response body: ${response.body}');
+      print('[_processSale] Response received!');
+      print('[_processSale] Status code: ${response.statusCode}');
+      print('[_processSale] Response body: ${response.body}');
 
       if (!mounted) {
-        print('🔴 [_processSale] Widget not mounted after request');
+        print('[_processSale] Widget not mounted after request');
         return;
       }
 
-      print('🔵 [_processSale] Closing loading dialog...');
+      print('[_processSale] Closing loading dialog...');
       Navigator.of(context).pop(); // Close loading dialog
 
       if (response.statusCode == 201) {
-        print('🟢 [_processSale] SUCCESS! Showing success message');
+        print('[_processSale] SUCCESS! Showing success message');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -982,10 +995,10 @@ class _RecipesPageContentState extends State<RecipesPageContent>
             backgroundColor: Colors.green,
           ),
         );
-        print('🔵 [_processSale] Refreshing availability...');
+        print('[_processSale] Refreshing availability...');
         _loadAvailability();
       } else {
-        print('🔴 [_processSale] Error response: ${response.statusCode}');
+        print('[_processSale] Error response: ${response.statusCode}');
         final error = json.decode(response.body);
         final errorMsg = error['error'] ?? 'Failed to create sale';
 
@@ -997,11 +1010,11 @@ class _RecipesPageContentState extends State<RecipesPageContent>
           final ingredientsList = details
               .map((d) => d['ingredient'] as String? ?? '')
               .join(', ');
-          print('🔴 [_processSale] Insufficient stock: $ingredientsList');
+          print('[_processSale] Insufficient stock: $ingredientsList');
           errorDisplay = 'Insufficient stock for: $ingredientsList';
         }
 
-        print('🔴 [_processSale] Showing error: $errorDisplay');
+        print('[_processSale] Showing error: $errorDisplay');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorDisplay),
@@ -1011,20 +1024,20 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         );
       }
     } catch (e, stackTrace) {
-      print('🔴 [_processSale] EXCEPTION CAUGHT: $e');
-      print('🔴 [_processSale] Stack trace: $stackTrace');
+      print('[_processSale] EXCEPTION CAUGHT: $e');
+      print('[_processSale] Stack trace: $stackTrace');
 
       if (!mounted) {
-        print('🔴 [_processSale] Widget not mounted in catch block');
+        print('[_processSale] Widget not mounted in catch block');
         return;
       }
 
-      print('🔵 [_processSale] Closing loading dialog after error...');
+      print('[_processSale] Closing loading dialog after error...');
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(); // Close loading dialog only if it exists
       }
 
-      print('🔵 [_processSale] Showing error snackbar...');
+      print('[_processSale] Showing error snackbar...');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error creating sale: $e'),
@@ -1033,7 +1046,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         ),
       );
     }
-    print('🔵 [_processSale] END');
+    print('[_processSale] END');
   }
 
   Widget _buildSaleQuantityDialog({
