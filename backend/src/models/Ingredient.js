@@ -18,7 +18,7 @@ class IngredientModel {
             FROM stock_ingredients si
             JOIN units AS wu  ON si.unit_weight_unit_id = wu.unit_id
             LEFT JOIN units AS bu  ON si.base_unit_id   = bu.unit_id
-            WHERE si.branch_id = $1
+            WHERE si.branch_id = $1 AND si.deleted_at IS NULL
             ORDER BY si.expiry_date ASC
         `;
     const result = await db.query(query, [branch_id]);
@@ -56,7 +56,7 @@ class IngredientModel {
             LEFT JOIN storage_types  AS st  ON si.storage_type_id     = st.storage_type_id
             LEFT JOIN master_ingredients AS mi ON si.master_ingredient_id = mi.master_ingredient_id
             LEFT JOIN users     AS u   ON si.added_by             = u.user_id
-            WHERE si.ingredient_id = $1
+            WHERE si.ingredient_id = $1 AND si.deleted_at IS NULL
         `;
 
     const batchesQuery = `
@@ -70,6 +70,7 @@ class IngredientModel {
             LEFT JOIN units AS bu ON ib.base_unit_id = bu.unit_id
             WHERE ib.ingredient_id = $1
               AND ib.is_depleted = false
+              AND ib.deleted_at IS NULL
             ORDER BY ib.expiry_date ASC
         `;
 
@@ -104,6 +105,7 @@ class IngredientModel {
       JOIN storage_types st ON si.storage_type_id = st.storage_type_id
       WHERE si.branch_id = $1
       AND si.master_ingredient_id = $2
+      AND si.deleted_at IS NULL
       LIMIT 1
     `;
     const result = await db.query(query, [branch_id, master_ingredient_id]);
@@ -315,9 +317,18 @@ class IngredientModel {
     }
   }
 
-  // ─── Delete ingredient ─────────────────────────────────────────────────────
+  // ─── Delete ingredient (soft delete) ───────────────────────────────────────
   static async delete(ingredient_id) {
-    await db.query('DELETE FROM stock_ingredients WHERE ingredient_id = $1', [ingredient_id]);
+    // Soft delete: mark ingredient and its batches as deleted instead of removing them
+    // This preserves referential integrity and sales history
+    await db.query(
+      'UPDATE stock_ingredients SET deleted_at = NOW() WHERE ingredient_id = $1',
+      [ingredient_id]
+    );
+    await db.query(
+      'UPDATE ingredient_batches SET deleted_at = NOW() WHERE ingredient_id = $1',
+      [ingredient_id]
+    );
   }
 
   // ─── Get expiring ingredients for a branch ─────────────────────────────────
@@ -349,6 +360,7 @@ class IngredientModel {
             WHERE si.branch_id = $1
               AND si.expiry_date <= CURRENT_DATE + ($2 || ' days')::INTERVAL
               AND si.expiry_date >= CURRENT_DATE
+              AND si.deleted_at IS NULL
             ORDER BY si.expiry_date ASC
         `;
     const result = await db.query(query, [branch_id, days]);

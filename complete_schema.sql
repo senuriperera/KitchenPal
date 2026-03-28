@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS public.master_ingredients (
 -- base_unit_id        : FK to units — the unit total_base_quantity is stored in (g/ml/unit)
 -- price               : price of ONE packet (cost per unit)
 -- image_url           : Cloudinary hosted URL
+-- deleted_at          : soft delete timestamp (NULL = active, NOT NULL = deleted)
 -- =======================
 CREATE TABLE IF NOT EXISTS public.stock_ingredients (
     ingredient_id SERIAL PRIMARY KEY,
@@ -137,7 +138,8 @@ CREATE TABLE IF NOT EXISTS public.stock_ingredients (
     image_url TEXT,
     added_by INTEGER REFERENCES public.users(user_id),
     added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP DEFAULT NULL
 );
 -- =======================
 -- 8. Ingredient Batches
@@ -150,6 +152,7 @@ CREATE TABLE IF NOT EXISTS public.stock_ingredients (
 -- remaining_base_quantity : STORED remaining amount in base units (g/ml/unit)
 --                           THIS IS WHAT GETS DEDUCTED ON EACH SALE (FIFO order by expiry_date ASC)
 -- base_unit_id            : unit that remaining_base_quantity is stored in
+-- deleted_at              : soft delete timestamp (NULL = active, NOT NULL = deleted)
 -- =======================
 CREATE TABLE IF NOT EXISTS public.ingredient_batches (
     batch_id SERIAL PRIMARY KEY,
@@ -163,7 +166,8 @@ CREATE TABLE IF NOT EXISTS public.ingredient_batches (
     manufacture_date DATE,
     expiry_date DATE NOT NULL,
     is_depleted BOOLEAN DEFAULT FALSE,
-    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP DEFAULT NULL
 );
 -- =======================
 -- 9. Recipes
@@ -310,6 +314,12 @@ CREATE TABLE IF NOT EXISTS public.waste_logs (
     logged_by INTEGER NOT NULL REFERENCES public.users(user_id),
     logged_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+-- ============================================================
+-- INDEXES
+-- ============================================================
+-- Soft delete indexes for performance
+CREATE INDEX IF NOT EXISTS stock_ingredients_deleted_at_idx ON public.stock_ingredients(deleted_at);
+CREATE INDEX IF NOT EXISTS ingredient_batches_deleted_at_idx ON public.ingredient_batches(deleted_at);
 -- ============================================================
 -- SEED DATA
 -- ============================================================

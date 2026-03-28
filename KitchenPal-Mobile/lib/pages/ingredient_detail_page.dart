@@ -82,7 +82,10 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
         await IngredientService.deleteIngredient(widget.ingredientId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ingredient deleted successfully')),
+            const SnackBar(
+              content: Text('Ingredient deleted successfully'),
+              backgroundColor: Colors.green,
+            ),
           );
           Navigator.pop(context, true);
         }
@@ -627,7 +630,11 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
               final batch = entry.value;
               final now = DateTime.now();
               final today = DateTime(now.year, now.month, now.day);
-              final bExpiry = DateTime(batch.expiryDate.year, batch.expiryDate.month, batch.expiryDate.day);
+              final bExpiry = DateTime(
+                batch.expiryDate.year,
+                batch.expiryDate.month,
+                batch.expiryDate.day,
+              );
               final daysLeft = bExpiry.difference(today).inDays;
 
               // Format the remaining quantity nicely

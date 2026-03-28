@@ -27,6 +27,7 @@ class AuthService {
         // Save auth data to secure storage
         await StorageService.saveAuthData(
           token: authResponse.token,
+          refreshToken: authResponse.refreshToken ?? '',
           userId: authResponse.user.userId,
           name: authResponse.user.name,
           email: authResponse.user.email,
@@ -63,6 +64,7 @@ class AuthService {
         // Save auth data to secure storage
         await StorageService.saveAuthData(
           token: authResponse.token,
+          refreshToken: authResponse.refreshToken ?? '',
           userId: authResponse.user.userId,
           name: authResponse.user.name,
           email: authResponse.user.email,

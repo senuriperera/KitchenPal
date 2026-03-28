@@ -5,6 +5,7 @@ class StorageService {
 
   // Keys
   static const String _tokenKey = 'auth_token';
+  static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
   static const String _userNameKey = 'user_name';
   static const String _userEmailKey = 'user_email';
@@ -14,6 +15,7 @@ class StorageService {
   // Save auth data
   static Future<void> saveAuthData({
     required String token,
+    required String refreshToken,
     required int userId,
     required String name,
     required String email,
@@ -22,6 +24,7 @@ class StorageService {
   }) async {
     await Future.wait([
       _storage.write(key: _tokenKey, value: token),
+      _storage.write(key: _refreshTokenKey, value: refreshToken),
       _storage.write(key: _userIdKey, value: userId.toString()),
       _storage.write(key: _userNameKey, value: name),
       _storage.write(key: _userEmailKey, value: email),
@@ -34,6 +37,16 @@ class StorageService {
   // Get token
   static Future<String?> getToken() async {
     return await _storage.read(key: _tokenKey);
+  }
+
+  // Save/update access token
+  static Future<void> saveToken(String token) async {
+    await _storage.write(key: _tokenKey, value: token);
+  }
+
+  // Get refresh token
+  static Future<String?> getRefreshToken() async {
+    return await _storage.read(key: _refreshTokenKey);
   }
 
   // Get user ID
@@ -78,6 +91,7 @@ class StorageService {
   static Future<void> clearAuthData() async {
     await Future.wait([
       _storage.delete(key: _tokenKey),
+      _storage.delete(key: _refreshTokenKey),
       _storage.delete(key: _userIdKey),
       _storage.delete(key: _userNameKey),
       _storage.delete(key: _userEmailKey),
