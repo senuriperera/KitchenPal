@@ -108,8 +108,8 @@ class _NotificationsDrawerState extends State<NotificationsDrawer> {
     Navigator.pop(context);
     // Navigate based on notification type
     if (notificationType == 'expiry_alert') {
-      // Navigate to inventory page to see expiring ingredients
-      Navigator.pushNamed(context, '/inventory');
+      // Navigate to notifications page
+      Navigator.pushNamed(context, '/notifications');
     } else {
       // Navigate to recipes page with generated tab (index 1)
       Navigator.pushNamed(context, '/recipes', arguments: {'tabIndex': 1});
@@ -121,32 +121,40 @@ class _NotificationsDrawerState extends State<NotificationsDrawer> {
     return Drawer(
       child: Column(
         children: [
-          DrawerHeader(
+          Container(
+            height: 150,
             decoration: const BoxDecoration(
-              color: Color(0xFF2E7D32),
+              color: Color(0xFFFFA500),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Notifications',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                TextButton(
-                  onPressed: _markAllAsRead,
-                  child: const Text(
-                    'Mark all as read',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 60),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(left: 16),
+                    child: Text(
+                      'Notifications',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  TextButton(
+                    onPressed: _markAllAsRead,
+                    child: const Text(
+                      'Mark all as read',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Expanded(

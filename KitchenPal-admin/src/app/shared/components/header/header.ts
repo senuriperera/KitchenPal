@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { AdminNotificationService, AdminBellNotificationsResponse } from '../../../core/services/admin-notification.service';
 import { WebSocketService } from '../../../core/services/websocket.service';
@@ -26,7 +27,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private adminNotificationService: AdminNotificationService,
-    private webSocketService: WebSocketService
+    private webSocketService: WebSocketService,
+    private router: Router
   ) { }
 
   get currentUser$() {
@@ -118,7 +120,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   navigateToDiscountApprovals(): void {
     // Navigate to discount approvals section
-    window.location.href = '/admin/discount-approval';
+    this.router.navigate(['/admin/discount-approval']);
   }
 
   getTimeAgo(createdAt: string): string {
