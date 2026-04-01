@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { AuthService } from '../../core/services/auth.service';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('DashboardComponent', () => {
     let component: DashboardComponent;
@@ -14,7 +15,7 @@ describe('DashboardComponent', () => {
         authServiceSpy = jasmine.createSpyObj('AuthService', [], { currentUserValue: { id: 1, role: 'admin' } });
 
         await TestBed.configureTestingModule({
-            imports: [DashboardComponent, HeaderComponent],
+            imports: [DashboardComponent, HeaderComponent, HttpClientTestingModule],
             providers: [
                 provideRouter([]),
                 { provide: AuthService, useValue: authServiceSpy }

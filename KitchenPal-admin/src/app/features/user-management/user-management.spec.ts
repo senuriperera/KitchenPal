@@ -8,6 +8,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { provideRouter } from '@angular/router';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('UserManagementComponent', () => {
     let component: UserManagementComponent;
@@ -29,7 +30,7 @@ describe('UserManagementComponent', () => {
         authServiceSpy.getUserBranchId.and.returnValue(1);
 
         await TestBed.configureTestingModule({
-            imports: [UserManagementComponent, CommonModule, FormsModule],
+            imports: [UserManagementComponent, CommonModule, FormsModule, HttpClientTestingModule],
             providers: [
                 provideRouter([]),
                 { provide: UserService, useValue: userServiceSpy },

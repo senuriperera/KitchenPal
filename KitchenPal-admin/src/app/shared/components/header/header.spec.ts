@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HeaderComponent } from './header';
 import { AuthService } from '../../../core/services/auth.service';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 
 describe('HeaderComponent', () => {
     let component: HeaderComponent;
@@ -11,7 +12,7 @@ describe('HeaderComponent', () => {
         const spy = jasmine.createSpyObj('AuthService', ['logout']);
 
         await TestBed.configureTestingModule({
-            imports: [HeaderComponent],
+            imports: [HeaderComponent, HttpClientTestingModule],
             providers: [
                 { provide: AuthService, useValue: spy }
             ]
