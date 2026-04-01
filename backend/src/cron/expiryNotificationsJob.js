@@ -69,7 +69,7 @@ async function runExpiryNotificationsJob() {
                 `SELECT user_id
          FROM users
          WHERE branch_id = $1
-           AND role IN ('staff', 'branch_manager')
+           AND role IN ('staff', 'STAFF', 'branch_manager', 'BRANCH_MANAGER', 'manager', 'MANAGER')
            AND is_active = true`,
                 [branch_id]
             );

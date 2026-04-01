@@ -1,5 +1,5 @@
 import { Injectable, NgZone, OnDestroy } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { io, Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 
@@ -8,6 +8,11 @@ import { environment } from '../../../environments/environment';
 })
 export class WebSocketService implements OnDestroy {
   private socket: Socket;
+  private notificationsChangedSubject = new Subject<void>();
+  private recipePendingSubject = new Subject<any>();
+
+  notificationsChanged$ = this.notificationsChangedSubject.asObservable();
+  recipePending$ = this.recipePendingSubject.asObservable();
 
   constructor(private ngZone: NgZone) {
     this.socket = io(environment.wsUrl, {
@@ -25,6 +30,20 @@ export class WebSocketService implements OnDestroy {
 
     this.socket.on('connect_error', (err) => {
       console.error('🔌 WebSocket connection error:', err.message);
+    });
+
+    // Listen for notifications changed event
+    this.socket.on('notifications:changed', () => {
+      this.ngZone.run(() => {
+        this.notificationsChangedSubject.next();
+      });
+    });
+
+    // Listen for new pending recipes
+    this.socket.on('recipe:pending', (data) => {
+      this.ngZone.run(() => {
+        this.recipePendingSubject.next(data);
+      });
     });
   }
 

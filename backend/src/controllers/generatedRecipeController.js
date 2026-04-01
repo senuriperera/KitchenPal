@@ -93,16 +93,22 @@ async function createGeneratedRecipe(req, res) {
 
         // 4) Fetch an active admin user
         const adminResult = await client.query(
-            `SELECT user_id
+            `SELECT user_id, name, role
        FROM users
-       WHERE role = 'admin'
+       WHERE role IN ('admin', 'ADMIN')
          AND is_active = true
        ORDER BY user_id ASC
        LIMIT 1`
         );
 
+        console.log('Admin users found:', adminResult.rows.length);
+        if (adminResult.rows.length > 0) {
+            console.log('Admin user details:', adminResult.rows[0]);
+        }
+
         if (adminResult.rows[0]) {
             const adminUserId = adminResult.rows[0].user_id;
+            console.log('Creating recipe_pending notification for admin user:', adminUserId);
 
             await client.query(
                 `INSERT INTO notifications (
@@ -126,6 +132,9 @@ async function createGeneratedRecipe(req, res) {
          )`,
                 [adminUserId, branchId]
             );
+            console.log('Recipe pending notification created successfully');
+        } else {
+            console.log('No active admin user found');
         }
 
         // 5) Fetch the newly created recipe details for WebSocket
@@ -228,6 +237,14 @@ async function getGeneratedRecipesForBranch(req, res) {
  */
 async function getPendingGeneratedRecipes(req, res) {
     try {
+        console.log('Fetching pending generated recipes...');
+        
+        // Check if there are ANY generated recipes
+        const allRecipesResult = await db.query(
+            `SELECT COUNT(*) as count FROM generated_recipes`
+        );
+        console.log('Total generated recipes in DB:', allRecipesResult.rows[0].count);
+
         const result = await db.query(
             `SELECT
          gr.generated_id,
@@ -256,6 +273,7 @@ async function getPendingGeneratedRecipes(req, res) {
        ORDER BY gr.created_at ASC`
         );
 
+        console.log('Pending generated recipes found:', result.rows.length);
         return res.json({ items: result.rows });
     } catch (err) {
         console.error('Error fetching pending generated recipes:', err);
@@ -319,15 +337,21 @@ async function approveGeneratedRecipe(req, res) {
 
         // Fetch all active staff in this branch
         const staffResult = await client.query(
-            `SELECT user_id
+            `SELECT user_id, name, role
        FROM users
        WHERE branch_id = $1
-         AND role IN ('staff', 'branch_manager')
+         AND role IN ('staff', 'STAFF', 'branch_manager', 'BRANCH_MANAGER', 'manager', 'MANAGER')
          AND is_active = true`,
             [branchId]
         );
 
+        console.log('Staff members found in branch', branchId, ':', staffResult.rows.length);
+        if (staffResult.rows.length > 0) {
+            console.log('Staff details:', staffResult.rows);
+        }
+
         for (const row of staffResult.rows) {
+            console.log('Creating recipe_approved notification for staff user:', row.user_id);
             await client.query(
                 `INSERT INTO notifications (
            user_id,
@@ -355,8 +379,18 @@ async function approveGeneratedRecipe(req, res) {
                 ]
             );
         }
+        console.log('Recipe approved notifications created for', staffResult.rows.length, 'staff members');
 
         await client.query('COMMIT');
+
+        // Emit WebSocket event to notify clients
+        const io = req.app && req.app.get ? req.app.get('io') : null;
+        if (io) {
+            io.emit('notifications:changed', {
+                action: 'recipe_approved',
+                branch_id: branchId,
+            });
+        }
 
         return res.json({ message: 'Generated recipe approved successfully' });
     } catch (err) {
@@ -421,15 +455,21 @@ async function rejectGeneratedRecipe(req, res) {
 
         // Fetch all active staff in this branch
         const staffResult = await client.query(
-            `SELECT user_id
+            `SELECT user_id, name, role
        FROM users
        WHERE branch_id = $1
-         AND role IN ('staff', 'branch_manager')
+         AND role IN ('staff', 'STAFF', 'branch_manager', 'BRANCH_MANAGER', 'manager', 'MANAGER')
          AND is_active = true`,
             [branchId]
         );
 
+        console.log('Staff members found in branch', branchId, ':', staffResult.rows.length);
+        if (staffResult.rows.length > 0) {
+            console.log('Staff details:', staffResult.rows);
+        }
+
         for (const row of staffResult.rows) {
+            console.log('Creating recipe_rejected notification for staff user:', row.user_id);
             await client.query(
                 `INSERT INTO notifications (
            user_id,
@@ -457,6 +497,7 @@ async function rejectGeneratedRecipe(req, res) {
                 ]
             );
         }
+        console.log('Recipe rejected notifications created for', staffResult.rows.length, 'staff members');
 
         await client.query('COMMIT');
 

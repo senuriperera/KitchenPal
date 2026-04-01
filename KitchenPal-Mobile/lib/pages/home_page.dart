@@ -5,6 +5,7 @@ import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
 import '../models/ingredient.dart';
 import '../services/websocket_service.dart';
+import '../services/notification_bell_service.dart';
 import 'login.dart';
 
 // Main HomePage wrapper for backward compatibility
@@ -34,17 +35,24 @@ class _HomePageContentState extends State<HomePageContent> {
   List<Ingredient> _expiringIngredients = [];
   bool _isLoading = true;
   String _userName = 'User';
+  int _unreadNotificationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadExpiringIngredients();
     _loadUserName();
+    _loadNotificationCount();
 
     // Connect to WebSocket and refresh nearing-expiry section
     WebSocketService.instance.connect();
     WebSocketService.instance.inventoryChanged.listen((_) {
       _loadExpiringIngredients();
+    });
+    
+    // Listen for notification changes
+    WebSocketService.instance.notificationsChanged.listen((_) {
+      _loadNotificationCount();
     });
   }
 
@@ -99,6 +107,19 @@ class _HomePageContentState extends State<HomePageContent> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadNotificationCount() async {
+    try {
+      final data = await NotificationBellService.getBellNotifications();
+      print('Notifications loaded: $data');
+      setState(() {
+        _unreadNotificationCount = data['unread_count'] ?? 0;
+      });
+    } catch (e) {
+      print('Error loading notifications: $e');
+      // Silent fail
     }
   }
 
@@ -218,30 +239,32 @@ class _HomePageContentState extends State<HomePageContent> {
             IconButton(
               icon: const Icon(Icons.notifications_outlined, size: 28),
               onPressed: () {
-                // Navigate to notifications page (index 4 in MainContainer)
-                // Find the MainContainer ancestor and update its index
-                final mainContainerState = context
-                    .findAncestorStateOfType<State<StatefulWidget>>();
-                if (mainContainerState != null && mainContainerState.mounted) {
-                  // Use a callback to notify parent to change index
-                  // Since we're in MainContainer, we can access it through context
-                  // For now, we'll use a simple approach - the bottom nav will handle this
-                  // Users can tap the notification icon in the bottom nav
-                }
+                Scaffold.of(context).openEndDrawer();
               },
             ),
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                width: 10,
-                height: 10,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
+            if (_unreadNotificationCount > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      _unreadNotificationCount > 99 ? '99+' : _unreadNotificationCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ],
