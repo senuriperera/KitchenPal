@@ -55,6 +55,139 @@
   }
 }
 
+.notification-bell-container {
+  position: relative;
+
+  .notification-bell {
+    position: relative;
+
+    .badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #dc2626;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+  }
+
+  .notification-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    width: 360px;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+
+    .dropdown-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid #e5e7eb;
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #111827;
+      }
+
+      .mark-all-btn {
+        background: none;
+        border: none;
+        color: #2563eb;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 0;
+
+        &:hover {
+          color: #1d4ed8;
+        }
+      }
+    }
+
+    .dropdown-content {
+      flex: 1;
+      overflow-y: auto;
+
+      .loading,
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+        color: #6b7280;
+
+        .material-icons {
+          font-size: 48px;
+          margin-bottom: 8px;
+          opacity: 0.5;
+        }
+
+        p {
+          margin: 0;
+          font-size: 14px;
+        }
+      }
+
+      .notification-list {
+        .notification-item {
+          padding: 12px 16px;
+          border-bottom: 1px solid #f3f4f6;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+
+          &.unread {
+            background-color: #fffbeb;
+          }
+
+          &:hover {
+            background-color: #f9fafb;
+          }
+
+          .notification-content {
+            .notification-title {
+              margin: 0 0 4px 0;
+              font-size: 14px;
+              font-weight: 600;
+              color: #111827;
+            }
+
+            .notification-branch {
+              margin: 0 0 4px 0;
+              font-size: 12px;
+              color: #6b7280;
+            }
+
+            .notification-time {
+              margin: 0;
+              font-size: 12px;
+              color: #9ca3af;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 .user-profile {
   display: flex;
   align-items: center;

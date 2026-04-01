@@ -13,6 +13,7 @@ const saleRoutes = require('./saleRoutes');
 const commonRoutes = require('./commonRoutes');
 const userRoutes = require('./userRoutes');
 const uploadRoutes = require('./uploadRoutes');
+const adminRoutes = require('./adminRoutes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -31,5 +32,6 @@ router.use('/sales', saleRoutes);
 router.use('/common', commonRoutes);
 router.use('/users', userRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;

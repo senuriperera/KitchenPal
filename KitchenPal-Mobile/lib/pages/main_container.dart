@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../shared/bottom_navbar.dart';
+import '../widgets/notifications_drawer.dart';
 import 'home_page.dart';
 import 'add_ingredient_page.dart';
 import 'inventory_page.dart';
@@ -43,6 +44,7 @@ class _MainContainerState extends State<MainContainer> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _buildPages()),
+      endDrawer: const NotificationsDrawer(),
       bottomNavigationBar: KitchenPalBottomNavBar(
         currentIndex: _currentIndex,
         onTap: (index) {

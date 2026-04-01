@@ -18,9 +18,16 @@ class WebSocketService {
   final StreamController<void> _inventoryChangedController =
       StreamController<void>.broadcast();
 
+  final StreamController<void> _notificationsChangedController =
+      StreamController<void>.broadcast();
+
   /// Emitted whenever the backend signals that inventory changed
   /// (ingredient created/deleted, expiry-related updates, etc.).
   Stream<void> get inventoryChanged => _inventoryChangedController.stream;
+
+  /// Emitted whenever the backend signals that notifications changed
+  /// (recipe approved/rejected notifications).
+  Stream<void> get notificationsChanged => _notificationsChangedController.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -55,10 +62,10 @@ class WebSocketService {
       _inventoryChangedController.add(null);
     });
 
-    // Notifications are currently surfaced to the mobile app
-    // via expiring-ingredients; if you later add a real
-    // notifications UI, you can add another StreamController
-    // and listen to 'notifications:changed' here.
+    // Notifications changed (recipe approved/rejected)
+    socket.on('notifications:changed', (_) {
+      _notificationsChangedController.add(null);
+    });
 
     socket.onDisconnect((_) {
       // Disconnected
@@ -72,5 +79,6 @@ class WebSocketService {
     _socket?.dispose();
     _socket = null;
     _inventoryChangedController.close();
+    _notificationsChangedController.close();
   }
 }

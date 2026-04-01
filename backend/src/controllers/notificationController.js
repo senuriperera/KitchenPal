@@ -236,6 +236,183 @@ class NotificationController {
             res.status(500).json({ error: 'Failed to acknowledge notification' });
         }
     }
+
+    // Get bell notifications (recipe_approved, recipe_rejected, expiry_alert) for the logged-in user
+    static async getBellNotifications(req, res) {
+        try {
+            const user_id = req.user.user_id;
+
+            const result = await db.query(
+                `SELECT
+                    n.notification_id,
+                    n.title,
+                    n.message,
+                    n.notification_type,
+                    n.status,
+                    n.is_read,
+                    n.created_at,
+                    n.ingredient_id
+                 FROM notifications n
+                 WHERE n.user_id = $1
+                   AND n.notification_type IN ('recipe_approved', 'recipe_rejected', 'expiry_alert')
+                 ORDER BY n.created_at DESC
+                 LIMIT 50`,
+                [user_id]
+            );
+
+            const notifications = result.rows;
+            const unread_count = notifications.filter(n => !n.is_read).length;
+
+            res.json({ notifications, unread_count });
+        } catch (error) {
+            console.error('Get bell notifications error:', error);
+            res.status(500).json({ error: 'Failed to fetch bell notifications' });
+        }
+    }
+
+    // Mark a single bell notification as read
+    static async markBellAsRead(req, res) {
+        try {
+            const { id } = req.params;
+            const user_id = req.user.user_id;
+
+            const result = await db.query(
+                `UPDATE notifications SET
+                   status = 'read',
+                   is_read = true,
+                   acknowledged_at = NOW()
+                 WHERE notification_id = $1
+                   AND user_id = $2
+                 RETURNING notification_id`,
+                [id, user_id]
+            );
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: 'Notification not found' });
+            }
+
+            res.json({ message: 'Notification marked as read' });
+        } catch (error) {
+            console.error('Mark bell as read error:', error);
+            res.status(500).json({ error: 'Failed to mark notification as read' });
+        }
+    }
+
+    // Mark all bell notifications as read for the logged-in user
+    static async markAllBellAsRead(req, res) {
+        try {
+            const user_id = req.user.user_id;
+
+            await db.query(
+                `UPDATE notifications SET
+                   status = 'read',
+                   is_read = true,
+                   acknowledged_at = NOW()
+                 WHERE user_id = $1
+                   AND is_read = false
+                   AND notification_type IN ('recipe_approved', 'recipe_rejected', 'expiry_alert')`,
+                [user_id]
+            );
+
+            res.json({ message: 'All notifications marked as read', unread_count: 0 });
+        } catch (error) {
+            console.error('Mark all bell as read error:', error);
+            res.status(500).json({ error: 'Failed to mark all notifications as read' });
+        }
+    }
+
+    // Get admin bell notifications (recipe_pending) for the logged-in user
+    static async getAdminBellNotifications(req, res) {
+        try {
+            const user_id = req.user.user_id;
+            console.log('Admin fetching notifications for user_id:', user_id);
+
+            // First, check if there are ANY recipe_pending notifications in the database
+            const allPendingResult = await db.query(
+                `SELECT COUNT(*) as count FROM notifications WHERE notification_type = 'recipe_pending'`
+            );
+            console.log('Total recipe_pending notifications in DB:', allPendingResult.rows[0].count);
+
+            const result = await db.query(
+                `SELECT
+                    n.notification_id,
+                    n.title,
+                    n.message,
+                    n.notification_type,
+                    n.status,
+                    n.is_read,
+                    n.created_at,
+                    b.name AS branch_name
+                 FROM notifications n
+                 LEFT JOIN branches b ON n.branch_id = b.branch_id
+                 WHERE n.user_id = $1
+                   AND n.notification_type = 'recipe_pending'
+                 ORDER BY n.created_at DESC
+                 LIMIT 50`,
+                [user_id]
+            );
+
+            console.log('Admin notifications found for this user:', result.rows.length);
+            const notifications = result.rows;
+            const unread_count = notifications.filter(n => !n.is_read).length;
+
+            res.json({ notifications, unread_count });
+        } catch (error) {
+            console.error('Get admin bell notifications error:', error);
+            res.status(500).json({ error: 'Failed to fetch admin bell notifications' });
+        }
+    }
+
+    // Mark a single admin bell notification as read
+    static async markAdminBellAsRead(req, res) {
+        try {
+            const { id } = req.params;
+            const user_id = req.user.user_id;
+
+            const result = await db.query(
+                `UPDATE notifications SET
+                   status = 'read',
+                   is_read = true,
+                   acknowledged_at = NOW()
+                 WHERE notification_id = $1
+                   AND user_id = $2
+                 RETURNING notification_id`,
+                [id, user_id]
+            );
+
+            if (result.rowCount === 0) {
+                return res.status(404).json({ error: 'Notification not found' });
+            }
+
+            res.json({ message: 'Notification marked as read' });
+        } catch (error) {
+            console.error('Mark admin bell as read error:', error);
+            res.status(500).json({ error: 'Failed to mark notification as read' });
+        }
+    }
+
+    // Mark all admin bell notifications as read for the logged-in user
+    static async markAllAdminBellAsRead(req, res) {
+        try {
+            const user_id = req.user.user_id;
+
+            await db.query(
+                `UPDATE notifications SET
+                   status = 'read',
+                   is_read = true,
+                   acknowledged_at = NOW()
+                 WHERE user_id = $1
+                   AND is_read = false
+                   AND notification_type = 'recipe_pending'`,
+                [user_id]
+            );
+
+            res.json({ message: 'All notifications marked as read', unread_count: 0 });
+        } catch (error) {
+            console.error('Mark all admin bell as read error:', error);
+            res.status(500).json({ error: 'Failed to mark all notifications as read' });
+        }
+    }
 }
 
 module.exports = NotificationController;
