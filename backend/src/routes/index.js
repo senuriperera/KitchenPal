@@ -14,6 +14,7 @@ const commonRoutes = require('./commonRoutes');
 const userRoutes = require('./userRoutes');
 const uploadRoutes = require('./uploadRoutes');
 const adminRoutes = require('./adminRoutes');
+const analyticsRoutes = require('./analyticsRoutes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -33,5 +34,6 @@ router.use('/common', commonRoutes);
 router.use('/users', userRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/admin', adminRoutes);
+router.use('/analytics', analyticsRoutes);
 
 module.exports = router;
