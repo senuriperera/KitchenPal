@@ -4,10 +4,30 @@ import '../config/api_constants.dart';
 import 'storage_service.dart';
 
 class NotificationBellService {
+  /// Refresh token if expired
+  static Future<void> _refreshTokenIfExpired() async {
+    final refreshToken = await StorageService.getRefreshToken();
+    if (refreshToken == null) throw Exception('No refresh token found');
+
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/auth/refresh-token'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refreshToken': refreshToken}),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final newAccessToken = json['accessToken'];
+      await StorageService.saveToken(newAccessToken);
+    } else {
+      throw Exception('Failed to refresh token');
+    }
+  }
+
   /// Fetch bell notifications (recipe_approved, recipe_rejected)
   static Future<Map<String, dynamic>> getBellNotifications() async {
     try {
-      final token = await StorageService.getToken();
+      var token = await StorageService.getToken();
       if (token == null) {
         throw Exception('No authentication token found');
       }
@@ -15,7 +35,7 @@ class NotificationBellService {
       final url = '${ApiConstants.baseUrl}/notifications/bell';
       print('Fetching notifications from: $url');
       
-      final response = await http.get(
+      var response = await http.get(
         Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
@@ -25,6 +45,19 @@ class NotificationBellService {
 
       print('Response status: ${response.statusCode}');
       print('Response body: ${response.body}');
+
+      // Retry once if token expired
+      if (response.statusCode == 401) {
+        await _refreshTokenIfExpired();
+        token = await StorageService.getToken();
+        response = await http.get(
+          Uri.parse(url),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+      }
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
@@ -42,18 +75,31 @@ class NotificationBellService {
   /// Mark a single notification as read
   static Future<void> markAsRead(int notificationId) async {
     try {
-      final token = await StorageService.getToken();
+      var token = await StorageService.getToken();
       if (token == null) {
         throw Exception('No authentication token found');
       }
 
-      final response = await http.patch(
+      var response = await http.patch(
         Uri.parse('${ApiConstants.baseUrl}/notifications/bell/$notificationId/read'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
+
+      // Retry once if token expired
+      if (response.statusCode == 401) {
+        await _refreshTokenIfExpired();
+        token = await StorageService.getToken();
+        response = await http.patch(
+          Uri.parse('${ApiConstants.baseUrl}/notifications/bell/$notificationId/read'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+      }
 
       if (response.statusCode != 200) {
         throw Exception('Failed to mark notification as read');
@@ -66,18 +112,31 @@ class NotificationBellService {
   /// Mark all bell notifications as read
   static Future<void> markAllAsRead() async {
     try {
-      final token = await StorageService.getToken();
+      var token = await StorageService.getToken();
       if (token == null) {
         throw Exception('No authentication token found');
       }
 
-      final response = await http.patch(
+      var response = await http.patch(
         Uri.parse('${ApiConstants.baseUrl}/notifications/bell/read-all'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
+
+      // Retry once if token expired
+      if (response.statusCode == 401) {
+        await _refreshTokenIfExpired();
+        token = await StorageService.getToken();
+        response = await http.patch(
+          Uri.parse('${ApiConstants.baseUrl}/notifications/bell/read-all'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+      }
 
       if (response.statusCode != 200) {
         throw Exception('Failed to mark all notifications as read');

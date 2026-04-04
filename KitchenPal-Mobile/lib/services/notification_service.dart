@@ -14,14 +14,44 @@ class NotificationService {
     };
   }
 
+  /// Refresh token if expired
+  static Future<void> _refreshTokenIfExpired() async {
+    final refreshToken = await StorageService.getRefreshToken();
+    if (refreshToken == null) throw Exception('No refresh token found');
+
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/auth/refresh-token'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refreshToken': refreshToken}),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final newAccessToken = json['accessToken'];
+      await StorageService.saveToken(newAccessToken);
+    } else {
+      throw Exception('Failed to refresh token');
+    }
+  }
+
   /// GET /api/notifications
   /// Returns expiry-nearing batch items with real batch_id and remaining_base_quantity.
   static Future<List<ExpiryNotification>> getExpiryNotifications() async {
-    final headers = await _authHeaders();
-    final response = await http.get(
+    var headers = await _authHeaders();
+    var response = await http.get(
       Uri.parse('${ApiConstants.baseUrl}/notifications'),
       headers: headers,
     );
+
+    // Retry once if token expired
+    if (response.statusCode == 401) {
+      await _refreshTokenIfExpired();
+      headers = await _authHeaders();
+      response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/notifications'),
+        headers: headers,
+      );
+    }
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -39,10 +69,20 @@ class NotificationService {
 
   /// PATCH /api/notifications/:id/acknowledge
   static Future<void> acknowledgeNotification(int notificationId) async {
-    final headers = await _authHeaders();
-    await http.patch(
+    var headers = await _authHeaders();
+    var response = await http.patch(
       Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId/acknowledge'),
       headers: headers,
     );
+
+    // Retry once if token expired
+    if (response.statusCode == 401) {
+      await _refreshTokenIfExpired();
+      headers = await _authHeaders();
+      response = await http.patch(
+        Uri.parse('${ApiConstants.baseUrl}/notifications/$notificationId/acknowledge'),
+        headers: headers,
+      );
+    }
   }
 }

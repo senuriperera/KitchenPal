@@ -49,7 +49,7 @@ class _HomePageContentState extends State<HomePageContent> {
     WebSocketService.instance.inventoryChanged.listen((_) {
       _loadExpiringIngredients();
     });
-    
+
     // Listen for notification changes
     WebSocketService.instance.notificationsChanged.listen((_) {
       _loadNotificationCount();
@@ -255,7 +255,9 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                   child: Center(
                     child: Text(
-                      _unreadNotificationCount > 99 ? '99+' : _unreadNotificationCount.toString(),
+                      _unreadNotificationCount > 99
+                          ? '99+'
+                          : _unreadNotificationCount.toString(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -558,48 +560,38 @@ class _HomePageContentState extends State<HomePageContent> {
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {},
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          side: const BorderSide(color: Colors.black12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                Center(
+                  child: SizedBox(
+                    width: 200,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Navigate to notifications page (index 4)
+                        if (widget.onNavigate != null) {
+                          widget.onNavigate!(4);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.restaurant_menu, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Generate Recipe',
+                            style: TextStyle(fontSize: 11),
                           ),
-                        ),
-                        child: const Text(
-                          'Acknowledge',
-                          style: TextStyle(color: Colors.black87, fontSize: 11),
-                        ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.restaurant_menu, size: 14),
-                            SizedBox(width: 4),
-                            Text('Recipe', style: TextStyle(fontSize: 11)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
