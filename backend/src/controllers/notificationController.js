@@ -4,45 +4,42 @@ const db = require('../config/database');
 class NotificationController {
     // Get expiry-nearing notifications for the logged-in user
     // GET /api/notifications
+    // Returns all expiring ingredients (within 7 days) regardless of notification status
     static async getExpiryNotificationsForUser(req, res) {
         try {
             const user_id = req.user.user_id;
             const branch_id = req.user.branch_id;
+            const { days = 7 } = req.query;
 
             if (!user_id || !branch_id) {
                 return res.status(400).json({ error: 'User branch context missing' });
             }
 
+            // Query all expiring batches for the branch (same as homepage)
+            // This ensures consistency between homepage and notifications page
             const query = `
-                                SELECT
-                                    ib.batch_id,
-                                    ib.ingredient_id,
-                                    ib.expiry_date,
-                                    ib.remaining_base_quantity,
-                                    si.name,
-                                    si.image_url,
-                                    st.name AS storage_type_name,
-                                    bu.code AS base_unit_code,
-                                    (ib.expiry_date - CURRENT_DATE) AS days_until_expiry,
-                                    n.notification_id,
-                                    n.is_read,
-                                    n.acknowledged_at
-                                FROM ingredient_batches ib
-                                JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
-                                JOIN notifications n ON n.ingredient_id = si.ingredient_id
-                                    AND n.user_id = $1
-                                    AND n.notification_type = 'expiry_alert'
-                                    AND n.status = 'unread'
-                                JOIN storage_types st ON si.storage_type_id = st.storage_type_id
-                                JOIN units bu ON ib.base_unit_id = bu.unit_id
-                                WHERE si.branch_id = $2
-                                    AND ib.is_depleted = false
-                                    AND (ib.expiry_date - CURRENT_DATE) <= 3
-                                    AND (ib.expiry_date - CURRENT_DATE) >= 0
-                                ORDER BY ib.expiry_date ASC
-                        `;
+                SELECT DISTINCT
+                    ib.batch_id,
+                    ib.ingredient_id,
+                    ib.expiry_date,
+                    ib.remaining_base_quantity,
+                    si.name,
+                    si.image_url,
+                    st.name AS storage_type_name,
+                    bu.code AS base_unit_code,
+                    (ib.expiry_date - CURRENT_DATE) AS days_until_expiry
+                FROM ingredient_batches ib
+                JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
+                JOIN storage_types st ON si.storage_type_id = st.storage_type_id
+                JOIN units bu ON ib.base_unit_id = bu.unit_id
+                WHERE si.branch_id = $1
+                    AND ib.is_depleted = false
+                    AND ib.expiry_date <= CURRENT_DATE + ($2 || ' days')::INTERVAL
+                    AND ib.expiry_date >= CURRENT_DATE
+                ORDER BY ib.expiry_date ASC
+            `;
 
-            const result = await db.query(query, [user_id, branch_id]);
+            const result = await db.query(query, [branch_id, days]);
 
             // Map to match Flutter's ExpiryNotification model field names
             const items = result.rows.map(row => ({
@@ -54,10 +51,7 @@ class NotificationController {
                 image_url: row.image_url,
                 storage_type_name: row.storage_type_name,
                 base_unit_code: row.base_unit_code,
-                days_until_expiry: parseInt(row.days_until_expiry, 10),
-                notification_id: row.notification_id,
-                is_read: row.is_read,
-                acknowledged_at: row.acknowledged_at
+                days_until_expiry: parseInt(row.days_until_expiry, 10)
             }));
 
             res.json({ items });

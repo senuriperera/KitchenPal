@@ -338,7 +338,6 @@ class IngredientModel {
                 si.ingredient_id,
                 si.name,
                 si.image_url,
-                si.expiry_date,
                 si.quantity_in_stock,
                 si.unit_weight,
                 wu.code AS unit_weight_unit_code,
@@ -352,16 +351,24 @@ class IngredientModel {
                 si.manufacture_date,
                 si.price,
                 si.unit_weight_unit_id,
-                si.base_unit_id
+                si.base_unit_id,
+                MIN(ib.expiry_date) AS expiry_date
             FROM stock_ingredients si
+            JOIN ingredient_batches ib ON si.ingredient_id = ib.ingredient_id
             JOIN units AS wu ON si.unit_weight_unit_id = wu.unit_id
             LEFT JOIN units AS bu ON si.base_unit_id   = bu.unit_id
             LEFT JOIN storage_types AS st ON si.storage_type_id = st.storage_type_id
             WHERE si.branch_id = $1
-              AND si.expiry_date <= CURRENT_DATE + ($2 || ' days')::INTERVAL
-              AND si.expiry_date >= CURRENT_DATE
+              AND ib.is_depleted = false
+              AND ib.expiry_date <= CURRENT_DATE + ($2 || ' days')::INTERVAL
+              AND ib.expiry_date >= CURRENT_DATE
               AND si.deleted_at IS NULL
-            ORDER BY si.expiry_date ASC
+            GROUP BY si.ingredient_id, si.name, si.image_url, si.quantity_in_stock, 
+                     si.unit_weight, wu.code, wu.unit_family, si.total_base_quantity, 
+                     bu.code, si.storage_type_id, st.name, si.master_ingredient_id, 
+                     si.added_by, si.manufacture_date, si.price, si.unit_weight_unit_id, 
+                     si.base_unit_id
+            ORDER BY expiry_date ASC
         `;
     const result = await db.query(query, [branch_id, days]);
     return result.rows;
