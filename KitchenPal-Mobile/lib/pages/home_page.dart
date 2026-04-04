@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../services/auth_service.dart';
-import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
-import '../models/ingredient.dart';
+import '../services/analytics_service.dart';
+import '../models/monthly_summary.dart';
+import '../models/nearing_expiry_item.dart';
 import '../services/websocket_service.dart';
 import '../services/notification_bell_service.dart';
 import 'login.dart';
@@ -32,28 +33,63 @@ class HomePageContent extends StatefulWidget {
 }
 
 class _HomePageContentState extends State<HomePageContent> {
-  List<Ingredient> _expiringIngredients = [];
+  List<NearingExpiryItem> _nearingExpiryItems = [];
+  MonthlySummary? _monthlySummary;
   bool _isLoading = true;
   String _userName = 'User';
   int _unreadNotificationCount = 0;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadExpiringIngredients();
     _loadUserName();
     _loadNotificationCount();
+    _loadAnalyticsData();
 
     // Connect to WebSocket and refresh nearing-expiry section
     WebSocketService.instance.connect();
     WebSocketService.instance.inventoryChanged.listen((_) {
-      _loadExpiringIngredients();
+      _loadAnalyticsData();
     });
 
     // Listen for notification changes
     WebSocketService.instance.notificationsChanged.listen((_) {
       _loadNotificationCount();
     });
+  }
+
+  Future<void> _loadAnalyticsData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      // Load both in parallel
+      final results = await Future.wait([
+        AnalyticsService.getMonthlySummary(),
+        AnalyticsService.getNearingExpiryList(),
+      ]);
+
+      final monthlySummary = results[0] as MonthlySummary;
+      final nearingExpiryItems = results[1] as List<NearingExpiryItem>;
+
+      if (!mounted) return;
+
+      setState(() {
+        _monthlySummary = monthlySummary;
+        _nearingExpiryItems = nearingExpiryItems;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = 'Failed to load analytics data';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadUserName() async {
@@ -86,30 +122,6 @@ class _HomePageContentState extends State<HomePageContent> {
     return '';
   }
 
-  Future<void> _loadExpiringIngredients() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // branch_id is now in JWT — no param needed
-      final ingredients = await IngredientService.getExpiringIngredients(
-        days: 7,
-      );
-
-      setState(() {
-        _expiringIngredients = ingredients
-            .take(3)
-            .toList(); // Show only first 3
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   Future<void> _loadNotificationCount() async {
     try {
       final data = await NotificationBellService.getBellNotifications();
@@ -126,42 +138,81 @@ class _HomePageContentState extends State<HomePageContent> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 16),
-              _buildWasteSummaryCard(),
-              const SizedBox(height: 20),
-              _buildNearingExpiryHeader(),
-              const SizedBox(height: 12),
-              _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _expiringIngredients.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Text(
-                          'No items nearing expiry',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    )
-                  : Column(
-                      children: _expiringIngredients.map((ingredient) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildExpiryItemFromData(ingredient),
-                        );
-                      }).toList(),
-                    ),
-              const SizedBox(height: 16),
-            ],
+      child: RefreshIndicator(
+        onRefresh: _loadAnalyticsData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 16),
+                _errorMessage != null
+                    ? _buildErrorState()
+                    : _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : Column(
+                            children: [
+                              _buildWasteSummaryCard(),
+                              const SizedBox(height: 20),
+                              _buildNearingExpiryHeader(),
+                              const SizedBox(height: 12),
+                              _nearingExpiryItems.isEmpty
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(32.0),
+                                        child: Text(
+                                          'No items nearing expiry',
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ),
+                                    )
+                                  : Column(
+                                      children: _nearingExpiryItems
+                                          .map((item) {
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
+                                          child: _buildExpiryItemCard(item),
+                                        );
+                                      }).toList(),
+                                    ),
+                            ],
+                          ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        children: [
+          Text(
+            _errorMessage ?? 'An error occurred',
+            style: TextStyle(color: Colors.red.shade700),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _loadAnalyticsData,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
       ),
     );
   }
@@ -274,6 +325,18 @@ class _HomePageContentState extends State<HomePageContent> {
   }
 
   Widget _buildWasteSummaryCard() {
+    if (_monthlySummary == null) {
+      return const SizedBox.shrink();
+    }
+
+    final summary = _monthlySummary!;
+    final currentMonth = DateTime.now();
+    final monthName = _getMonthName(currentMonth.month);
+    final savedPercentage = summary.savedPercentage.toStringAsFixed(0);
+    final savedKg = summary.savedCurrent.toStringAsFixed(1);
+    final wastedKg = summary.wastedCurrent.toStringAsFixed(1);
+    final savedValue = (summary.savedCurrent * 3.5).toStringAsFixed(2); // Rough estimate
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -293,10 +356,10 @@ class _HomePageContentState extends State<HomePageContent> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Flexible(
+              Flexible(
                 child: Text(
-                  'October Waste Summary',
-                  style: TextStyle(
+                  '$monthName Waste Summary',
+                  style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
@@ -322,9 +385,9 @@ class _HomePageContentState extends State<HomePageContent> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text(
-                '75% ',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              Text(
+                '$savedPercentage% ',
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const Text(
                 'Saved',
@@ -343,7 +406,9 @@ class _HomePageContentState extends State<HomePageContent> {
                 width: 110,
                 height: 110,
                 child: CustomPaint(
-                  painter: CircularProgressPainter(percentage: 75),
+                  painter: CircularProgressPainter(
+                    percentage: summary.savedPercentage,
+                  ),
                   child: Center(
                     child: Container(
                       width: 40,
@@ -382,9 +447,9 @@ class _HomePageContentState extends State<HomePageContent> {
                           style: TextStyle(fontSize: 13),
                         ),
                         const Spacer(),
-                        const Text(
-                          '420 kg',
-                          style: TextStyle(
+                        Text(
+                          '$savedKg kg',
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
@@ -405,9 +470,9 @@ class _HomePageContentState extends State<HomePageContent> {
                         const SizedBox(width: 8),
                         const Text('Wasted', style: TextStyle(fontSize: 13)),
                         const Spacer(),
-                        const Text(
-                          '140 kg',
-                          style: TextStyle(
+                        Text(
+                          '$wastedKg kg',
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
@@ -415,9 +480,9 @@ class _HomePageContentState extends State<HomePageContent> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Total saved value: \$1,250',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    Text(
+                      'Total saved value: \$$savedValue',
+                      style: const TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                   ],
                 ),
@@ -427,6 +492,24 @@ class _HomePageContentState extends State<HomePageContent> {
         ],
       ),
     );
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    return months[month - 1];
   }
 
   Widget _buildNearingExpiryHeader() {
@@ -463,13 +546,26 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
-  Widget _buildExpiryItem(
-    String name,
-    String details,
-    String expiry,
-    String imageUrl, {
-    bool isUrgent = false,
-  }) {
+  Widget _buildExpiryItemCard(NearingExpiryItem item) {
+    final daysLeft = item.daysLeft;
+    Color badgeColor;
+    Color badgeBgColor;
+
+    if (daysLeft == 1) {
+      badgeColor = Colors.red;
+      badgeBgColor = const Color(0xFFFFEBEE);
+    } else if (daysLeft == 2) {
+      badgeColor = Colors.orange;
+      badgeBgColor = const Color(0xFFFFF3E0);
+    } else {
+      badgeColor = Colors.amber;
+      badgeBgColor = const Color(0xFFFFFDE7);
+    }
+
+    final qtyStr = item.quantityRemaining == item.quantityRemaining.roundToDouble()
+        ? item.quantityRemaining.toInt().toString()
+        : item.quantityRemaining.toStringAsFixed(1);
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -489,66 +585,38 @@ class _HomePageContentState extends State<HomePageContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (isUrgent)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    margin: const EdgeInsets.only(bottom: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.access_time, size: 12, color: Colors.red),
-                        SizedBox(width: 4),
-                        Text(
-                          'Expires Tomorrow',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.red,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    margin: const EdgeInsets.only(bottom: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.access_time,
-                          size: 12,
-                          color: Color(0xFFFF9800),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          expiry,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFFFF9800),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: badgeBgColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.access_time,
+                        size: 12,
+                        color: badgeColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$daysLeft day${daysLeft != 1 ? 's' : ''} left',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: badgeColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 Text(
-                  name,
+                  item.name,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -556,42 +624,8 @@ class _HomePageContentState extends State<HomePageContent> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  details,
+                  '$qtyStr ${item.unit}',
                   style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-                const SizedBox(height: 10),
-                Center(
-                  child: SizedBox(
-                    width: 200,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // Navigate to notifications page (index 4)
-                        if (widget.onNavigate != null) {
-                          widget.onNavigate!(4);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.restaurant_menu, size: 14),
-                          SizedBox(width: 4),
-                          Text(
-                            'Generate Recipe',
-                            style: TextStyle(fontSize: 11),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -603,52 +637,33 @@ class _HomePageContentState extends State<HomePageContent> {
               width: 85,
               height: 85,
               color: Colors.grey.shade200,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: const Color(0xFFFFE0B2),
-                    child: const Icon(
-                      Icons.image,
-                      size: 35,
-                      color: Colors.grey,
+              child: item.imageUrl != null
+                  ? Image.network(
+                      item.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: const Color(0xFFFFE0B2),
+                          child: const Icon(
+                            Icons.image,
+                            size: 35,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                    )
+                  : Container(
+                      color: const Color(0xFFFFE0B2),
+                      child: const Icon(
+                        Icons.image,
+                        size: 35,
+                        color: Colors.grey,
+                      ),
                     ),
-                  );
-                },
-              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildExpiryItemFromData(Ingredient ingredient) {
-    final daysUntilExpiry = ingredient.daysUntilExpiry;
-    final isUrgent = daysUntilExpiry <= 1;
-
-    String expiryText;
-    if (daysUntilExpiry == 0) {
-      expiryText = 'Expires Today';
-    } else if (daysUntilExpiry == 1) {
-      expiryText = 'Expires Tomorrow';
-    } else {
-      expiryText = 'Exp: $daysUntilExpiry Days';
-    }
-
-    // Format the quantity display using total_base_quantity
-    final qty = ingredient.totalBaseQuantity;
-    final qtyStr = qty == qty.roundToDouble()
-        ? qty.toInt().toString()
-        : qty.toStringAsFixed(1);
-
-    return _buildExpiryItem(
-      ingredient.name,
-      '$qtyStr ${ingredient.baseUnitCode} • ${ingredient.storageTypeName}',
-      expiryText,
-      ingredient.imageUrl ?? '',
-      isUrgent: isUrgent,
     );
   }
 }
