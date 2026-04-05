@@ -43,6 +43,6 @@ export class AnalyticsService {
   }
 
   getBranches(): Observable<any> {
-    return this.http.get(`${environment.apiUrl}/branches`);
+    return this.http.get(`${environment.apiUrl}/common/branches`);
   }
 }
