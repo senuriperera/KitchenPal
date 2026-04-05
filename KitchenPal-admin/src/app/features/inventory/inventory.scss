@@ -1,4 +1,4 @@
-@import '../dashboard/dashboard.scss';
+@use '../dashboard/dashboard.scss' as dashboard;
 
 .inventory-container {
   min-height: 100vh;

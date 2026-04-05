@@ -6,178 +6,188 @@
   </app-header>
 
   <div class="dashboard-content">
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-      <!-- Items Near Expiry -->
-      <div class="stat-card yellow">
-        <div class="stat-header">
-          <span class="stat-label">Items Near Expiry</span>
-          <div class="stat-icon-wrapper yellow-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-          </div>
-        </div>
-        <div class="stat-value">{{ stats.itemsNearExpiry.value }}</div>
-        <div class="stat-trend">
-          <svg
-            class="trend-arrow down"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-          <span class="trend-text"
-            >{{ stats.itemsNearExpiry.change }}% decrease</span
-          >
-        </div>
-      </div>
-
-      <!-- Food Wasted -->
-      <div class="stat-card red">
-        <div class="stat-header">
-          <span class="stat-label">Food Wasted (kg)</span>
-          <div class="stat-icon-wrapper red-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path
-                d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-              />
-            </svg>
-          </div>
-        </div>
-        <div class="stat-value">{{ stats.foodWasted.value }}</div>
-        <div class="stat-trend">
-          <svg
-            class="trend-arrow up"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-          <span class="trend-text"
-            >{{ stats.foodWasted.change }}% increase</span
-          >
-        </div>
-      </div>
-
-      <!-- Food Saved -->
-      <div class="stat-card green">
-        <div class="stat-header">
-          <span class="stat-label">Food Saved (kg)</span>
-          <div class="stat-icon-wrapper green-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-          </div>
-        </div>
-        <div class="stat-value">{{ stats.foodSaved.value }}</div>
-        <div class="stat-trend">
-          <svg
-            class="trend-arrow up"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-          <span class="trend-text">{{ stats.foodSaved.change }}% increase</span>
-        </div>
-      </div>
-
-      <!-- Active Discounts -->
-      <div class="stat-card purple">
-        <div class="stat-header">
-          <span class="stat-label">Active Discounts</span>
-          <div class="stat-icon-wrapper purple-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
-              />
-            </svg>
-          </div>
-        </div>
-        <div class="stat-value">{{ stats.activeDiscounts.value }}</div>
-      </div>
-
-      <!-- Profit from Discounts -->
-      <div class="stat-card blue">
-        <div class="stat-header">
-          <span class="stat-label">Profit from Discounts</span>
-          <div class="stat-icon-wrapper blue-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-              <polyline points="17 6 23 6 23 12" />
-            </svg>
-          </div>
-        </div>
-        <div class="stat-value">${{ stats.profitFromDiscounts.value }}</div>
-        <div class="stat-trend">
-          <svg
-            class="trend-arrow up"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <polyline points="18 15 12 9 6 15" />
-          </svg>
-          <span class="trend-text"
-            >{{ stats.profitFromDiscounts.change }}% increase</span
-          >
-        </div>
-      </div>
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading dashboard data...</p>
     </div>
+
+    <!-- Error State -->
+    <div *ngIf="errorMessage && !isLoading" class="error-state">
+      <p>{{ errorMessage }}</p>
+      <button (click)="loadDashboardData()" class="retry-btn">Retry</button>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div *ngIf="!isLoading && !errorMessage && stats">
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <!-- Items Near Expiry -->
+        <div class="stat-card yellow">
+          <div class="stat-header">
+            <span class="stat-label">Items Near Expiry</span>
+            <div class="stat-icon-wrapper yellow-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value">{{ stats.nearExpiry }}</div>
+        </div>
+
+        <!-- Food Wasted -->
+        <div class="stat-card red">
+          <div class="stat-header">
+            <span class="stat-label">Food Wasted</span>
+            <div class="stat-icon-wrapper red-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="3 6 5 6 21 6" />
+                <path
+                  d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                />
+              </svg>
+            </div>
+          </div>
+          <div class="stat-sub">{{ stats.foodWasted.weight.display }}</div>
+          <div class="stat-sub">{{ stats.foodWasted.volume.display }}</div>
+          <div class="stat-sub">{{ stats.foodWasted.count.display }}</div>
+          <div class="stat-trend" [class.red]="stats.foodWasted.changePercent > 0" [class.green]="stats.foodWasted.changePercent < 0">
+            <svg
+              class="trend-arrow"
+              [class.up]="stats.foodWasted.changePercent > 0"
+              [class.down]="stats.foodWasted.changePercent < 0"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+            <span class="trend-text">
+              {{ stats.foodWasted.changePercent > 0 ? '↑' : '↓' }}
+              {{ abs(stats.foodWasted.changePercent) }}% vs last month
+            </span>
+          </div>
+        </div>
+
+        <!-- Food Saved -->
+        <div class="stat-card green">
+          <div class="stat-header">
+            <span class="stat-label">Food Saved</span>
+            <div class="stat-icon-wrapper green-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+          </div>
+          <div class="stat-sub">{{ stats.foodSaved.weight.display }}</div>
+          <div class="stat-sub">{{ stats.foodSaved.volume.display }}</div>
+          <div class="stat-sub">{{ stats.foodSaved.count.display }}</div>
+          <div class="stat-trend" [class.green]="stats.foodSaved.changePercent > 0" [class.red]="stats.foodSaved.changePercent < 0">
+            <svg
+              class="trend-arrow"
+              [class.up]="stats.foodSaved.changePercent > 0"
+              [class.down]="stats.foodSaved.changePercent < 0"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+            <span class="trend-text">
+              {{ stats.foodSaved.changePercent > 0 ? '↑' : '↓' }}
+              {{ abs(stats.foodSaved.changePercent) }}% vs last month
+            </span>
+          </div>
+        </div>
+
+        <!-- Active Discounts -->
+        <div class="stat-card purple">
+          <div class="stat-header">
+            <span class="stat-label">Active Discounts</span>
+            <div class="stat-icon-wrapper purple-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"
+                />
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value">{{ stats.activeDiscounts }}</div>
+        </div>
+
+        <!-- Profit from Discounts -->
+        <div class="stat-card blue">
+          <div class="stat-header">
+            <span class="stat-label">Profit from Discounts</span>
+            <div class="stat-icon-wrapper blue-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                <polyline points="17 6 23 6 23 12" />
+              </svg>
+            </div>
+          </div>
+          <div class="stat-value">Rs {{ stats.profitFromDiscounts.current | number:'1.2-2' }}</div>
+          <div class="stat-trend green">
+            <svg
+              class="trend-arrow up"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <polyline points="18 15 12 9 6 15" />
+            </svg>
+            <span class="trend-text">
+              ↑ {{ stats.profitFromDiscounts.changePercent }}% vs last month
+            </span>
+          </div>
+        </div>
+      </div>
 
     <!-- Quick Actions -->
     <section class="section">
@@ -198,26 +208,62 @@
       </div>
     </section>
 
-    <!-- Bottom Section -->
-    <div class="bottom-section">
-      <!-- Recent Activity -->
-      <section class="section recent-activity">
-        <div class="section-header">
-          <h2 class="section-title">Recent Activity</h2>
-          <a href="#" class="view-all">View all →</a>
-        </div>
-        <div class="activity-placeholder">
-          <!-- Activity items will be populated here -->
-        </div>
-      </section>
+      <!-- Bottom Section -->
+      <div class="bottom-section">
+        <!-- Recent Activity -->
+        <section class="section recent-activity">
+          <div class="section-header">
+            <h2 class="section-title">Recent Activity</h2>
+            <a href="#" class="view-all">View all →</a>
+          </div>
+          <div class="activity-list">
+            <div class="activity-item" *ngFor="let activity of activities">
+              <div class="activity-icon"
+                [ngClass]="{
+                  'icon-sale': activity.type === 'sale',
+                  'icon-approval': activity.type === 'approval',
+                  'icon-expiry': activity.type === 'expiry_alert'
+                }">
+                <span class="material-icons">
+                  {{ getActivityIcon(activity.type) }}
+                </span>
+              </div>
+              <div class="activity-body">
+                <div class="activity-message">{{ activity.message }}</div>
+                <div class="activity-meta">{{ activity.actor }} · {{ activity.time_ago }}</div>
+              </div>
+            </div>
+            <div *ngIf="activities.length === 0" class="no-activity">
+              No recent activity
+            </div>
+          </div>
+        </section>
 
-      <!-- Food Saved vs Wasted Chart -->
-      <section class="section chart-section">
-        <h2 class="section-title">Food Saved vs. Wasted</h2>
-        <div class="chart-placeholder">
-          <!-- Chart will be rendered here -->
-        </div>
-      </section>
+        <!-- Food Saved vs Wasted Chart -->
+        <section class="section chart-section">
+          <h2 class="section-title">Food Saved vs. Wasted</h2>
+          <div class="family-tabs">
+            <button 
+              [class.active]="selectedFamily === 'weight'"
+              (click)="switchFamily('weight')">
+              Weight (kg/g)
+            </button>
+            <button 
+              [class.active]="selectedFamily === 'volume'"
+              (click)="switchFamily('volume')">
+              Volume (L/ml)
+            </button>
+            <button 
+              [class.active]="selectedFamily === 'count'"
+              (click)="switchFamily('count')">
+              Count (units)
+            </button>
+          </div>
+          <div class="chart-container">
+            <canvas id="areaChart"></canvas>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </div>

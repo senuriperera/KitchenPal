@@ -302,3 +302,205 @@
     padding: 20px;
   }
 }
+
+// Loading and Error States
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #f97316;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    color: #6b7280;
+    font-size: 14px;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 32px;
+
+  p {
+    color: #dc2626;
+    font-size: 14px;
+  }
+
+  .retry-btn {
+    background: #dc2626;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #b91c1c;
+    }
+  }
+}
+
+// Stat Sub-values
+.stat-sub {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+// Trend Colors
+.stat-trend {
+  &.red {
+    color: #ef4444;
+  }
+
+  &.green {
+    color: #10b981;
+  }
+}
+
+// Activity List
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #f9fafb;
+  }
+}
+
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .material-icons {
+    font-size: 20px;
+  }
+
+  &.icon-sale {
+    background: #dbeafe;
+    color: #3b82f6;
+  }
+
+  &.icon-approval {
+    background: #dcfce7;
+    color: #10b981;
+  }
+
+  &.icon-expiry {
+    background: #fef3c7;
+    color: #f59e0b;
+  }
+}
+
+.activity-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.activity-message {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.activity-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.no-activity {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 40px;
+}
+
+// Family Tabs
+.family-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 12px;
+
+  button {
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    &.active {
+      background: #f97316;
+      color: white;
+
+      &:hover {
+        background: #ea580c;
+      }
+    }
+  }
+}
+
+// Chart Container
+.chart-container {
+  position: relative;
+  height: 300px;
+  width: 100%;
+
+  canvas {
+    max-height: 300px;
+  }
+}

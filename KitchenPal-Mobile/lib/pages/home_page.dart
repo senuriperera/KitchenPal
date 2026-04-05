@@ -404,7 +404,7 @@ class _HomePageContentState extends State<HomePageContent> {
                 height: 110,
                 child: CustomPaint(
                   painter: CircularProgressPainter(
-                    percentage: summary.savedPercentage,
+                    percentage: summary.currentMonth.savedPercentage,
                   ),
                   child: Center(
                     child: Container(
@@ -482,7 +482,7 @@ class _HomePageContentState extends State<HomePageContent> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Total saved value: \$$savedValue',
+                      'Saved percentage: ${summary.currentMonth.savedPercentage.toStringAsFixed(1)}%',
                       style: const TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                   ],
