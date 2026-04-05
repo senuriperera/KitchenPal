@@ -332,10 +332,7 @@ class _HomePageContentState extends State<HomePageContent> {
     final summary = _monthlySummary!;
     final currentMonth = DateTime.now();
     final monthName = _getMonthName(currentMonth.month);
-    final savedPercentage = summary.savedPercentage.toStringAsFixed(0);
-    final savedKg = summary.savedCurrent.toStringAsFixed(1);
-    final wastedKg = summary.wastedCurrent.toStringAsFixed(1);
-    final savedValue = (summary.savedCurrent * 3.5).toStringAsFixed(2); // Rough estimate
+    final savedPercentage = summary.currentMonth.savedPercentage.toStringAsFixed(0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -448,9 +445,11 @@ class _HomePageContentState extends State<HomePageContent> {
                         ),
                         const Spacer(),
                         Text(
-                          '$savedKg kg',
+                          '${summary.currentMonth.saved.weight.display}  '
+                          '${summary.currentMonth.saved.volume.display}  '
+                          '${summary.currentMonth.saved.count.display}',
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -471,9 +470,11 @@ class _HomePageContentState extends State<HomePageContent> {
                         const Text('Wasted', style: TextStyle(fontSize: 13)),
                         const Spacer(),
                         Text(
-                          '$wastedKg kg',
+                          '${summary.currentMonth.wasted.weight.display}  '
+                          '${summary.currentMonth.wasted.volume.display}  '
+                          '${summary.currentMonth.wasted.count.display}',
                           style: const TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

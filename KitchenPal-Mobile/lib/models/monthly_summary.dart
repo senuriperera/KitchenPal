@@ -1,36 +1,94 @@
-class MonthlySummary {
-  final double wastedCurrent;
-  final double savedCurrent;
+// Represents a single quantity with value, unit, and display format
+class FamilyQuantity {
+  final double value;
+  final String unit;
+  final String display;
+
+  FamilyQuantity({
+    required this.value,
+    required this.unit,
+    required this.display,
+  });
+
+  factory FamilyQuantity.fromJson(Map<String, dynamic> json) {
+    return FamilyQuantity(
+      value: (json['value'] ?? 0).toDouble(),
+      unit: json['unit'] ?? '',
+      display: json['display'] ?? '',
+    );
+  }
+}
+
+// Represents quantities grouped by unit family (weight/volume/count)
+class MonthlyFamilyTotals {
+  final FamilyQuantity weight;
+  final FamilyQuantity volume;
+  final FamilyQuantity count;
+
+  MonthlyFamilyTotals({
+    required this.weight,
+    required this.volume,
+    required this.count,
+  });
+
+  factory MonthlyFamilyTotals.fromJson(Map<String, dynamic> json) {
+    return MonthlyFamilyTotals(
+      weight: FamilyQuantity.fromJson(json['weight'] ?? {}),
+      volume: FamilyQuantity.fromJson(json['volume'] ?? {}),
+      count: FamilyQuantity.fromJson(json['count'] ?? {}),
+    );
+  }
+}
+
+// Represents the current month summary
+class CurrentMonthSummary {
+  final MonthlyFamilyTotals wasted;
+  final MonthlyFamilyTotals saved;
   final double savedPercentage;
+
+  CurrentMonthSummary({
+    required this.wasted,
+    required this.saved,
+    required this.savedPercentage,
+  });
+
+  factory CurrentMonthSummary.fromJson(Map<String, dynamic> json) {
+    return CurrentMonthSummary(
+      wasted: MonthlyFamilyTotals.fromJson(json['wasted'] ?? {}),
+      saved: MonthlyFamilyTotals.fromJson(json['saved'] ?? {}),
+      savedPercentage: (json['savedPercentage'] ?? 0).toDouble(),
+    );
+  }
+}
+
+// Main MonthlySummary model
+class MonthlySummary {
+  final CurrentMonthSummary currentMonth;
   final List<MonthlyData> monthlyData;
 
   MonthlySummary({
-    required this.wastedCurrent,
-    required this.savedCurrent,
-    required this.savedPercentage,
+    required this.currentMonth,
     required this.monthlyData,
   });
 
   factory MonthlySummary.fromJson(Map<String, dynamic> json) {
-    final currentMonth = json['currentMonth'] ?? {};
     final monthlyList = (json['monthlyData'] as List<dynamic>?)
             ?.map((item) => MonthlyData.fromJson(item as Map<String, dynamic>))
             .toList() ??
         [];
 
     return MonthlySummary(
-      wastedCurrent: (currentMonth['wasted'] ?? 0).toDouble(),
-      savedCurrent: (currentMonth['saved'] ?? 0).toDouble(),
-      savedPercentage: (currentMonth['savedPercentage'] ?? 0).toDouble(),
+      currentMonth: CurrentMonthSummary.fromJson(json['currentMonth'] ?? {}),
       monthlyData: monthlyList,
     );
   }
 }
 
+// Individual month data
 class MonthlyData {
   final String month; // Format: "2026-04"
-  final double wasted;
-  final double saved;
+  final MonthlyFamilyTotals wasted;
+  final MonthlyFamilyTotals saved;
 
   MonthlyData({
     required this.month,
@@ -41,8 +99,8 @@ class MonthlyData {
   factory MonthlyData.fromJson(Map<String, dynamic> json) {
     return MonthlyData(
       month: json['month'] ?? '',
-      wasted: (json['wasted'] ?? 0).toDouble(),
-      saved: (json['saved'] ?? 0).toDouble(),
+      wasted: MonthlyFamilyTotals.fromJson(json['wasted'] ?? {}),
+      saved: MonthlyFamilyTotals.fromJson(json['saved'] ?? {}),
     );
   }
 }
