@@ -19,8 +19,6 @@ interface MenuItem {
 export class SidebarComponent {
   menuItems: MenuItem[] = [
     { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { label: 'Inventory', icon: 'inventory', route: '/inventory' },
-    { label: 'Expiry Alerts', icon: 'notification_important', route: '/expiry-alerts' },
     { label: 'Recipes', icon: 'menu_book', route: '/recipes' },
     { label: 'Discount Approvals', icon: 'local_offer', route: '/discount-approvals' },
     { label: 'Reports', icon: 'bar_chart', route: '/reports' },

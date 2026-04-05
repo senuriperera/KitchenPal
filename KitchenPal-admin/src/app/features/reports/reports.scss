@@ -81,7 +81,7 @@
 .generate-btn {
   align-self: flex-end;
   padding: 0.75rem 2rem;
-  background: #3b82f6;
+  background: #F97316;
   color: white;
   border: none;
   border-radius: 8px;
@@ -90,9 +90,20 @@
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  i {
+    font-size: 1.25rem;
+
+    &.spinner {
+      animation: spin 1s linear infinite;
+    }
+  }
 
   &:hover:not(:disabled) {
-    background: #2563eb;
+    background: #EA580C;
   }
 
   &:disabled {

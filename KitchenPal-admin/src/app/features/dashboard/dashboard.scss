@@ -71,6 +71,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 24px;
 
   svg {
     width: 20px;
@@ -121,6 +122,10 @@
   .trend-arrow {
     width: 16px;
     height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
 
     &.up {
       color: #f59e0b;

@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { DashboardComponent } from './features/dashboard/dashboard';
-import { InventoryComponent } from './features/inventory/inventory';
 import { DiscountApprovalComponent } from './features/discount-approval/discount-approval';
 import { UserManagementComponent } from './features/user-management/user-management';
 import { LoginComponent } from './features/auth/login/login';
@@ -17,17 +16,6 @@ export const routes: Routes = [
     component: DashboardComponent,
     canActivate: [authGuard],
   },
-  // W's in the Chat
-  {
-    path: 'inventory',
-    component: InventoryComponent,
-    canActivate: [authGuard],
-  },
-  {
-    path: 'expiry-alerts',
-    component: DashboardComponent,
-    canActivate: [authGuard],
-  }, // Placeholder
   { path: 'recipes', component: Recipes, canActivate: [authGuard] },
   {
     path: 'discount-approvals',
