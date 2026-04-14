@@ -139,13 +139,13 @@
             </div>
           </div>
           <div class="pie-content">
-            <div class="chart-wrapper pie-wrapper" *ngIf="filteredPieItems.length > 0">
+            <div class="chart-wrapper pie-wrapper" [hidden]="filteredPieItems.length === 0">
               <canvas id="pieChart"></canvas>
             </div>
-            <div class="no-data" *ngIf="filteredPieItems.length === 0">
+            <div class="no-data" [hidden]="filteredPieItems.length > 0">
               No data for this category
             </div>
-            <div class="pie-legend" *ngIf="filteredPieItems.length > 0">
+            <div class="pie-legend" [hidden]="filteredPieItems.length === 0">
               <div class="legend-item"
                 *ngFor="let item of filteredPieItems; let i = index">
                 <div class="legend-dot" [style.background]="pieColors[i]"></div>

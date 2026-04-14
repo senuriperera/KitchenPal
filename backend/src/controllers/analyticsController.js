@@ -385,22 +385,29 @@ class AnalyticsController {
       const getParamIndex = (offset) => branchParams.length + offset;
 
       const [topWastedResult, totalWasteResult, previousWasteResult] = await Promise.all([
-        // Top wasted ingredients
+        // Top wasted ingredients — top N per unit_family (weight/volume/count)
         db.query(`
-          SELECT 
-            si.ingredient_id,
-            si.name,
-            u.unit_family,
-            u.base_unit_code,
-            COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted_base
-          FROM waste_logs wl
-          JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-          JOIN units u ON si.base_unit_id = u.unit_id
-          WHERE wl.logged_at >= $${getParamIndex(1)}
-          ${branchFilter}
-          GROUP BY si.ingredient_id, si.name, u.unit_family, u.base_unit_code
-          ORDER BY total_wasted_base DESC
-          LIMIT $${getParamIndex(2)}
+          SELECT ingredient_id, name, unit_family, base_unit_code, total_wasted_base
+          FROM (
+            SELECT
+              si.ingredient_id,
+              si.name,
+              u.unit_family,
+              u.base_unit_code,
+              COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted_base,
+              ROW_NUMBER() OVER (
+                PARTITION BY u.unit_family
+                ORDER BY COALESCE(SUM(wl.quantity_wasted), 0) DESC
+              ) AS rn
+            FROM waste_logs wl
+            JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
+            JOIN units u ON si.base_unit_id = u.unit_id
+            WHERE wl.logged_at >= $${getParamIndex(1)}
+            ${branchFilter}
+            GROUP BY si.ingredient_id, si.name, u.unit_family, u.base_unit_code
+          ) ranked
+          WHERE rn <= $${getParamIndex(2)}
+          ORDER BY unit_family, total_wasted_base DESC
         `, [...branchParams, dateFrom, limit]),
 
         // Total waste for percentage
