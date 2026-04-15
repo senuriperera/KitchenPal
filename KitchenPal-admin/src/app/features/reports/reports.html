@@ -35,10 +35,16 @@
         </select>
       </div>
 
-      <button class="generate-btn" (click)="generateReport()" [disabled]="isGenerating">
+      <button
+        class="generate-btn"
+        (click)="generateReport()"
+        [disabled]="isGenerating"
+      >
         <i class="material-icons" *ngIf="!isGenerating">assessment</i>
-        <i class="material-icons spinner" *ngIf="isGenerating">hourglass_empty</i>
-        {{ isGenerating ? 'Generating...' : 'Generate Report' }}
+        <i class="material-icons spinner" *ngIf="isGenerating"
+          >hourglass_empty</i
+        >
+        {{ isGenerating ? "Generating..." : "Generate Report" }}
       </button>
 
       <button class="export-btn" (click)="exportCSV()" [disabled]="!reportData">
@@ -53,57 +59,68 @@
 
     <!-- Report Content -->
     <div class="report-content" *ngIf="reportData && topWastedData">
-      
       <!-- Total Waste Section -->
       <div class="total-waste-section">
-        <div class="total-label">Total Waste ({{ selectedDateRangeLabel }})</div>
+        <div class="total-label">
+          Total Waste ({{ selectedDateRangeLabel }})
+        </div>
         <div class="total-values">
           <div class="total-item">
-            <span class="total-num">{{ topWastedData.totalWaste?.weight?.display || '0 kg' }}</span>
+            <span class="total-num">{{
+              topWastedData.totalWaste?.weight?.display || "0 kg"
+            }}</span>
             <span class="total-sub">weight</span>
           </div>
           <div class="total-item">
-            <span class="total-num">{{ topWastedData.totalWaste?.volume?.display || '0 L' }}</span>
+            <span class="total-num">{{
+              topWastedData.totalWaste?.volume?.display || "0 L"
+            }}</span>
             <span class="total-sub">volume</span>
           </div>
           <div class="total-item">
-            <span class="total-num">{{ topWastedData.totalWaste?.count?.display || '0 items' }}</span>
+            <span class="total-num">{{
+              topWastedData.totalWaste?.count?.display || "0 items"
+            }}</span>
             <span class="total-sub">count</span>
           </div>
         </div>
-        <div class="change-badge"
+        <div
+          class="change-badge"
           [class.green]="topWastedData.changePercentage < 0"
           [class.red]="topWastedData.changePercentage > 0"
-          *ngIf="topWastedData.changePercentage !== undefined">
-          {{ topWastedData.changePercentage > 0 ? '+' : '' }}{{ topWastedData.changePercentage }}%
-          vs previous period
+          *ngIf="topWastedData.changePercentage !== undefined"
+        >
+          {{ topWastedData.changePercentage > 0 ? "+" : ""
+          }}{{ topWastedData.changePercentage }}% vs previous period
         </div>
       </div>
 
       <!-- Charts Section -->
       <div class="charts-grid">
-        
         <!-- Monthly Trend Bar Chart -->
         <div class="chart-card">
           <div class="chart-header">
             <h3>Monthly Trend</h3>
             <div class="family-tabs">
-              <button 
-                class="tab-btn" 
+              <button
+                class="tab-btn"
                 [class.active]="selectedFamily === 'weight'"
-                (click)="selectedFamily = 'weight'; onFamilyChange()">
+                (click)="selectedFamily = 'weight'; onFamilyChange()"
+              >
                 Weight
               </button>
-              <button 
-                class="tab-btn" 
+              <button
+                class="tab-btn"
                 [class.active]="selectedFamily === 'volume'"
-                (click)="selectedFamily = 'volume'; onFamilyChange()">
+                (click)="selectedFamily = 'volume'; onFamilyChange()"
+              >
                 Volume
               </button>
-              <button 
-                class="tab-btn" 
+              <button
+                class="tab-btn"
                 [class.active]="selectedFamily === 'count'"
-                (click)="selectedFamily = 'count'; onFamilyChange()">
+                (click)="selectedFamily = 'count'; onFamilyChange()"
+              >
                 Count
               </button>
             </div>
@@ -118,36 +135,44 @@
           <div class="chart-header">
             <h3>Top Wasted Items</h3>
             <div class="family-tabs">
-              <button 
-                class="tab-btn" 
+              <button
+                class="tab-btn"
                 [class.active]="selectedPieFamily === 'weight'"
-                (click)="selectedPieFamily = 'weight'; onPieFamilyChange()">
+                (click)="selectedPieFamily = 'weight'; onPieFamilyChange()"
+              >
                 Weight
               </button>
-              <button 
-                class="tab-btn" 
+              <button
+                class="tab-btn"
                 [class.active]="selectedPieFamily === 'volume'"
-                (click)="selectedPieFamily = 'volume'; onPieFamilyChange()">
+                (click)="selectedPieFamily = 'volume'; onPieFamilyChange()"
+              >
                 Volume
               </button>
-              <button 
-                class="tab-btn" 
+              <button
+                class="tab-btn"
                 [class.active]="selectedPieFamily === 'count'"
-                (click)="selectedPieFamily = 'count'; onPieFamilyChange()">
+                (click)="selectedPieFamily = 'count'; onPieFamilyChange()"
+              >
                 Count
               </button>
             </div>
           </div>
           <div class="pie-content">
-            <div class="chart-wrapper pie-wrapper" [hidden]="filteredPieItems.length === 0">
+            <div
+              class="chart-wrapper pie-wrapper"
+              *ngIf="filteredPieItems.length > 0"
+            >
               <canvas id="pieChart"></canvas>
             </div>
-            <div class="no-data" [hidden]="filteredPieItems.length > 0">
+            <div class="no-data" *ngIf="filteredPieItems.length === 0">
               No data for this category
             </div>
-            <div class="pie-legend" [hidden]="filteredPieItems.length === 0">
-              <div class="legend-item"
-                *ngFor="let item of filteredPieItems; let i = index">
+            <div class="pie-legend" *ngIf="filteredPieItems.length > 0">
+              <div
+                class="legend-item"
+                *ngFor="let item of filteredPieItems; let i = index"
+              >
                 <div class="legend-dot" [style.background]="pieColors[i]"></div>
                 <span class="legend-name">{{ item.name }}</span>
                 <span class="legend-value">{{ item.quantity.display }}</span>
@@ -156,7 +181,6 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -166,6 +190,5 @@
       <h3>No Report Generated</h3>
       <p>Select your filters and click "Generate Report" to view analytics</p>
     </div>
-
   </div>
 </div>

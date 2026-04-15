@@ -298,11 +298,15 @@
   font-size: 0.875rem;
   color: #6b7280;
   font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .legend-pct {
   font-size: 0.875rem;
   color: #9ca3af;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .no-data {

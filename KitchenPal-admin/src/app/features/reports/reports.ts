@@ -99,7 +99,24 @@ export class Reports implements OnInit, OnDestroy {
     });
 
     const family = this.selectedFamily;
-    const unitLabel = this.reportData.monthlyData[0]?.wasted?.[family]?.unit || 'kg';
+
+    // Find the maximum value across all months to determine the proper unit
+    let maxValue = 0;
+    this.reportData.monthlyData.forEach((d: any) => {
+      const wastedVal = d.wasted?.[family]?.value || 0;
+      const savedVal = d.saved?.[family]?.value || 0;
+      maxValue = Math.max(maxValue, wastedVal, savedVal);
+    });
+
+    // Determine unit based on max value (since backend's convertToDisplay logic)
+    let unitLabel = 'kg';
+    if (family === 'weight') {
+      unitLabel = maxValue >= 1 ? 'kg' : 'g';  // If converted value >= 1kg, use kg, else g
+    } else if (family === 'volume') {
+      unitLabel = maxValue >= 1 ? 'L' : 'ml';  // If converted value >= 1L, use L, else ml
+    } else if (family === 'count') {
+      unitLabel = 'units';
+    }
 
     if (this.monthlyChartInstance) {
       this.monthlyChartInstance.destroy();
@@ -125,14 +142,14 @@ export class Reports implements OnInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { 
-          legend: { 
-            position: 'bottom' 
-          } 
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
         },
-        scales: { 
-          x: { stacked: false }, 
-          y: { beginAtZero: true } 
+        scales: {
+          x: { stacked: false },
+          y: { beginAtZero: true }
         }
       }
     });

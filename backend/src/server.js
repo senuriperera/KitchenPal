@@ -11,6 +11,7 @@ const db = require('./config/database');
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const { runExpiryNotificationsJob } = require('./cron/expiryNotificationsJob');
+const { startAutoExpiryWasteLoggingJob } = require('./jobs/autoExpiryWasteLoggingJob');
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -165,4 +166,7 @@ function scheduleDailyExpiryJob() {
             console.error('❌ Cron: expiry notifications job failed', err);
         }
     });
+
+    // Also start the auto-expiry waste logging job
+    startAutoExpiryWasteLoggingJob();
 }
