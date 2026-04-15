@@ -461,7 +461,8 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
             bgColor: const Color(0xFFFFEBEE),
             label: 'Expiry Date',
             value: _formatDate(i.expiryDate),
-            isExpirySoon: i.daysUntilExpiry <= 3,
+            isExpirySoon: i.isExpired || i.daysUntilExpiry <= 3,
+            isExpired: i.isExpired,
           ),
         ],
       ),
@@ -475,7 +476,12 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
     required String label,
     required String value,
     bool isExpirySoon = false,
+    bool isExpired = false,
   }) {
+    final displayValue = isExpired ? 'Expired' : value;
+    final textColor = isExpirySoon ? Colors.red : Colors.black87;
+    final badgeText = isExpired ? 'Expired' : 'Expiring Soon';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -506,11 +512,11 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  value,
+                  displayValue,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: isExpirySoon ? Colors.red : Colors.black87,
+                    color: textColor,
                   ),
                 ),
               ],
@@ -523,9 +529,9 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 color: Colors.red,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
-                'Expiring Soon',
-                style: TextStyle(
+              child: Text(
+                badgeText,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
@@ -636,6 +642,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 batch.expiryDate.day,
               );
               final daysLeft = bExpiry.difference(today).inDays;
+              final isBatchExpired = daysLeft < 0;
 
               // Format the remaining quantity nicely
               String formattedQty;
