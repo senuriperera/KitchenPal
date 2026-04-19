@@ -47,11 +47,15 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
 
-        // Navigate to home page
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainContainer()),
-        );
+        // Navigate to home page after a brief delay to ensure SnackBar displays
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const MainContainer()),
+            );
+          }
+        });
       }
     } catch (e) {
       if (mounted) {

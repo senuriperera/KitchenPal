@@ -39,6 +39,7 @@ export class DiscountApprovalComponent implements OnInit, OnDestroy {
   rejectNote: { [generatedId: number]: string } = {};
 
   private wsSubscription?: Subscription;
+  private wsSubscriptions: Subscription[] = [];
 
   constructor(
     private generatedRecipeService: GeneratedRecipeService,
@@ -54,21 +55,55 @@ export class DiscountApprovalComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.wsSubscription?.unsubscribe();
+    this.wsSubscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   setupWebSocket(): void {
-    this.wsSubscription = this.wsService
-      .on<PendingGeneratedRecipe>('recipe:pending')
-      .subscribe({
-        next: (newRecipe) => {
-          console.log('New recipe pending approval:', newRecipe);
-          this.pending.unshift(newRecipe);
-          this.initializeEditValues(newRecipe);
-        },
-        error: (err) => {
-          console.error('WebSocket error:', err);
-        },
-      });
+    // Listen for new generated recipes
+    const recipeGeneratedSub = this.wsService.recipeGenerated$.subscribe({
+      next: (newRecipe) => {
+        console.log('New recipe generated:', newRecipe);
+        this.loadPending(); // Reload to get the new recipe with all details
+      },
+      error: (err) => {
+        console.error('WebSocket error (recipe:generated):', err);
+      },
+    });
+    this.wsSubscriptions.push(recipeGeneratedSub);
+
+    // Listen for recipe approvals
+    const recipeApprovedSub = this.wsService.recipeApproved$.subscribe({
+      next: (approvedRecipe) => {
+        console.log('Recipe approved:', approvedRecipe);
+        // Remove from pending list
+        this.pending = this.pending.filter(
+          (r) => r.generated_id !== approvedRecipe.generated_id
+        );
+        // Reload recently approved list
+        this.loadRecentlyApproved();
+      },
+      error: (err) => {
+        console.error('WebSocket error (recipe:approved):', err);
+      },
+    });
+    this.wsSubscriptions.push(recipeApprovedSub);
+
+    // Listen for recipe rejections
+    const recipeRejectedSub = this.wsService.recipeRejected$.subscribe({
+      next: (rejectedRecipe) => {
+        console.log('Recipe rejected:', rejectedRecipe);
+        // Remove from pending list
+        this.pending = this.pending.filter(
+          (r) => r.generated_id !== rejectedRecipe.generated_id
+        );
+        // Reload recently rejected list
+        this.loadRecentlyRejected();
+      },
+      error: (err) => {
+        console.error('WebSocket error (recipe:rejected):', err);
+      },
+    });
+    this.wsSubscriptions.push(recipeRejectedSub);
   }
 
   loadPending(): void {

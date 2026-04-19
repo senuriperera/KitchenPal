@@ -601,7 +601,7 @@ class AnalyticsController {
       }
 
       const expiryResult = await db.query(`
-        SELECT 
+        SELECT
           si.ingredient_id,
           si.name,
           si.image_url,
@@ -617,6 +617,13 @@ class AnalyticsController {
         AND (ib.expiry_date - CURRENT_DATE) >= 0
         AND ib.is_depleted = false
         ${branchFilter}
+        AND si.ingredient_id NOT IN (
+          SELECT DISTINCT grt.ingredient_id
+          FROM generated_recipe_triggers grt
+          JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
+          WHERE gr.status IN ('pending', 'approved')
+          ${branchFilter ? 'AND gr.branch_id = (SELECT branch_id FROM stock_ingredients WHERE ingredient_id = grt.ingredient_id)' : ''}
+        )
         ORDER BY ib.expiry_date ASC
         LIMIT 5
       `, branchParams);

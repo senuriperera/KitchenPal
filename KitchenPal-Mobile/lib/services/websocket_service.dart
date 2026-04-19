@@ -21,13 +21,35 @@ class WebSocketService {
   final StreamController<void> _notificationsChangedController =
       StreamController<void>.broadcast();
 
+  final StreamController<Map<String, dynamic>> _recipeGeneratedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  final StreamController<Map<String, dynamic>> _recipeApprovedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  final StreamController<Map<String, dynamic>> _recipeRejectedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
   /// Emitted whenever the backend signals that inventory changed
   /// (ingredient created/deleted, expiry-related updates, etc.).
   Stream<void> get inventoryChanged => _inventoryChangedController.stream;
 
   /// Emitted whenever the backend signals that notifications changed
   /// (recipe approved/rejected notifications).
-  Stream<void> get notificationsChanged => _notificationsChangedController.stream;
+  Stream<void> get notificationsChanged =>
+      _notificationsChangedController.stream;
+
+  /// Emitted when a recipe is generated
+  Stream<Map<String, dynamic>> get recipeGenerated =>
+      _recipeGeneratedController.stream;
+
+  /// Emitted when a recipe is approved
+  Stream<Map<String, dynamic>> get recipeApproved =>
+      _recipeApprovedController.stream;
+
+  /// Emitted when a recipe is rejected
+  Stream<Map<String, dynamic>> get recipeRejected =>
+      _recipeRejectedController.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -67,6 +89,21 @@ class WebSocketService {
       _notificationsChangedController.add(null);
     });
 
+    // Recipe generated event
+    socket.on('recipe:generated', (data) {
+      _recipeGeneratedController.add(Map<String, dynamic>.from(data ?? {}));
+    });
+
+    // Recipe approved event
+    socket.on('recipe:approved', (data) {
+      _recipeApprovedController.add(Map<String, dynamic>.from(data ?? {}));
+    });
+
+    // Recipe rejected event
+    socket.on('recipe:rejected', (data) {
+      _recipeRejectedController.add(Map<String, dynamic>.from(data ?? {}));
+    });
+
     socket.onDisconnect((_) {
       // Disconnected
     });
@@ -80,5 +117,8 @@ class WebSocketService {
     _socket = null;
     _inventoryChangedController.close();
     _notificationsChangedController.close();
+    _recipeGeneratedController.close();
+    _recipeApprovedController.close();
+    _recipeRejectedController.close();
   }
 }

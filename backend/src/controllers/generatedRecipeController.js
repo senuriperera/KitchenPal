@@ -31,6 +31,32 @@ async function createGeneratedRecipe(req, res) {
     try {
         await client.query('BEGIN');
 
+        // Check if any of the selected ingredients are already locked in pending recipes
+        const ingredientIds = selected_batches
+            .map((b) => b.ingredient_id)
+            .filter((id) => id != null);
+
+        if (ingredientIds.length > 0) {
+            const lockedIngredientsResult = await client.query(
+                `SELECT DISTINCT grt.ingredient_id
+           FROM generated_recipe_triggers grt
+           JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
+           WHERE gr.branch_id = $1
+             AND gr.status = 'pending'
+             AND grt.ingredient_id = ANY($2)`,
+                [branchId, ingredientIds]
+            );
+
+            if (lockedIngredientsResult.rows.length > 0) {
+                await client.query('ROLLBACK');
+                const lockedIngredientIds = lockedIngredientsResult.rows.map(row => row.ingredient_id);
+                return res.status(400).json({
+                    error: 'One or more selected ingredients are already locked in pending recipes',
+                    locked_ingredient_ids: lockedIngredientIds
+                });
+            }
+        }
+
         // 1) Insert into generated_recipes
         const insertRecipeResult = await client.query(
             `INSERT INTO generated_recipes (
@@ -75,10 +101,6 @@ async function createGeneratedRecipe(req, res) {
         }
 
         // 3) Mark corresponding expiry_alert notifications as read for this staff member
-        const ingredientIds = selected_batches
-            .map((b) => b.ingredient_id)
-            .filter((id) => id != null);
-
         if (ingredientIds.length > 0) {
             await client.query(
                 `UPDATE notifications
@@ -161,10 +183,23 @@ async function createGeneratedRecipe(req, res) {
 
         await client.query('COMMIT');
 
-        // 6) Emit WebSocket event to notify admins
-        const io = req.app.get('io');
-        if (io && recipeDetailsResult.rows[0]) {
-            io.emit('recipe:pending', recipeDetailsResult.rows[0]);
+        // Emit WebSocket event to notify clients of status change
+        const io = req.app && req.app.get ? req.app.get('io') : null;
+        if (io) {
+            const triggerResult = await db.query(
+                `SELECT ingredient_id FROM generated_recipe_triggers WHERE generated_id = $1`,
+                [generatedId]
+            );
+            const ingredientIds = triggerResult.rows.map(row => row.ingredient_id);
+            const recipeName = recipeDetailsResult.rows[0]?.name || 'Recipe';
+
+            io.emit('recipe:generated', {
+                generated_id: generatedId,
+                branch_id: branchId,
+                ingredient_ids: ingredientIds,
+                status: 'pending',
+                recipe_name: recipeName,
+            });
         }
 
         return res.status(201).json({ generated_id: generatedId });
@@ -238,7 +273,7 @@ async function getGeneratedRecipesForBranch(req, res) {
 async function getPendingGeneratedRecipes(req, res) {
     try {
         console.log('Fetching pending generated recipes...');
-        
+
         // Check if there are ANY generated recipes
         const allRecipesResult = await db.query(
             `SELECT COUNT(*) as count FROM generated_recipes`
@@ -383,12 +418,21 @@ async function approveGeneratedRecipe(req, res) {
 
         await client.query('COMMIT');
 
-        // Emit WebSocket event to notify clients
+        // Emit WebSocket event to notify clients of status change
         const io = req.app && req.app.get ? req.app.get('io') : null;
         if (io) {
-            io.emit('notifications:changed', {
-                action: 'recipe_approved',
+            const triggerResult = await db.query(
+                `SELECT ingredient_id FROM generated_recipe_triggers WHERE generated_id = $1`,
+                [generatedId]
+            );
+            const ingredientIds = triggerResult.rows.map(row => row.ingredient_id);
+
+            io.emit('recipe:approved', {
+                generated_id: generatedId,
                 branch_id: branchId,
+                ingredient_ids: ingredientIds,
+                status: 'approved',
+                recipe_name: recipeName,
             });
         }
 
@@ -500,6 +544,24 @@ async function rejectGeneratedRecipe(req, res) {
         console.log('Recipe rejected notifications created for', staffResult.rows.length, 'staff members');
 
         await client.query('COMMIT');
+
+        // Emit WebSocket event to notify clients of status change
+        const io = req.app && req.app.get ? req.app.get('io') : null;
+        if (io) {
+            const triggerResult = await db.query(
+                `SELECT ingredient_id FROM generated_recipe_triggers WHERE generated_id = $1`,
+                [generatedId]
+            );
+            const ingredientIds = triggerResult.rows.map(row => row.ingredient_id);
+
+            io.emit('recipe:rejected', {
+                generated_id: generatedId,
+                branch_id: branchId,
+                ingredient_ids: ingredientIds,
+                status: 'available',
+                admin_note: admin_note,
+            });
+        }
 
         return res.json({ message: 'Generated recipe rejected successfully' });
     } catch (err) {

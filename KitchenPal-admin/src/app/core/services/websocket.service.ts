@@ -9,10 +9,14 @@ import { environment } from '../../../environments/environment';
 export class WebSocketService implements OnDestroy {
   private socket: Socket;
   private notificationsChangedSubject = new Subject<void>();
-  private recipePendingSubject = new Subject<any>();
+  private recipeGeneratedSubject = new Subject<any>();
+  private recipeApprovedSubject = new Subject<any>();
+  private recipeRejectedSubject = new Subject<any>();
 
   notificationsChanged$ = this.notificationsChangedSubject.asObservable();
-  recipePending$ = this.recipePendingSubject.asObservable();
+  recipeGenerated$ = this.recipeGeneratedSubject.asObservable();
+  recipeApproved$ = this.recipeApprovedSubject.asObservable();
+  recipeRejected$ = this.recipeRejectedSubject.asObservable();
 
   constructor(private ngZone: NgZone) {
     this.socket = io(environment.wsUrl, {
@@ -39,10 +43,24 @@ export class WebSocketService implements OnDestroy {
       });
     });
 
-    // Listen for new pending recipes
-    this.socket.on('recipe:pending', (data) => {
+    // Listen for new generated recipes
+    this.socket.on('recipe:generated', (data) => {
       this.ngZone.run(() => {
-        this.recipePendingSubject.next(data);
+        this.recipeGeneratedSubject.next(data);
+      });
+    });
+
+    // Listen for recipe approvals
+    this.socket.on('recipe:approved', (data) => {
+      this.ngZone.run(() => {
+        this.recipeApprovedSubject.next(data);
+      });
+    });
+
+    // Listen for recipe rejections
+    this.socket.on('recipe:rejected', (data) => {
+      this.ngZone.run(() => {
+        this.recipeRejectedSubject.next(data);
       });
     });
   }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/expiry_notification.dart';
 import '../services/notification_service.dart';
+import '../services/ingredient_service.dart';
 import '../services/recipe_service.dart';
 import '../services/websocket_service.dart';
 import 'recipe_suggestions_page.dart';
@@ -25,35 +27,124 @@ class NotificationsPageContent extends StatefulWidget {
       _NotificationsPageContentState();
 }
 
-class _NotificationsPageContentState extends State<NotificationsPageContent> {
-  List<ExpiryNotification> _expiringNotifications = [];
+class _NotificationsPageContentState extends State<NotificationsPageContent>
+    with WidgetsBindingObserver {
+  List<Map<String, dynamic>> _availableIngredients = [];
   Set<int> _selectedBatchIds = {};
   bool _isLoading = true;
   String? _errorMessage;
+  late StreamSubscription<dynamic> _inventoryChangedSubscription;
+  late StreamSubscription<dynamic> _recipeGeneratedSubscription;
+  late StreamSubscription<dynamic> _recipeApprovedSubscription;
+  late StreamSubscription<dynamic> _recipeRejectedSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadExpiringNotifications();
+    WidgetsBinding.instance.addObserver(this);
+    _loadAvailableIngredients();
 
-    // Keep expiry notifications in sync with inventory changes
+    // Keep ingredients in sync with inventory changes
     WebSocketService.instance.connect();
-    WebSocketService.instance.inventoryChanged.listen((_) {
-      _loadExpiringNotifications();
+    _inventoryChangedSubscription =
+        WebSocketService.instance.inventoryChanged.listen((_) {
+      _loadAvailableIngredients();
+    });
+
+    // Listen to recipe status changes for real-time updates
+    _recipeGeneratedSubscription =
+        WebSocketService.instance.recipeGenerated.listen((event) {
+      _updateIngredientStatus(
+        event['ingredient_ids'] as List<dynamic>,
+        'awaiting_approval',
+        recipeName: event['recipe_name'] as String?,
+      );
+    });
+
+    _recipeApprovedSubscription =
+        WebSocketService.instance.recipeApproved.listen((event) {
+      _updateIngredientStatus(
+        event['ingredient_ids'] as List<dynamic>,
+        'approved',
+      );
+    });
+
+    _recipeRejectedSubscription =
+        WebSocketService.instance.recipeRejected.listen((event) {
+      _updateIngredientStatus(
+        event['ingredient_ids'] as List<dynamic>,
+        'available',
+      );
     });
   }
 
-  Future<void> _loadExpiringNotifications() async {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reload ingredients when app comes back to foreground
+      _loadAvailableIngredients();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _inventoryChangedSubscription.cancel();
+    _recipeGeneratedSubscription.cancel();
+    _recipeApprovedSubscription.cancel();
+    _recipeRejectedSubscription.cancel();
+    super.dispose();
+  }
+
+  void _updateIngredientStatus(
+    List<dynamic> ingredientIds,
+    String newStatus,
+    {String? recipeName}
+  ) {
+    setState(() {
+      for (var ingredient in _availableIngredients) {
+        if (ingredientIds.contains(ingredient['ingredient_id'])) {
+          ingredient['status'] = newStatus;
+
+          if (newStatus == 'awaiting_approval') {
+            ingredient['message'] = recipeName != null
+                ? 'Awaiting approval (Selected for $recipeName)'
+                : 'Awaiting approval';
+          } else if (newStatus == 'approved') {
+            ingredient['message'] = 'Already used in approved recipe';
+          } else {
+            ingredient['message'] = null;
+          }
+        }
+      }
+
+      // Clear selections if ingredients were just locked
+      if (newStatus == 'awaiting_approval') {
+        for (var ingredientId in ingredientIds) {
+          // Find batch_id for this ingredient_id and deselect
+          for (var ingredient in _availableIngredients) {
+            if (ingredient['ingredient_id'] == ingredientId) {
+              _selectedBatchIds.remove(ingredient['batch_id']);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  Future<void> _loadAvailableIngredients() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final notifications = await NotificationService.getExpiryNotifications();
+      final ingredients =
+          await IngredientService.getAvailableIngredientsForRecipeGeneration();
 
       setState(() {
-        _expiringNotifications = notifications;
+        _availableIngredients = ingredients;
+        _selectedBatchIds.clear(); // Clear selections on reload
         _isLoading = false;
       });
     } catch (e) {
@@ -64,7 +155,10 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     }
   }
 
-  void _toggleSelection(int batchId) {
+  void _toggleSelection(int batchId, String status) {
+    // Only allow selection of available ingredients
+    if (status != 'available') return;
+
     setState(() {
       if (_selectedBatchIds.contains(batchId)) {
         _selectedBatchIds.remove(batchId);
@@ -91,22 +185,37 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     });
 
     try {
-      // Build selected_items payload using real batch_id
-      final selectedItems = _expiringNotifications
-          .where((n) => _selectedBatchIds.contains(n.batchId))
+      // Build selected_items payload using selected batch_ids
+      final selectedItems = _availableIngredients
+          .where((ing) => _selectedBatchIds.contains(ing['batch_id']))
           .map(
-            (n) => {
-              'batch_id': n.batchId,
-              'ingredient_id': n.ingredientId,
-              'name': n.name,
-              'days_until_expiry': n.daysUntilExpiry,
-              'expiry_date': n.expiryDate.toIso8601String().split('T').first,
-              'remaining_base_quantity': n.remainingBaseQuantity,
+            (ing) => {
+              'batch_id': ing['batch_id'],
+              'ingredient_id': ing['ingredient_id'],
+              'name': ing['name'],
+              'days_until_expiry': ing['days_until_expiry'],
+              'expiry_date': ing['expiry_date'].toString().split(' ').first,
+              'remaining_base_quantity': ing['remaining_quantity'],
             },
           )
           .toList();
 
       final recipes = await RecipeService.generateRecipes(selectedItems);
+
+      // Immediately update local state to show ingredients as awaiting approval
+      final selectedIngredientIds = selectedItems
+          .map((item) => item['ingredient_id'] as int)
+          .toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        for (var ingredient in _availableIngredients) {
+          if (selectedIngredientIds.contains(ingredient['ingredient_id'])) {
+            ingredient['status'] = 'awaiting_approval';
+          }
+        }
+      });
 
       final selectedBatches = selectedItems
           .map(
@@ -128,6 +237,11 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
           ),
         ),
       );
+
+      // After returning from RecipeSuggestionsPage, reload ingredients to sync with backend
+      if (mounted) {
+        _loadAvailableIngredients();
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -199,14 +313,14 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: _loadExpiringNotifications,
+                            onPressed: _loadAvailableIngredients,
                             child: const Text('Retry'),
                           ),
                         ],
                       ),
                     ),
                   )
-                : _expiringNotifications.isEmpty
+                : _availableIngredients.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -234,31 +348,36 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
                     ),
                   )
                 : RefreshIndicator(
-                    onRefresh: _loadExpiringNotifications,
+                    onRefresh: _loadAvailableIngredients,
                     child: ListView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16.0,
                         vertical: 8.0,
                       ),
-                      itemCount: _expiringNotifications.length,
+                      itemCount: _availableIngredients.length,
                       itemBuilder: (context, index) {
-                        final notification = _expiringNotifications[index];
-                        return _buildExpiryItem(notification);
+                        final ingredient = _availableIngredients[index];
+                        return _buildIngredientCard(ingredient);
                       },
                     ),
                   ),
           ),
 
           // Generate Recipe Button
-          if (_expiringNotifications.isNotEmpty)
+          if (_availableIngredients.isNotEmpty &&
+              _availableIngredients
+                  .any((ing) => ing['status'] == 'available'))
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _generateRecipe,
+                  onPressed:
+                      _selectedBatchIds.isEmpty ? null : _generateRecipe,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF59E0B),
+                    backgroundColor: _selectedBatchIds.isEmpty
+                        ? Colors.grey[400]
+                        : const Color(0xFFF59E0B),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -277,15 +396,39 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
     );
   }
 
-  Widget _buildExpiryItem(ExpiryNotification notification) {
-    final isSelected = _selectedBatchIds.contains(notification.batchId);
-    final daysUntilExpiry = notification.daysUntilExpiry;
+  Widget _buildIngredientCard(Map<String, dynamic> ingredient) {
+    final batchId = ingredient['batch_id'] as int;
+    final status = ingredient['status'] as String;
+    final message = ingredient['message'] as String?;
+    final isSelected = _selectedBatchIds.contains(batchId);
+    final isAvailable = status == 'available';
+
+    // Safely parse daysUntilExpiry - could be int or String
+    final daysUntilExpiry = ingredient['days_until_expiry'] is int
+        ? ingredient['days_until_expiry'] as int
+        : int.tryParse(ingredient['days_until_expiry'].toString()) ?? 0;
 
     // Format the quantity display
-    final qty = notification.remainingBaseQuantity;
-    final qtyStr = qty == qty.roundToDouble()
-        ? qty.toInt().toString()
-        : qty.toStringAsFixed(1);
+    final qty = ingredient['remaining_quantity'];
+    final qtyNum = qty is num
+        ? qty
+        : (double.tryParse(qty.toString()) ?? 0.0);
+    final qtyStr = qtyNum == qtyNum.toInt()
+        ? qtyNum.toInt().toString()
+        : qtyNum.toStringAsFixed(1);
+
+    Color statusColor;
+    IconData statusIcon;
+    if (status == 'available') {
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
+    } else if (status == 'awaiting_approval') {
+      statusColor = Colors.orange;
+      statusIcon = Icons.schedule;
+    } else {
+      statusColor = Colors.grey;
+      statusIcon = Icons.lock;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -293,6 +436,9 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: isAvailable && isSelected
+            ? Border.all(color: const Color(0xFFF59E0B), width: 2)
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -301,132 +447,171 @@ class _NotificationsPageContentState extends State<NotificationsPageContent> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Checkbox
-          GestureDetector(
-            onTap: () => _toggleSelection(notification.batchId),
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFFF59E0B)
-                      : Colors.grey[400]!,
-                  width: 2,
+          Row(
+            children: [
+              // Checkbox (only enabled for available)
+              GestureDetector(
+                onTap: () => _toggleSelection(batchId, status),
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isAvailable
+                          ? (isSelected
+                              ? const Color(0xFFF59E0B)
+                              : Colors.grey[400]!)
+                          : Colors.grey[300]!,
+                      width: 2,
+                    ),
+                    borderRadius: BorderRadius.circular(6),
+                    color: isAvailable && isSelected
+                        ? const Color(0xFFF59E0B)
+                        : Colors.white,
+                  ),
+                  child: isAvailable && isSelected
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
                 ),
-                borderRadius: BorderRadius.circular(6),
-                color: isSelected ? const Color(0xFFF59E0B) : Colors.white,
               ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 16, color: Colors.white)
-                  : null,
-            ),
-          ),
-          const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-          // Ingredient Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              width: 70,
-              height: 70,
-              color: Colors.grey[200],
-              child:
-                  notification.imageUrl != null &&
-                      notification.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      notification.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+              // Ingredient Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  color: Colors.grey[200],
+                  child: ingredient['image_url'] != null &&
+                          (ingredient['image_url'] as String).isNotEmpty
+                      ? Image.network(
+                          ingredient['image_url'] as String,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFFFE0B2),
+                              child: const Icon(
+                                Icons.fastfood,
+                                size: 30,
+                                color: Colors.grey,
+                              ),
+                            );
+                          },
+                        )
+                      : Container(
                           color: const Color(0xFFFFE0B2),
                           child: const Icon(
                             Icons.fastfood,
                             size: 30,
                             color: Colors.grey,
                           ),
-                        );
-                      },
-                    )
-                  : Container(
-                      color: const Color(0xFFFFE0B2),
-                      child: const Icon(
-                        Icons.fastfood,
-                        size: 30,
-                        color: Colors.grey,
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Ingredient Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ingredient['name'] as String,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-            ),
-          ),
-          const SizedBox(width: 12),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Expires: ${ingredient['expiry_date'].toString().split(' ').first}',
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$qtyStr ${ingredient['unit_name']}',
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
 
-          // Notification Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  notification.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+              // Days until expiry badge
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: daysUntilExpiry <= 3
+                      ? const Color(0xFFFFEBEE)
+                      : const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Expires: ${notification.expiryDate.year}-${notification.expiryDate.month.toString().padLeft(2, '0')}-${notification.expiryDate.day.toString().padLeft(2, '0')}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                child: Column(
+                  children: [
+                    Text(
+                      daysUntilExpiry.toString(),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: daysUntilExpiry <= 3
+                            ? Colors.red
+                            : const Color(0xFFFF9800),
+                      ),
+                    ),
+                    Text(
+                      daysUntilExpiry == 1 ? 'day' : 'days',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: daysUntilExpiry <= 3
+                            ? Colors.red
+                            : const Color(0xFFFF9800),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$qtyStr ${notification.baseUnitCode} remaining',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  notification.storageTypeName,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          // Days until expiry badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: daysUntilExpiry <= 3
-                  ? const Color(0xFFFFEBEE)
-                  : const Color(0xFFFFF3E0),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  daysUntilExpiry.toString(),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: daysUntilExpiry <= 3
-                        ? Colors.red
-                        : const Color(0xFFFF9800),
-                  ),
+          // Status message if ingredient is locked
+          if (!isAvailable && message != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: status == 'awaiting_approval'
+                    ? const Color(0xFFFFF3E0)
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: statusColor.withOpacity(0.3),
+                  width: 1,
                 ),
-                Text(
-                  daysUntilExpiry == 1 ? 'day' : 'days',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: daysUntilExpiry <= 3
-                        ? Colors.red
-                        : const Color(0xFFFF9800),
+              ),
+              child: Row(
+                children: [
+                  Icon(statusIcon, size: 16, color: statusColor),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: statusColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

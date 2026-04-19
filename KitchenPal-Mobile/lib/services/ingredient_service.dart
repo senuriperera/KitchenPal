@@ -175,6 +175,41 @@ class IngredientService {
     }
   }
 
+  // GET /api/ingredients/available-for-generation
+  // Returns ingredients with lock status (available, awaiting_approval, approved)
+  static Future<List<Map<String, dynamic>>>
+  getAvailableIngredientsForRecipeGeneration() async {
+    final headers = await _authHeaders();
+    var response = await http.get(
+      Uri.parse('${ApiConstants.baseUrl}/ingredients/available-for-generation'),
+      headers: headers,
+    );
+
+    // Retry once if token expired
+    if (response.statusCode == 401) {
+      await _refreshTokenIfExpired();
+      final newHeaders = await _authHeaders();
+      response = await http.get(
+        Uri.parse(
+          '${ApiConstants.baseUrl}/ingredients/available-for-generation',
+        ),
+        headers: newHeaders,
+      );
+    }
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      final List<dynamic> list = json['ingredients'] ?? [];
+      return list.cast<Map<String, dynamic>>();
+    } else if (response.statusCode == 401) {
+      throw Exception('401');
+    } else {
+      throw Exception(
+        'Failed to load available ingredients: ${response.statusCode}',
+      );
+    }
+  }
+
   // Client-side helpers
   static List<Ingredient> searchIngredients(List<Ingredient> list, String q) {
     if (q.isEmpty) return list;
