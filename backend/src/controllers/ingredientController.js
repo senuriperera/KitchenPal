@@ -248,6 +248,8 @@ class IngredientController {
                 AND (ib.expiry_date - CURRENT_DATE) >= 0
                 AND ib.is_depleted = false
                 AND si.branch_id = $1
+                AND si.deleted_at IS NULL
+                AND ib.deleted_at IS NULL
                 ORDER BY ib.expiry_date ASC
             `, [branch_id]);
 

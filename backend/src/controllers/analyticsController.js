@@ -76,6 +76,8 @@ class AnalyticsController {
           WHERE ib.expiry_date <= CURRENT_DATE + INTERVAL '3 days'
           AND ib.expiry_date >= CURRENT_DATE
           AND ib.is_depleted = false
+          AND si.deleted_at IS NULL
+          AND ib.deleted_at IS NULL
           ${branchFilter}
         `, branchParams),
 
@@ -616,6 +618,8 @@ class AnalyticsController {
         WHERE (ib.expiry_date - CURRENT_DATE) <= 3
         AND (ib.expiry_date - CURRENT_DATE) >= 0
         AND ib.is_depleted = false
+        AND si.deleted_at IS NULL
+        AND ib.deleted_at IS NULL
         ${branchFilter}
         AND si.ingredient_id NOT IN (
           SELECT DISTINCT grt.ingredient_id

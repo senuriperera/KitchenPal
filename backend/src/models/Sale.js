@@ -183,6 +183,7 @@ class SaleModel {
                      WHERE ingredient_id = $1
                        AND is_depleted = false
                        AND expiry_date > NOW()::DATE
+                       AND deleted_at IS NULL
                      ORDER BY expiry_date ASC
                      FOR UPDATE`,
                     [ing.ingredient_id]
@@ -237,6 +238,7 @@ class SaleModel {
                             WHERE ingredient_id = $2
                               AND is_depleted = false
                               AND expiry_date > NOW()::DATE
+                              AND deleted_at IS NULL
                         ),
                         last_updated = NOW()
                      WHERE ingredient_id = $3`,

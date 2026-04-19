@@ -36,6 +36,8 @@ class NotificationController {
                     AND ib.is_depleted = false
                     AND ib.expiry_date <= CURRENT_DATE + ($2 || ' days')::INTERVAL
                     AND ib.expiry_date >= CURRENT_DATE
+                    AND si.deleted_at IS NULL
+                    AND ib.deleted_at IS NULL
                 ORDER BY ib.expiry_date ASC
             `;
 

@@ -29,7 +29,9 @@ async function runExpiryNotificationsJob() {
        JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
        WHERE ib.is_depleted = false
          AND (ib.expiry_date - CURRENT_DATE) <= 3
-         AND (ib.expiry_date - CURRENT_DATE) >= 0`
+         AND (ib.expiry_date - CURRENT_DATE) >= 0
+         AND si.deleted_at IS NULL
+         AND ib.deleted_at IS NULL`
         );
 
         if (expiringResult.rows.length === 0) {
