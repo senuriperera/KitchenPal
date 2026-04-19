@@ -554,6 +554,47 @@ async function getRecentlyApprovedRecipes(req, res) {
 }
 
 /**
+ * GET /api/generated-recipes/recently-rejected
+ * Admin: list recently rejected generated recipes (last 10).
+ */
+async function getRecentlyRejectedRecipes(req, res) {
+    try {
+        const result = await db.query(
+            `SELECT
+         gr.generated_id,
+         gr.admin_note,
+         gr.reviewed_at,
+         r.name,
+         r.image_url,
+         r.base_price,
+         r.cooking_time_minutes,
+         r.recipe_id,
+         u.name AS generated_by_name,
+         b.name AS branch_name,
+         CASE
+           WHEN EXISTS (
+             SELECT 1 FROM generated_recipe_triggers grt
+             WHERE grt.generated_id = gr.generated_id
+           ) THEN 'Auto-suggested'
+           ELSE 'Predefined'
+         END AS recipe_type
+       FROM generated_recipes gr
+       JOIN recipes r ON gr.recipe_id = r.recipe_id
+       JOIN users u ON gr.generated_by = u.user_id
+       JOIN branches b ON gr.branch_id = b.branch_id
+       WHERE gr.status = 'rejected'
+       ORDER BY gr.reviewed_at DESC
+       LIMIT 10`
+        );
+
+        return res.json({ items: result.rows });
+    } catch (err) {
+        console.error('Error fetching recently rejected recipes:', err);
+        return res.status(500).json({ error: 'Failed to fetch recently rejected recipes' });
+    }
+}
+
+/**
  * GET /api/generated-recipes/:id/ingredients
  * Get ingredients for a generated recipe.
  */
@@ -602,5 +643,6 @@ module.exports = {
     approveGeneratedRecipe,
     rejectGeneratedRecipe,
     getRecentlyApprovedRecipes,
+    getRecentlyRejectedRecipes,
     getGeneratedRecipeIngredients,
 };

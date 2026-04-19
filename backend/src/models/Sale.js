@@ -176,11 +176,13 @@ class SaleModel {
                 console.log('[SaleModel.create] Amount needed:', ing.base_qty_needed);
 
                 // Query batches oldest expiry first with FOR UPDATE lock
+                // Only include non-expired batches
                 const batchesResult = await client.query(
                     `SELECT batch_id, remaining_base_quantity
                      FROM ingredient_batches
                      WHERE ingredient_id = $1
                        AND is_depleted = false
+                       AND expiry_date > NOW()::DATE
                      ORDER BY expiry_date ASC
                      FOR UPDATE`,
                     [ing.ingredient_id]
@@ -225,6 +227,7 @@ class SaleModel {
                 console.log('[SaleModel.create] Updating stock_ingredients for', ing.ingredient_name);
 
                 // Update stock_ingredients after all batch deductions
+                // Only count non-expired, non-depleted batches
                 await client.query(
                     `UPDATE stock_ingredients SET
                         total_base_quantity = total_base_quantity - $1,
@@ -233,6 +236,7 @@ class SaleModel {
                             FROM ingredient_batches
                             WHERE ingredient_id = $2
                               AND is_depleted = false
+                              AND expiry_date > NOW()::DATE
                         ),
                         last_updated = NOW()
                      WHERE ingredient_id = $3`,

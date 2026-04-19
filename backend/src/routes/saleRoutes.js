@@ -8,7 +8,9 @@ const validate = require('../middleware/validate');
 // Validation rules
 const createSaleValidation = [
     body('recipe_id').isInt().withMessage('Valid recipe_id is required'),
-    body('generated_id').optional().isInt().withMessage('generated_id must be an integer'),
+    body('generated_id')
+        .custom(value => value === null || Number.isInteger(value))
+        .withMessage('generated_id must be null (for standard recipes) or an integer (for generated recipes)'),
     body('quantity_sold')
         .optional()
         .isInt({ min: 1 })

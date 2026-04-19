@@ -9,6 +9,7 @@ const {
     approveGeneratedRecipe,
     rejectGeneratedRecipe,
     getRecentlyApprovedRecipes,
+    getRecentlyRejectedRecipes,
     getGeneratedRecipeIngredients,
 } = require('../controllers/generatedRecipeController');
 
@@ -25,6 +26,9 @@ router.get('/pending', authenticate, authorize('admin'), getPendingGeneratedReci
 
 // Admin: list recently approved generated recipes
 router.get('/recently-approved', authenticate, authorize('admin'), getRecentlyApprovedRecipes);
+
+// Admin: list recently rejected generated recipes
+router.get('/recently-rejected', authenticate, authorize('admin'), getRecentlyRejectedRecipes);
 
 // Get ingredients for a generated recipe
 router.get('/:id/ingredients', authenticate, getGeneratedRecipeIngredients);

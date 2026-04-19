@@ -6,6 +6,7 @@ import {
   GeneratedRecipeService,
   PendingGeneratedRecipe,
   ApprovedGeneratedRecipe,
+  RejectedGeneratedRecipe,
   RecipeIngredient,
 } from '../../core/services/generated-recipe.service';
 import { WebSocketService } from '../../core/services/websocket.service';
@@ -21,6 +22,7 @@ import { Subscription } from 'rxjs';
 export class DiscountApprovalComponent implements OnInit, OnDestroy {
   pending: PendingGeneratedRecipe[] = [];
   recentlyApproved: ApprovedGeneratedRecipe[] = [];
+  recentlyRejected: RejectedGeneratedRecipe[] = [];
   isLoading = true;
   error: string | null = null;
 
@@ -46,6 +48,7 @@ export class DiscountApprovalComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadPending();
     this.loadRecentlyApproved();
+    this.loadRecentlyRejected();
     this.setupWebSocket();
   }
 
@@ -94,6 +97,17 @@ export class DiscountApprovalComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to load recently approved recipes', err);
+      },
+    });
+  }
+
+  loadRecentlyRejected(): void {
+    this.generatedRecipeService.getRecentlyRejected().subscribe({
+      next: (items) => {
+        this.recentlyRejected = items;
+      },
+      error: (err) => {
+        console.error('Failed to load recently rejected recipes', err);
       },
     });
   }
@@ -188,6 +202,7 @@ export class DiscountApprovalComponent implements OnInit, OnDestroy {
         );
         this.showRejectForm[item.generated_id] = false;
         this.rejectNote[item.generated_id] = '';
+        this.loadRecentlyRejected();
       },
       error: (err) => {
         console.error('Failed to reject generated recipe', err);
