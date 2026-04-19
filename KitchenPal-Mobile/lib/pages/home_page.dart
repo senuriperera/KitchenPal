@@ -8,6 +8,7 @@ import '../models/nearing_expiry_item.dart';
 import '../services/websocket_service.dart';
 import '../services/notification_bell_service.dart';
 import 'login.dart';
+import 'waste_report_page.dart';
 
 // Main HomePage wrapper for backward compatibility
 class HomePage extends StatelessWidget {
@@ -363,18 +364,39 @@ class _HomePageContentState extends State<HomePageContent> {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'View Report',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const WasteReportPage(),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00C853).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF00C853).withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View Report',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF00C853),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF00C853)),
+                    ],
+                  ),
                 ),
               ),
             ],

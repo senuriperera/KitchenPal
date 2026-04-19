@@ -16,6 +16,7 @@ class AnalyticsController {
   static getDateRange(rangeType) {
     const now = new Date();
     const daysMap = {
+      'last_7_days': 7,
       'last_30_days': 30,
       'last_90_days': 90,
       'last_6_months': 180
@@ -33,32 +34,30 @@ class AnalyticsController {
       const userBranchId = req.user.branch_id;
       const queryBranchId = req.query.branch_id;
 
-      // Determine branch filter - case insensitive role check
+      // branchFilter   → used for queries joining stock_ingredients (si.branch_id)
+      // wasteFilter    → used for waste_logs queries (wl.branch_id — more reliable)
       let branchFilter = '';
+      let wasteFilter = '';
       let branchParams = [];
-      
+
       if (userRole.toLowerCase() === 'admin') {
-        // Admin: filter by specific branch if provided, otherwise see all branches
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
+          wasteFilter  = 'AND wl.branch_id = $1';
           branchParams = [queryBranchId];
         }
-        // If no queryBranchId, branchFilter stays empty (sees all branches)
+        // No queryBranchId → admin sees all branches, both filters stay empty
       } else {
-        // Non-admin: always filter to their branch
         branchFilter = 'AND si.branch_id = $1';
+        wasteFilter  = 'AND wl.branch_id = $1';
         branchParams = [userBranchId];
       }
 
-      // Get current month boundaries
       const now = new Date();
-      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
       const getParamIndex = (offset) => branchParams.length + offset;
 
-      // Run all queries in parallel
       const [
         nearExpiryResult,
         wastedThisMonthResult,
@@ -68,50 +67,47 @@ class AnalyticsController {
         activeDiscountsResult,
         profitThisMonthResult
       ] = await Promise.all([
+
         // 1. Items near expiry (within 3 days)
         db.query(`
           SELECT COUNT(DISTINCT ib.batch_id) as count
           FROM ingredient_batches ib
           JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
           WHERE ib.expiry_date <= CURRENT_DATE + INTERVAL '3 days'
-          AND ib.expiry_date >= CURRENT_DATE
-          AND ib.is_depleted = false
-          AND si.deleted_at IS NULL
-          AND ib.deleted_at IS NULL
-          ${branchFilter}
+            AND ib.expiry_date >= CURRENT_DATE
+            AND ib.is_depleted = false
+            AND si.deleted_at IS NULL
+            AND ib.deleted_at IS NULL
+            ${branchFilter}
         `, branchParams),
 
-        // 2. Food wasted this month grouped by unit_family
+        // 2. Food wasted this month — join units directly via wl.unit_id
         db.query(`
-          SELECT 
+          SELECT
             u.unit_family,
-            u.base_unit_code,
             COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted
           FROM waste_logs wl
-          JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-          JOIN units u ON si.base_unit_id = u.unit_id
+          JOIN units u ON wl.unit_id = u.unit_id
           WHERE DATE_TRUNC('month', wl.logged_at) = DATE_TRUNC('month', NOW())
-          ${branchFilter}
-          GROUP BY u.unit_family, u.base_unit_code
+            ${wasteFilter}
+          GROUP BY u.unit_family
         `, branchParams),
 
-        // 3. Food wasted last month grouped by unit_family
+        // 3. Food wasted last month
         db.query(`
-          SELECT 
+          SELECT
             u.unit_family,
-            u.base_unit_code,
             COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted
           FROM waste_logs wl
-          JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-          JOIN units u ON si.base_unit_id = u.unit_id
+          JOIN units u ON wl.unit_id = u.unit_id
           WHERE DATE_TRUNC('month', wl.logged_at) = DATE_TRUNC('month', $${getParamIndex(1)}::timestamp)
-          ${branchFilter}
-          GROUP BY u.unit_family, u.base_unit_code
+            ${wasteFilter}
+          GROUP BY u.unit_family
         `, [...branchParams, lastMonthStart]),
 
-        // 4. Food saved this month grouped by unit_family
+        // 4. Food saved this month (from discounted-recipe sales)
         db.query(`
-          SELECT 
+          SELECT
             u.unit_family,
             u.base_unit_code,
             COALESCE(SUM(sd.quantity_deducted), 0) AS total_saved
@@ -121,14 +117,14 @@ class AnalyticsController {
           JOIN units u ON si.base_unit_id = u.unit_id
           JOIN sales s ON sd.sale_id = s.sale_id
           WHERE s.generated_id IS NOT NULL
-          AND DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', NOW())
-          ${branchFilter}
+            AND DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', NOW())
+            ${branchFilter}
           GROUP BY u.unit_family, u.base_unit_code
         `, branchParams),
 
-        // 5. Food saved last month grouped by unit_family
+        // 5. Food saved last month
         db.query(`
-          SELECT 
+          SELECT
             u.unit_family,
             u.base_unit_code,
             COALESCE(SUM(sd.quantity_deducted), 0) AS total_saved
@@ -138,17 +134,17 @@ class AnalyticsController {
           JOIN units u ON si.base_unit_id = u.unit_id
           JOIN sales s ON sd.sale_id = s.sale_id
           WHERE s.generated_id IS NOT NULL
-          AND DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', $${getParamIndex(1)}::timestamp)
-          ${branchFilter}
+            AND DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', $${getParamIndex(1)}::timestamp)
+            ${branchFilter}
           GROUP BY u.unit_family, u.base_unit_code
         `, [...branchParams, lastMonthStart]),
 
-        // 6. Active discounts (approved generated recipes)
+        // 6. Active discounts
         db.query(`
           SELECT COUNT(*) as count
           FROM generated_recipes gr
           WHERE gr.status = 'approved'
-          ${branchFilter ? 'AND gr.branch_id = $1' : ''}
+            ${branchFilter ? 'AND gr.branch_id = $1' : ''}
         `, branchParams),
 
         // 7. Profit from discounts this month
@@ -157,29 +153,24 @@ class AnalyticsController {
           FROM sales s
           JOIN generated_recipes gr ON s.generated_id = gr.generated_id
           WHERE DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', NOW())
-          ${branchFilter ? 'AND gr.branch_id = $1' : ''}
+            ${branchFilter ? 'AND gr.branch_id = $1' : ''}
         `, branchParams)
       ]);
 
-      // Process results
       const nearExpiry = parseInt(nearExpiryResult.rows[0].count);
-      
+
       const wastedThisMonthByFamily = buildFamilyTotals(wastedThisMonthResult.rows);
       const wastedLastMonthByFamily = buildFamilyTotals(wastedLastMonthResult.rows);
       const wastedThisDisplay = convertFamilyTotals(wastedThisMonthByFamily);
-      const wastedLastDisplay = convertFamilyTotals(wastedLastMonthByFamily);
 
       const savedThisMonthByFamily = buildFamilyTotals(savedThisMonthResult.rows);
       const savedLastMonthByFamily = buildFamilyTotals(savedLastMonthResult.rows);
       const savedThisDisplay = convertFamilyTotals(savedThisMonthByFamily);
-      const savedLastDisplay = convertFamilyTotals(savedLastMonthByFamily);
 
-      // Calculate percentage changes for each family
-      const calculateChange = (current, previous) => {
-        return previous > 0 
+      const calculateChange = (current, previous) =>
+        previous > 0
           ? parseFloat((((current - previous) / previous) * 100).toFixed(1))
           : 0;
-      };
 
       const wastedChangePercent = calculateChange(
         wastedThisMonthByFamily.weight + wastedThisMonthByFamily.volume + wastedThisMonthByFamily.count,
@@ -191,11 +182,9 @@ class AnalyticsController {
         savedLastMonthByFamily.weight + savedLastMonthByFamily.volume + savedLastMonthByFamily.count
       );
 
-      // Calculate saved percentage using monetary value
       const profitThisMonth = parseFloat(profitThisMonthResult.rows[0].total_revenue || 0);
       const activeDiscounts = parseInt(activeDiscountsResult.rows[0].count);
 
-      // For saved percentage, use total quantities
       const totalSavedQty = savedThisMonthByFamily.weight + savedThisMonthByFamily.volume + savedThisMonthByFamily.count;
       const totalWastedQty = wastedThisMonthByFamily.weight + wastedThisMonthByFamily.volume + wastedThisMonthByFamily.count;
       const savedPercentage = totalSavedQty + totalWastedQty > 0
@@ -220,7 +209,7 @@ class AnalyticsController {
         activeDiscounts,
         profitFromDiscounts: {
           current: parseFloat(profitThisMonth.toFixed(2)),
-          changePercent: 0 // TODO: calculate from last month
+          changePercent: 0
         }
       });
     } catch (error) {
@@ -238,18 +227,18 @@ class AnalyticsController {
       const months = parseInt(req.query.months) || 6;
 
       let branchFilter = '';
+      let wasteFilter = '';
       let branchParams = [];
-      
+
       if (userRole.toLowerCase() === 'admin') {
-        // Admin: filter by specific branch if provided, otherwise see all branches
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
+          wasteFilter  = 'AND wl.branch_id = $1';
           branchParams = [queryBranchId];
         }
-        // If no queryBranchId, branchFilter stays empty (sees all branches)
       } else {
-        // Non-admin: always filter to their branch
         branchFilter = 'AND si.branch_id = $1';
+        wasteFilter  = 'AND wl.branch_id = $1';
         branchParams = [userBranchId];
       }
 
@@ -259,24 +248,23 @@ class AnalyticsController {
       const getParamIndex = (offset) => branchParams.length + offset;
 
       const [wastedResult, savedResult] = await Promise.all([
-        // Monthly waste grouped by month AND unit_family
+        // Monthly waste — join units directly via wl.unit_id
         db.query(`
-          SELECT 
+          SELECT
             DATE_TRUNC('month', wl.logged_at) as month,
             u.unit_family,
             COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted
           FROM waste_logs wl
-          JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-          JOIN units u ON si.base_unit_id = u.unit_id
+          JOIN units u ON wl.unit_id = u.unit_id
           WHERE wl.logged_at >= $${getParamIndex(1)}
-          ${branchFilter}
+            ${wasteFilter}
           GROUP BY DATE_TRUNC('month', wl.logged_at), u.unit_family
           ORDER BY month ASC
         `, [...branchParams, startDate]),
 
-        // Monthly saved grouped by month AND unit_family
+        // Monthly saved (discounted-recipe sales)
         db.query(`
-          SELECT 
+          SELECT
             DATE_TRUNC('month', s.sold_at) as month,
             u.unit_family,
             COALESCE(SUM(sd.quantity_deducted), 0) AS total_saved
@@ -286,64 +274,62 @@ class AnalyticsController {
           JOIN units u ON si.base_unit_id = u.unit_id
           JOIN sales s ON sd.sale_id = s.sale_id
           WHERE s.generated_id IS NOT NULL
-          AND s.sold_at >= $${getParamIndex(1)}
-          ${branchFilter}
+            AND s.sold_at >= $${getParamIndex(1)}
+            ${branchFilter}
           GROUP BY DATE_TRUNC('month', s.sold_at), u.unit_family
           ORDER BY month ASC
         `, [...branchParams, startDate])
       ]);
 
-      // Build maps for lookup
+      // Build maps for month → { weight, volume, count }
       const wastedMap = {};
       wastedResult.rows.forEach(row => {
-        const monthKey = new Date(row.month).toISOString().substring(0, 7);
-        if (!wastedMap[monthKey]) wastedMap[monthKey] = { weight: 0, volume: 0, count: 0 };
-        wastedMap[monthKey][row.unit_family] = parseFloat(row.total_wasted);
+        const key = new Date(row.month).toISOString().substring(0, 7);
+        if (!wastedMap[key]) wastedMap[key] = { weight: 0, volume: 0, count: 0 };
+        wastedMap[key][row.unit_family] = parseFloat(row.total_wasted);
       });
 
       const savedMap = {};
       savedResult.rows.forEach(row => {
-        const monthKey = new Date(row.month).toISOString().substring(0, 7);
-        if (!savedMap[monthKey]) savedMap[monthKey] = { weight: 0, volume: 0, count: 0 };
-        savedMap[monthKey][row.unit_family] = parseFloat(row.total_saved);
+        const key = new Date(row.month).toISOString().substring(0, 7);
+        if (!savedMap[key]) savedMap[key] = { weight: 0, volume: 0, count: 0 };
+        savedMap[key][row.unit_family] = parseFloat(row.total_saved);
       });
 
-      // Generate continuous monthly data
+      // Generate continuous monthly data (fills months with zero if no data)
       const monthlyData = [];
       let currentMonthWasted = { weight: 0, volume: 0, count: 0 };
-      let currentMonthSaved = { weight: 0, volume: 0, count: 0 };
+      let currentMonthSaved  = { weight: 0, volume: 0, count: 0 };
 
       for (let i = 0; i < months; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - months + 1 + i, 1);
-        const monthKey = date.toISOString().substring(0, 7);
-        
-        const wasted = wastedMap[monthKey] || { weight: 0, volume: 0, count: 0 };
-        const saved = savedMap[monthKey] || { weight: 0, volume: 0, count: 0 };
+        const key  = date.toISOString().substring(0, 7);
+
+        const wasted = wastedMap[key] || { weight: 0, volume: 0, count: 0 };
+        const saved  = savedMap[key]  || { weight: 0, volume: 0, count: 0 };
 
         monthlyData.push({
-          month: monthKey,
+          month:  key,
           wasted: convertFamilyTotals(wasted),
-          saved: convertFamilyTotals(saved)
+          saved:  convertFamilyTotals(saved)
         });
 
-        // Track current month (last in array)
         if (i === months - 1) {
           currentMonthWasted = wasted;
-          currentMonthSaved = saved;
+          currentMonthSaved  = saved;
         }
       }
 
-      // Calculate saved percentage
       const totalCurrentWasted = currentMonthWasted.weight + currentMonthWasted.volume + currentMonthWasted.count;
-      const totalCurrentSaved = currentMonthSaved.weight + currentMonthSaved.volume + currentMonthSaved.count;
+      const totalCurrentSaved  = currentMonthSaved.weight  + currentMonthSaved.volume  + currentMonthSaved.count;
       const savedPercentage = totalCurrentWasted + totalCurrentSaved > 0
         ? Math.round((totalCurrentSaved / (totalCurrentWasted + totalCurrentSaved)) * 100)
         : 0;
 
       res.json({
         currentMonth: {
-          wasted: convertFamilyTotals(currentMonthWasted),
-          saved: convertFamilyTotals(currentMonthSaved),
+          wasted:          convertFamilyTotals(currentMonthWasted),
+          saved:           convertFamilyTotals(currentMonthSaved),
           savedPercentage
         },
         monthlyData
@@ -364,18 +350,18 @@ class AnalyticsController {
       const limit = parseInt(req.query.limit) || 5;
 
       let branchFilter = '';
+      let wasteFilter = '';
       let branchParams = [];
-      
+
       if (userRole.toLowerCase() === 'admin') {
-        // Admin: filter by specific branch if provided, otherwise see all branches
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
+          wasteFilter  = 'AND wl.branch_id = $1';
           branchParams = [queryBranchId];
         }
-        // If no queryBranchId, branchFilter stays empty (sees all branches)
       } else {
-        // Non-admin: always filter to their branch
         branchFilter = 'AND si.branch_id = $1';
+        wasteFilter  = 'AND wl.branch_id = $1';
         branchParams = [userBranchId];
       }
 
@@ -387,15 +373,15 @@ class AnalyticsController {
       const getParamIndex = (offset) => branchParams.length + offset;
 
       const [topWastedResult, totalWasteResult, previousWasteResult] = await Promise.all([
-        // Top wasted ingredients — top N per unit_family (weight/volume/count)
+
+        // Top wasted ingredients — top N per unit_family, unit from wl.unit_id
         db.query(`
-          SELECT ingredient_id, name, unit_family, base_unit_code, total_wasted_base
+          SELECT ingredient_id, name, unit_family, total_wasted_base
           FROM (
             SELECT
               si.ingredient_id,
               si.name,
               u.unit_family,
-              u.base_unit_code,
               COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted_base,
               ROW_NUMBER() OVER (
                 PARTITION BY u.unit_family
@@ -403,44 +389,41 @@ class AnalyticsController {
               ) AS rn
             FROM waste_logs wl
             JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-            JOIN units u ON si.base_unit_id = u.unit_id
+            JOIN units u ON wl.unit_id = u.unit_id
             WHERE wl.logged_at >= $${getParamIndex(1)}
-            ${branchFilter}
-            GROUP BY si.ingredient_id, si.name, u.unit_family, u.base_unit_code
+              ${wasteFilter}
+            GROUP BY si.ingredient_id, si.name, u.unit_family
           ) ranked
           WHERE rn <= $${getParamIndex(2)}
           ORDER BY unit_family, total_wasted_base DESC
         `, [...branchParams, dateFrom, limit]),
 
-        // Total waste for percentage
+        // Total waste per family for percentage calculation
         db.query(`
-          SELECT 
+          SELECT
             u.unit_family,
             COALESCE(SUM(wl.quantity_wasted), 0) as total
           FROM waste_logs wl
-          JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-          JOIN units u ON si.base_unit_id = u.unit_id
+          JOIN units u ON wl.unit_id = u.unit_id
           WHERE wl.logged_at >= $${getParamIndex(1)}
-          ${branchFilter}
+            ${wasteFilter}
           GROUP BY u.unit_family
         `, [...branchParams, dateFrom]),
 
-        // Previous period total
+        // Previous period total for change % calculation
         db.query(`
-          SELECT 
+          SELECT
             u.unit_family,
             COALESCE(SUM(wl.quantity_wasted), 0) as total
           FROM waste_logs wl
-          JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
-          JOIN units u ON si.base_unit_id = u.unit_id
+          JOIN units u ON wl.unit_id = u.unit_id
           WHERE wl.logged_at >= $${getParamIndex(1)}
-          AND wl.logged_at < $${getParamIndex(2)}
-          ${branchFilter}
+            AND wl.logged_at < $${getParamIndex(2)}
+            ${wasteFilter}
           GROUP BY u.unit_family
         `, [...branchParams, previousDateFrom, dateFrom])
       ]);
 
-      // Build totals by family
       const totalWasteByFamily = { weight: 0, volume: 0, count: 0 };
       totalWasteResult.rows.forEach(row => {
         totalWasteByFamily[row.unit_family] = parseFloat(row.total);
@@ -451,14 +434,12 @@ class AnalyticsController {
         previousWasteByFamily[row.unit_family] = parseFloat(row.total);
       });
 
-      // Calculate change percentage
-      const totalCurrent = totalWasteByFamily.weight + totalWasteByFamily.volume + totalWasteByFamily.count;
+      const totalCurrent  = totalWasteByFamily.weight  + totalWasteByFamily.volume  + totalWasteByFamily.count;
       const totalPrevious = previousWasteByFamily.weight + previousWasteByFamily.volume + previousWasteByFamily.count;
       const changePercentage = totalPrevious > 0
         ? parseFloat((((totalCurrent - totalPrevious) / totalPrevious) * 100).toFixed(1))
         : 0;
 
-      // Format top wasted items
       const topWasted = topWastedResult.rows.map(row => {
         const familyTotal = totalWasteByFamily[row.unit_family];
         const percentage = familyTotal > 0
@@ -485,7 +466,7 @@ class AnalyticsController {
     }
   }
 
-  // Endpoint 4: GET /api/analytics/recent-activity (NO CHANGES)
+  // Endpoint 4: GET /api/analytics/recent-activity
   static async getRecentActivity(req, res) {
     try {
       const userRole = req.user.role;
@@ -494,25 +475,20 @@ class AnalyticsController {
 
       let branchFilter = '';
       let branchParams = [];
-      
+
       if (userRole.toLowerCase() === 'admin') {
-        // Admin: filter by specific branch if provided, otherwise see all branches
         if (queryBranchId) {
           branchFilter = 'WHERE branch_id = $1';
           branchParams = [queryBranchId];
-        } else {
-          // If no queryBranchId, no WHERE clause (sees all branches)
-          branchFilter = '';
         }
       } else {
-        // Non-admin: always filter to their branch
         branchFilter = 'WHERE branch_id = $1';
         branchParams = [userBranchId];
       }
 
       const activityResult = await db.query(`
         (
-          SELECT 
+          SELECT
             'sale' as type,
             s.sale_id as id,
             CONCAT('Sale of ', r.name) as message,
@@ -527,7 +503,7 @@ class AnalyticsController {
         )
         UNION ALL
         (
-          SELECT 
+          SELECT
             'approval' as type,
             gr.generated_id as id,
             CONCAT('Approved recipe: ', r.name) as message,
@@ -538,11 +514,11 @@ class AnalyticsController {
           LEFT JOIN recipes r ON gr.recipe_id = r.recipe_id
           LEFT JOIN users u ON gr.reviewed_by = u.user_id
           WHERE gr.status = 'approved'
-          AND gr.reviewed_at >= NOW() - INTERVAL '7 days'
+            AND gr.reviewed_at >= NOW() - INTERVAL '7 days'
         )
         UNION ALL
         (
-          SELECT 
+          SELECT
             'expiry_alert' as type,
             n.notification_id as id,
             n.title as message,
@@ -552,23 +528,23 @@ class AnalyticsController {
           FROM notifications n
           LEFT JOIN users u ON n.user_id = u.user_id
           WHERE n.notification_type = 'expiry_alert'
-          AND n.created_at >= NOW() - INTERVAL '7 days'
+            AND n.created_at >= NOW() - INTERVAL '7 days'
         )
         ORDER BY timestamp DESC
         LIMIT 10
-      `, branchParams);
+      `, []);
 
       let activities = activityResult.rows;
-      
+
       if (branchFilter && branchParams.length > 0) {
-        activities = activities.filter(a => a.branch_id === branchParams[0]);
+        activities = activities.filter(a => String(a.branch_id) === String(branchParams[0]));
       }
 
       activities = activities.slice(0, 10).map(activity => ({
-        type: activity.type,
-        id: activity.id,
-        message: activity.message,
-        actor: activity.actor || 'System',
+        type:     activity.type,
+        id:       activity.id,
+        message:  activity.message,
+        actor:    activity.actor || 'System',
         time_ago: AnalyticsController.timeAgo(activity.timestamp)
       }));
 
@@ -579,7 +555,7 @@ class AnalyticsController {
     }
   }
 
-  // Endpoint 5: GET /api/analytics/nearing-expiry-list (NO CHANGES)
+  // Endpoint 5: GET /api/analytics/nearing-expiry-list
   static async getNearingExpiryList(req, res) {
     try {
       const userRole = req.user.role;
@@ -588,16 +564,13 @@ class AnalyticsController {
 
       let branchFilter = '';
       let branchParams = [];
-      
+
       if (userRole.toLowerCase() === 'admin') {
-        // Admin: filter by specific branch if provided, otherwise see all branches
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
           branchParams = [queryBranchId];
         }
-        // If no queryBranchId, branchFilter stays empty (sees all branches)
       } else {
-        // Non-admin: always filter to their branch
         branchFilter = 'AND si.branch_id = $1';
         branchParams = [userBranchId];
       }
@@ -614,33 +587,33 @@ class AnalyticsController {
           (ib.expiry_date - CURRENT_DATE) as days_until_expiry
         FROM ingredient_batches ib
         JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
-        JOIN units u ON si.base_unit_id = u.unit_id
+        LEFT JOIN units u ON si.base_unit_id = u.unit_id
         WHERE (ib.expiry_date - CURRENT_DATE) <= 3
-        AND (ib.expiry_date - CURRENT_DATE) >= 0
-        AND ib.is_depleted = false
-        AND si.deleted_at IS NULL
-        AND ib.deleted_at IS NULL
-        ${branchFilter}
-        AND si.ingredient_id NOT IN (
-          SELECT DISTINCT grt.ingredient_id
-          FROM generated_recipe_triggers grt
-          JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
-          WHERE gr.status IN ('pending', 'approved')
-          ${branchFilter ? 'AND gr.branch_id = (SELECT branch_id FROM stock_ingredients WHERE ingredient_id = grt.ingredient_id)' : ''}
-        )
+          AND (ib.expiry_date - CURRENT_DATE) >= 0
+          AND ib.is_depleted = false
+          AND si.deleted_at IS NULL
+          AND ib.deleted_at IS NULL
+          ${branchFilter}
+          AND si.ingredient_id NOT IN (
+            SELECT DISTINCT grt.ingredient_id
+            FROM generated_recipe_triggers grt
+            JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
+            WHERE gr.status IN ('pending', 'approved')
+              ${branchFilter ? 'AND gr.branch_id = (SELECT branch_id FROM stock_ingredients WHERE ingredient_id = grt.ingredient_id LIMIT 1)' : ''}
+          )
         ORDER BY ib.expiry_date ASC
         LIMIT 5
       `, branchParams);
 
       const nearingExpiry = expiryResult.rows.map(row => ({
-        ingredient_id: row.ingredient_id,
-        batch_id: row.batch_id,
-        name: row.name,
-        image_url: row.image_url,
+        ingredient_id:      row.ingredient_id,
+        batch_id:           row.batch_id,
+        name:               row.name,
+        image_url:          row.image_url,
         quantity_remaining: parseFloat(row.remaining_base_quantity),
-        unit: row.unit_name,
-        expiry_date: row.expiry_date,
-        days_left: parseInt(row.days_until_expiry)
+        unit:               row.unit_name,
+        expiry_date:        row.expiry_date,
+        days_left:          parseInt(row.days_until_expiry)
       }));
 
       res.json({ nearingExpiry });
