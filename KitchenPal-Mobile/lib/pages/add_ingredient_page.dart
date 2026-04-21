@@ -554,24 +554,106 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
   // ─── Submit ──────────────────────────────────────────────────────────────────
   Future<void> _submitIngredient() async {
+    // Validate ingredient name
     final name = _nameSearchController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an ingredient name')),
+        const SnackBar(
+          content: Text('Please enter an ingredient name'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
-    if (_selectedWeightUnit == null) {
+
+    // Validate quantity
+    final quantityText = _quantityController.text.trim();
+    if (quantityText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a weight unit')),
+        const SnackBar(
+          content: Text('Please enter quantity'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
+    final quantity = double.tryParse(quantityText);
+    if (quantity == null || quantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid quantity greater than 0'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate price
+    final priceText = _priceController.text.trim();
+    if (priceText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter price per unit'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    final price = double.tryParse(priceText);
+    if (price == null || price < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid price'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate storage type
     if (_selectedStorageType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a storage type')),
+        const SnackBar(
+          content: Text('Please select a storage type'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
+    }
+
+    // Validate weight unit
+    if (_selectedWeightUnit == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a weight unit'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Validate weight per unit (only for non-count family)
+    if (!_isCountFamily) {
+      final weightText = _weightController.text.trim();
+      if (weightText.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter weight per unit'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      final weight = double.tryParse(weightText);
+      if (weight == null || weight <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter a valid weight greater than 0'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSubmitting = true);
