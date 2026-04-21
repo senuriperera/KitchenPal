@@ -1,38 +1,21 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import '../config/api_constants.dart';
 import '../models/recipe.dart';
 import '../models/recipe_suggestion.dart';
 import '../models/generated_recipe.dart';
+import 'api_client.dart';
 import 'storage_service.dart';
 
 class RecipeService {
-  static final String _baseUrl = '${ApiConstants.baseUrl}/recipes';
-  static final String _suggestionsBaseUrl =
-      '${ApiConstants.baseUrl}/suggestions';
 
   /// Get all standard recipes (is_generated = false)
   static Future<List<Recipe>> getAllRecipes() async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.get(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.get('/recipes');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> recipesJson = jsonResponse['recipes'] ?? [];
         return recipesJson.map((json) => Recipe.fromJson(json)).toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception('Failed to load recipes: ${response.statusCode}');
       }
@@ -44,26 +27,13 @@ class RecipeService {
   /// Get a single recipe by ID
   static Future<Recipe> getRecipeById(int recipeId) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.get(
-        Uri.parse('$_baseUrl/$recipeId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.get('/recipes/$recipeId');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         return Recipe.fromJson(jsonResponse['recipe']);
       } else if (response.statusCode == 404) {
         throw Exception('Recipe not found');
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception('Failed to load recipe: ${response.statusCode}');
       }
@@ -82,11 +52,6 @@ class RecipeService {
     required List<Map<String, dynamic>> ingredients,
   }) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
       final requestBody = {
         'name': name,
         'image_url': imageUrl,
@@ -96,14 +61,7 @@ class RecipeService {
         'ingredients': ingredients,
       };
 
-      final response = await http.post(
-        Uri.parse(_baseUrl),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(requestBody),
-      );
+      final response = await ApiClient.post('/recipes', body: requestBody);
 
       if (response.statusCode == 201) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -111,8 +69,6 @@ class RecipeService {
       } else if (response.statusCode == 400) {
         final Map<String, dynamic> errorResponse = json.decode(response.body);
         throw Exception(errorResponse['error'] ?? 'Invalid recipe data');
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception('Failed to create recipe: ${response.statusCode}');
       }
@@ -124,25 +80,12 @@ class RecipeService {
   /// Get generated recipes for the current branch (generated_recipes table)
   static Future<List<GeneratedRecipe>> getGeneratedRecipes() async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/generated-recipes'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.get('/generated-recipes');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = json.decode(response.body);
         final List<dynamic> list = jsonResponse['recipes'] ?? [];
         return list.map((json) => GeneratedRecipe.fromJson(json)).toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception(
           'Failed to load generated recipes: ${response.statusCode}',
@@ -162,24 +105,15 @@ class RecipeService {
     required int suggestedServings,
   }) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/generated-recipes'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
+      final response = await ApiClient.post(
+        '/generated-recipes',
+        body: {
           'recipe_id': recipeId,
           'suggested_discount_percent': suggestedDiscountPercent,
           'suggested_discount_price': suggestedDiscountPrice,
           'selected_batches': selectedBatches,
           'suggested_servings': suggestedServings,
-        }),
+        },
       );
 
       if (response.statusCode != 201) {
@@ -197,26 +131,17 @@ class RecipeService {
     List<int> ingredientIds,
   ) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
       final branchId = await StorageService.getBranchId();
       if (branchId == null) {
         throw Exception('No branch assigned to your account');
       }
 
-      final response = await http.post(
-        Uri.parse('$_suggestionsBaseUrl/generate'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
+      final response = await ApiClient.post(
+        '/suggestions/generate',
+        body: {
           'branch_id': branchId,
           'ingredient_ids': ingredientIds,
-        }),
+        },
       );
 
       if (response.statusCode == 201) {
@@ -230,8 +155,6 @@ class RecipeService {
         throw Exception(
           errorResponse['error'] ?? 'Invalid data for suggestion',
         );
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception(
           'Failed to generate recipe suggestion: ${response.statusCode}',
@@ -248,18 +171,9 @@ class RecipeService {
     List<Map<String, dynamic>> selectedItems,
   ) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.post(
-        Uri.parse('$_baseUrl/generate'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({'selected_items': selectedItems}),
+      final response = await ApiClient.post(
+        '/recipes/generate',
+        body: {'selected_items': selectedItems},
       );
 
       if (response.statusCode == 200) {
@@ -274,8 +188,6 @@ class RecipeService {
         throw Exception(
           errorResponse['error'] ?? 'Invalid data for suggestion',
         );
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception('Failed to generate recipes: ${response.statusCode}');
       }
@@ -287,25 +199,12 @@ class RecipeService {
   /// Delete a recipe
   static Future<bool> deleteRecipe(int recipeId) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.delete(
-        Uri.parse('$_baseUrl/$recipeId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.delete('/recipes/$recipeId');
 
       if (response.statusCode == 200) {
         return true;
       } else if (response.statusCode == 404) {
         throw Exception('Recipe not found');
-      } else if (response.statusCode == 401) {
-        throw Exception('Unauthorized: Please login again');
       } else {
         throw Exception('Failed to delete recipe: ${response.statusCode}');
       }

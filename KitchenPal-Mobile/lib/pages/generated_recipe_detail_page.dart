@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 import '../models/recipe_suggestion.dart';
+import '../models/ingredient.dart';
 import '../services/recipe_service.dart';
+import '../services/ingredient_service.dart';
 
 class GeneratedRecipeDetailPage extends StatefulWidget {
   final RecipeSuggestion suggestion;
@@ -18,11 +20,13 @@ class _GeneratedRecipeDetailPageState
   Recipe? _recipe;
   bool _isLoading = true;
   String? _errorMessage;
+  List<Ingredient> _availableIngredients = [];
 
   @override
   void initState() {
     super.initState();
     _loadRecipe();
+    _loadAvailableIngredients();
   }
 
   Future<void> _loadRecipe() async {
@@ -38,6 +42,45 @@ class _GeneratedRecipeDetailPageState
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadAvailableIngredients() async {
+    try {
+      final ingredients = await IngredientService.getAllIngredients();
+      setState(() {
+        _availableIngredients = ingredients;
+      });
+      
+      // Debug: Print available ingredients
+      print('Available ingredients count: ${ingredients.length}');
+      for (var ing in ingredients) {
+        print('Ingredient: ${ing.name}, MasterID: ${ing.masterIngredientId}, Stock: ${ing.quantityInStock}');
+      }
+    } catch (e) {
+      print('Error loading ingredients: $e');
+      // Silently fail - ingredients will just show as unavailable
+    }
+  }
+
+  bool _isIngredientAvailable(int masterIngredientId, String ingredientName) {
+    // Try matching by master_ingredient_id first
+    final matchById = _availableIngredients.any(
+      (ing) => ing.masterIngredientId == masterIngredientId && ing.quantityInStock > 0,
+    );
+    
+    if (matchById) return true;
+    
+    // Fallback: Try matching by name (case-insensitive)
+    final matchByName = _availableIngredients.any(
+      (ing) => ing.name.toLowerCase() == ingredientName.toLowerCase() && ing.quantityInStock > 0,
+    );
+    
+    // Debug
+    if (!matchById && !matchByName) {
+      print('Ingredient not found: $ingredientName (ID: $masterIngredientId)');
+    }
+    
+    return matchByName;
   }
 
   Color get _urgencyColor {
@@ -101,16 +144,16 @@ class _GeneratedRecipeDetailPageState
     );
   }
 
-  Widget _buildIngredientItem(RecipeIngredient ingredient) {
+  Widget _buildIngredientItem(RecipeIngredient ingredient, bool isAvailable) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF9500),
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: isAvailable ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
               shape: BoxShape.circle,
             ),
           ),
@@ -386,10 +429,14 @@ class _GeneratedRecipeDetailPageState
                               itemCount: _recipe!.ingredients.length,
                               separatorBuilder: (context, index) =>
                                   Divider(height: 1, color: Colors.grey[200]),
-                              itemBuilder: (context, index) =>
-                                  _buildIngredientItem(
-                                    _recipe!.ingredients[index],
-                                  ),
+                              itemBuilder: (context, index) {
+                                final ingredient = _recipe!.ingredients[index];
+                                final isAvailable = _isIngredientAvailable(
+                                  ingredient.masterIngredientId,
+                                  ingredient.name,
+                                );
+                                return _buildIngredientItem(ingredient, isAvailable);
+                              },
                             ),
                     ),
                   const SizedBox(height: 24),

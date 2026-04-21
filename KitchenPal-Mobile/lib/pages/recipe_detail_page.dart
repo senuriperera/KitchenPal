@@ -1,10 +1,68 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
+import '../models/ingredient.dart';
+import '../services/ingredient_service.dart';
 
-class RecipeDetailPage extends StatelessWidget {
+class RecipeDetailPage extends StatefulWidget {
   final Recipe recipe;
 
   const RecipeDetailPage({super.key, required this.recipe});
+
+  @override
+  State<RecipeDetailPage> createState() => _RecipeDetailPageState();
+}
+
+class _RecipeDetailPageState extends State<RecipeDetailPage> {
+  List<Ingredient> _availableIngredients = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailableIngredients();
+  }
+
+  Future<void> _loadAvailableIngredients() async {
+    try {
+      final ingredients = await IngredientService.getAllIngredients();
+      setState(() {
+        _availableIngredients = ingredients;
+        _isLoading = false;
+      });
+      
+      // Debug: Print available ingredients
+      print('Available ingredients count: ${ingredients.length}');
+      for (var ing in ingredients) {
+        print('Ingredient: ${ing.name}, MasterID: ${ing.masterIngredientId}, Stock: ${ing.quantityInStock}');
+      }
+    } catch (e) {
+      print('Error loading ingredients: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  bool _isIngredientAvailable(int masterIngredientId, String ingredientName) {
+    // Try matching by master_ingredient_id first
+    final matchById = _availableIngredients.any(
+      (ing) => ing.masterIngredientId == masterIngredientId && ing.quantityInStock > 0,
+    );
+    
+    if (matchById) return true;
+    
+    // Fallback: Try matching by name (case-insensitive)
+    final matchByName = _availableIngredients.any(
+      (ing) => ing.name.toLowerCase() == ingredientName.toLowerCase() && ing.quantityInStock > 0,
+    );
+    
+    // Debug
+    if (!matchById && !matchByName) {
+      print('Ingredient not found: $ingredientName (ID: $masterIngredientId)');
+    }
+    
+    return matchByName;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +80,9 @@ class RecipeDetailPage extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              background: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
+              background: widget.recipe.imageUrl != null && widget.recipe.imageUrl!.isNotEmpty
                   ? Image.network(
-                      recipe.imageUrl!,
+                      widget.recipe.imageUrl!,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return _buildPlaceholderImage();
@@ -43,7 +101,7 @@ class RecipeDetailPage extends StatelessWidget {
                 children: [
                   // Recipe Name
                   Text(
-                    recipe.recipeName,
+                    widget.recipe.recipeName,
                     style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -57,15 +115,15 @@ class RecipeDetailPage extends StatelessWidget {
                     children: [
                       _buildInfoChip(
                         icon: Icons.access_time,
-                        label: recipe.cookingTimeMinutes != null
-                            ? '${recipe.cookingTimeMinutes} min'
+                        label: widget.recipe.cookingTimeMinutes != null
+                            ? '${widget.recipe.cookingTimeMinutes} min'
                             : 'N/A',
                         color: const Color(0xFFFF6B35),
                       ),
                       const SizedBox(width: 12),
                       _buildInfoChip(
                         icon: Icons.attach_money,
-                        label: 'Rs ${recipe.basePrice.toStringAsFixed(2)}',
+                        label: 'Rs ${widget.recipe.basePrice.toStringAsFixed(2)}',
                         color: const Color(0xFF4CAF50),
                       ),
                     ],
@@ -73,8 +131,8 @@ class RecipeDetailPage extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Description/Steps
-                  if (recipe.description != null &&
-                      recipe.description!.isNotEmpty) ...[
+                  if (widget.recipe.description != null &&
+                      widget.recipe.description!.isNotEmpty) ...[
                     const Text(
                       'Description',
                       style: TextStyle(
@@ -98,7 +156,7 @@ class RecipeDetailPage extends StatelessWidget {
                         ],
                       ),
                       child: Text(
-                        recipe.description!,
+                        widget.recipe.description!,
                         style: const TextStyle(
                           fontSize: 16,
                           height: 1.5,
@@ -133,7 +191,7 @@ class RecipeDetailPage extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: recipe.ingredients.isEmpty
+                    child: widget.recipe.ingredients.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Text(
@@ -144,17 +202,30 @@ class RecipeDetailPage extends StatelessWidget {
                               ),
                             ),
                           )
-                        : ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: recipe.ingredients.length,
-                            separatorBuilder: (context, index) =>
-                                Divider(height: 1, color: Colors.grey[200]),
-                            itemBuilder: (context, index) {
-                              final ingredient = recipe.ingredients[index];
-                              return _buildIngredientItem(ingredient);
-                            },
-                          ),
+                        : _isLoading
+                            ? const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFFFF6B35),
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: widget.recipe.ingredients.length,
+                                separatorBuilder: (context, index) =>
+                                    Divider(height: 1, color: Colors.grey[200]),
+                                itemBuilder: (context, index) {
+                                  final ingredient = widget.recipe.ingredients[index];
+                                  final isAvailable = _isIngredientAvailable(
+                                    ingredient.masterIngredientId,
+                                    ingredient.name,
+                                  );
+                                  return _buildIngredientItem(ingredient, isAvailable);
+                                },
+                              ),
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -205,16 +276,16 @@ class RecipeDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildIngredientItem(RecipeIngredient ingredient) {
+  Widget _buildIngredientItem(RecipeIngredient ingredient, bool isAvailable) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF6B35),
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: isAvailable ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
               shape: BoxShape.circle,
             ),
           ),

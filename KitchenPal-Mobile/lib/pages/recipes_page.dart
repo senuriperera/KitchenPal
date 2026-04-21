@@ -1,13 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../config/api_constants.dart';
 import '../models/recipe.dart';
-import '../models/recipe_suggestion.dart';
 import '../models/generated_recipe.dart';
 import '../services/recipe_service.dart';
-import '../services/storage_service.dart';
+import '../services/api_client.dart';
 import '../services/websocket_service.dart';
 import 'recipe_detail_page.dart';
 import 'generated_recipe_detail_page.dart';
@@ -65,6 +62,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   StreamSubscription? _recipeGeneratedSub;
   StreamSubscription? _recipeApprovedSub;
   StreamSubscription? _recipeRejectedSub;
+  StreamSubscription? _inventoryChangedSub;
   bool _wsListenersSetup = false;
 
   @override
@@ -167,6 +165,17 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                 print('[RecipesPage] ERROR: recipeRejected error: $e'),
           );
 
+          _inventoryChangedSub = WebSocketService.instance.inventoryChanged.listen(
+            (_) {
+              if (mounted) {
+                print('[RecipesPage] inventoryChanged event received');
+                _loadAvailability();
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: inventoryChanged error: $e'),
+          );
+
           print('[RecipesPage] All stream listeners registered');
         })
         .catchError((e) {
@@ -187,6 +196,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     _recipeGeneratedSub?.cancel();
     _recipeApprovedSub?.cancel();
     _recipeRejectedSub?.cancel();
+    _inventoryChangedSub?.cancel();
     super.dispose();
   }
 
@@ -249,16 +259,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   Future<void> _loadAvailability() async {
     setState(() => _isLoadingAvailability = true);
     try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/recipes/availability'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await ApiClient.get('/recipes/availability');
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -1056,13 +1057,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     );
 
     try {
-      print('[_processSale] Getting auth token...');
-      final token = await StorageService.getToken();
-      if (token == null) {
-        print('[_processSale] No token found!');
-        throw Exception('No authentication token found');
-      }
-      print('[_processSale] Token obtained (length: ${token.length})');
+      print('[_processSale] Preparing request...');
 
       final requestBody = {
         'recipe_id': recipeId,
@@ -1070,18 +1065,9 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         'quantity_sold': quantitySold,
       };
       print('[_processSale] Request body: $requestBody');
+      print('[_processSale] Sending POST to: /sales');
 
-      final url = '${ApiConstants.baseUrl}/sales';
-      print('[_processSale] Sending POST to: $url');
-
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(requestBody),
-      );
+      final response = await ApiClient.post('/sales', body: requestBody);
 
       print('[_processSale] Response received!');
       print('[_processSale] Status code: ${response.statusCode}');

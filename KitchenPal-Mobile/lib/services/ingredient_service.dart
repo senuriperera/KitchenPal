@@ -1,43 +1,16 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/ingredient.dart';
-import '../config/api_constants.dart';
-import 'storage_service.dart';
+import 'api_client.dart';
 
 class IngredientService {
-  static Future<Map<String, String>> _authHeaders() async {
-    final token = await StorageService.getToken();
-    if (token == null) throw Exception('No authentication token found');
-    return {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-  }
-
   // GET /api/ingredients  (branch_id from JWT — no URL param)
   static Future<List<Ingredient>> getAllIngredients() async {
-    final headers = await _authHeaders();
-    var response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/ingredients'),
-      headers: headers,
-    );
-
-    // Retry once if token expired
-    if (response.statusCode == 401) {
-      await _refreshTokenIfExpired();
-      final newHeaders = await _authHeaders();
-      response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/ingredients'),
-        headers: newHeaders,
-      );
-    }
+    final response = await ApiClient.get('/ingredients');
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       final List<dynamic> list = json['ingredients'] ?? [];
       return list.map((j) => Ingredient.fromJson(j)).toList();
-    } else if (response.statusCode == 401) {
-      throw Exception('401');
     } else {
       throw Exception('Failed to load ingredients: ${response.statusCode}');
     }
@@ -45,27 +18,11 @@ class IngredientService {
 
   // GET /api/ingredients/:id  (full detail with batches)
   static Future<Ingredient> getIngredientById(int id) async {
-    final headers = await _authHeaders();
-    var response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/ingredients/$id'),
-      headers: headers,
-    );
-
-    // Retry once if token expired
-    if (response.statusCode == 401) {
-      await _refreshTokenIfExpired();
-      final newHeaders = await _authHeaders();
-      response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/ingredients/$id'),
-        headers: newHeaders,
-      );
-    }
+    final response = await ApiClient.get('/ingredients/$id');
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       return Ingredient.fromJson(json['ingredient']);
-    } else if (response.statusCode == 401) {
-      throw Exception('401');
     } else {
       throw Exception('Failed to load ingredient: ${response.statusCode}');
     }
@@ -73,29 +30,11 @@ class IngredientService {
 
   // POST /api/ingredients
   static Future<Ingredient> createIngredient(Map<String, dynamic> data) async {
-    final headers = await _authHeaders();
-    var response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/ingredients'),
-      headers: headers,
-      body: jsonEncode(data),
-    );
-
-    // Retry once if token expired
-    if (response.statusCode == 401) {
-      await _refreshTokenIfExpired();
-      final newHeaders = await _authHeaders();
-      response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/ingredients'),
-        headers: newHeaders,
-        body: jsonEncode(data),
-      );
-    }
+    final response = await ApiClient.post('/ingredients', body: data);
 
     if (response.statusCode == 201) {
       final json = jsonDecode(response.body);
       return Ingredient.fromJson(json['ingredient']);
-    } else if (response.statusCode == 401) {
-      throw Exception('401');
     } else {
       final body = jsonDecode(response.body);
       throw Exception(body['error'] ?? 'Failed to create ingredient');
@@ -104,72 +43,21 @@ class IngredientService {
 
   // DELETE /api/ingredients/:id
   static Future<void> deleteIngredient(int id) async {
-    final headers = await _authHeaders();
-    var response = await http.delete(
-      Uri.parse('${ApiConstants.baseUrl}/ingredients/$id'),
-      headers: headers,
-    );
+    final response = await ApiClient.delete('/ingredients/$id');
 
-    // Retry once if token expired
-    if (response.statusCode == 401) {
-      await _refreshTokenIfExpired();
-      final newHeaders = await _authHeaders();
-      response = await http.delete(
-        Uri.parse('${ApiConstants.baseUrl}/ingredients/$id'),
-        headers: newHeaders,
-      );
-    }
-
-    if (response.statusCode == 401) throw Exception('401');
     if (response.statusCode != 200) {
       throw Exception('Failed to delete ingredient: ${response.statusCode}');
     }
   }
 
-  // Refresh token if expired
-  static Future<void> _refreshTokenIfExpired() async {
-    final refreshToken = await StorageService.getRefreshToken();
-    if (refreshToken == null) throw Exception('No refresh token found');
-
-    final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/auth/refresh-token'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refreshToken': refreshToken}),
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      final newAccessToken = json['accessToken'];
-      await StorageService.saveToken(newAccessToken);
-    } else {
-      throw Exception('Failed to refresh token');
-    }
-  }
-
   // GET /api/ingredients/expiring?days=N
   static Future<List<Ingredient>> getExpiringIngredients({int days = 7}) async {
-    final headers = await _authHeaders();
-    var response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/ingredients/expiring?days=$days'),
-      headers: headers,
-    );
-
-    // Retry once if token expired
-    if (response.statusCode == 401) {
-      await _refreshTokenIfExpired();
-      final newHeaders = await _authHeaders();
-      response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/ingredients/expiring?days=$days'),
-        headers: newHeaders,
-      );
-    }
+    final response = await ApiClient.get('/ingredients/expiring?days=$days');
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       final List<dynamic> list = json['ingredients'] ?? [];
       return list.map((j) => Ingredient.fromJson(j)).toList();
-    } else if (response.statusCode == 401) {
-      throw Exception('401');
     } else {
       throw Exception('Failed to load expiring: ${response.statusCode}');
     }
@@ -179,30 +67,12 @@ class IngredientService {
   // Returns ingredients with lock status (available, awaiting_approval, approved)
   static Future<List<Map<String, dynamic>>>
   getAvailableIngredientsForRecipeGeneration() async {
-    final headers = await _authHeaders();
-    var response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/ingredients/available-for-generation'),
-      headers: headers,
-    );
-
-    // Retry once if token expired
-    if (response.statusCode == 401) {
-      await _refreshTokenIfExpired();
-      final newHeaders = await _authHeaders();
-      response = await http.get(
-        Uri.parse(
-          '${ApiConstants.baseUrl}/ingredients/available-for-generation',
-        ),
-        headers: newHeaders,
-      );
-    }
+    final response = await ApiClient.get('/ingredients/available-for-generation');
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       final List<dynamic> list = json['ingredients'] ?? [];
       return list.cast<Map<String, dynamic>>();
-    } else if (response.statusCode == 401) {
-      throw Exception('401');
     } else {
       throw Exception(
         'Failed to load available ingredients: ${response.statusCode}',

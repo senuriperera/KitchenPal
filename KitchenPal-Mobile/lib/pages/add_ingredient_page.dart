@@ -4,13 +4,13 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/cloudinary_config.dart';
-import '../config/api_constants.dart';
 import '../models/master_ingredient.dart';
 import '../models/unit_model.dart';
 import '../models/storage_type.dart';
 import '../services/master_ingredient_service.dart';
 import '../services/ocr_service.dart';
 import '../services/storage_service.dart';
+import '../services/api_client.dart';
 import 'login.dart';
 
 // Main AddIngredientPage wrapper for backward compatibility
@@ -93,24 +93,10 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   // ─── Load all dropdown data in parallel ─────────────────────────────────────
   Future<void> _loadDropdownData() async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) throw Exception('401');
-
-      final headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-
       final results = await Future.wait([
         MasterIngredientService.getAll(),
-        http.get(
-          Uri.parse('${ApiConstants.baseUrl}/common/units'),
-          headers: headers,
-        ),
-        http.get(
-          Uri.parse('${ApiConstants.baseUrl}/common/storage-types'),
-          headers: headers,
-        ),
+        ApiClient.get('/common/units'),
+        ApiClient.get('/common/storage-types'),
       ]);
 
       final masterList = results[0] as List<MasterIngredient>;
@@ -246,17 +232,8 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
   // ─── Check existing ingredient for auto-fill ────────────────────────────────
   Future<void> _checkExistingIngredient(int masterIngredientId) async {
     try {
-      final token = await StorageService.getToken();
-      if (token == null) return;
-
-      final response = await http.get(
-        Uri.parse(
-          '${ApiConstants.baseUrl}/ingredients/existing?master_ingredient_id=$masterIngredientId',
-        ),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await ApiClient.get(
+        '/ingredients/existing?master_ingredient_id=$masterIngredientId',
       );
 
       if (response.statusCode == 204) {
@@ -599,9 +576,6 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
     setState(() => _isSubmitting = true);
     try {
-      final token = await StorageService.getToken();
-      if (token == null) throw Exception('401');
-
       final Map<String, dynamic> body = {
         'name': name,
         'quantity_in_stock': double.tryParse(_quantityController.text) ?? 1.0,
@@ -622,14 +596,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       }
       // If _isNewCustomIngredient == true, leave master_ingredient_id absent → backend creates new
 
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/ingredients'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      );
+      final response = await ApiClient.post('/ingredients', body: body);
 
       if (response.statusCode == 201) {
         if (mounted) {
