@@ -40,6 +40,9 @@ class WebSocketService {
   final StreamController<Map<String, dynamic>> _recipeDeletedController =
       StreamController<Map<String, dynamic>>.broadcast();
 
+  final StreamController<Map<String, dynamic>> _recipeDeactivatedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
   /// Emitted whenever the backend signals that inventory changed
   /// (ingredient created/deleted, expiry-related updates, etc.).
   Stream<void> get inventoryChanged => _inventoryChangedController.stream;
@@ -72,6 +75,10 @@ class WebSocketService {
   /// Emitted when a standard recipe is deleted
   Stream<Map<String, dynamic>> get recipeDeleted =>
       _recipeDeletedController.stream;
+
+  /// Emitted when a generated recipe is deactivated due to depleted ingredients
+  Stream<Map<String, dynamic>> get recipeDeactivated =>
+      _recipeDeactivatedController.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -182,6 +189,12 @@ class WebSocketService {
       print('[WS] socket.on(recipe:deleted) FIRED with data: $data');
       _recipeDeletedController.add(Map<String, dynamic>.from(data ?? {}));
     });
+
+    // Generated recipe deactivated event (ingredients depleted)
+    socket.on('recipe:deactivated', (data) {
+      print('[WS] Received: recipe:deactivated');
+      _recipeDeactivatedController.add(Map<String, dynamic>.from(data ?? {}));
+    });
   }
 
   void dispose() {
@@ -195,5 +208,6 @@ class WebSocketService {
     _recipeCreatedController.close();
     _recipeUpdatedController.close();
     _recipeDeletedController.close();
+    _recipeDeactivatedController.close();
   }
 }

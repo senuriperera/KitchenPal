@@ -1,4 +1,5 @@
 const SaleModel = require('../models/Sale');
+const { deactivateDepletedGeneratedRecipes } = require('./generatedRecipeController');
 
 class SaleController {
     // Create new sale
@@ -15,6 +16,12 @@ class SaleController {
                 quantity_sold: quantity_sold || 1,
                 sold_by,
             });
+
+            // After sale, check if any generated recipes should be deactivated due to depleted ingredients
+            if (generated_id) {
+                const io = req.app && req.app.get ? req.app.get('io') : null;
+                await deactivateDepletedGeneratedRecipes(branch_id, io);
+            }
 
             res.status(201).json({
                 message: 'Sale recorded successfully',

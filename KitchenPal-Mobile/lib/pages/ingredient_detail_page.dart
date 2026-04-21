@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import '../models/ingredient.dart';
 import '../models/ingredient_batch.dart';
 import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
+import '../services/websocket_service.dart';
 import '../config/cloudinary_config.dart';
 import 'login.dart';
 
@@ -25,10 +27,39 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
   bool _isDeleting = false;
   String? _errorMessage;
 
+  // WebSocket subscription
+  StreamSubscription? _inventoryChangedSub;
+
   @override
   void initState() {
     super.initState();
     _loadDetail();
+    _setupWebSocketListener();
+  }
+
+  void _setupWebSocketListener() {
+    // Connect to WebSocket and listen for inventory changes
+    WebSocketService.instance.connect().then((_) {
+      if (!mounted) return;
+      
+      _inventoryChangedSub = WebSocketService.instance.inventoryChanged.listen(
+        (_) {
+          if (mounted) {
+            print('[IngredientDetailPage] inventoryChanged event received, reloading...');
+            _loadDetail();
+          }
+        },
+        onError: (e) => print('[IngredientDetailPage] ERROR: inventoryChanged error: $e'),
+      );
+    }).catchError((e) {
+      print('[IngredientDetailPage] ERROR: Failed to connect WebSocket: $e');
+    });
+  }
+
+  @override
+  void dispose() {
+    _inventoryChangedSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadDetail() async {

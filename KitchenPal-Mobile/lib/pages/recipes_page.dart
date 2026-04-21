@@ -62,6 +62,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   StreamSubscription? _recipeGeneratedSub;
   StreamSubscription? _recipeApprovedSub;
   StreamSubscription? _recipeRejectedSub;
+  StreamSubscription? _recipeDeactivatedSub;
   StreamSubscription? _inventoryChangedSub;
   bool _wsListenersSetup = false;
 
@@ -165,6 +166,26 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                 print('[RecipesPage] ERROR: recipeRejected error: $e'),
           );
 
+          _recipeDeactivatedSub = WebSocketService.instance.recipeDeactivated.listen(
+            (data) {
+              if (_generatedLoaded && mounted) {
+                print('[RecipesPage] recipeDeactivated event received: $data');
+                _loadGeneratedRecipes();
+                // Show a snackbar to inform the user
+                final recipeName = data['recipe_name'] ?? 'A recipe';
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$recipeName has been removed (ingredients depleted)'),
+                    duration: const Duration(seconds: 3),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: recipeDeactivated error: $e'),
+          );
+
           _inventoryChangedSub = WebSocketService.instance.inventoryChanged.listen(
             (_) {
               if (mounted) {
@@ -196,6 +217,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     _recipeGeneratedSub?.cancel();
     _recipeApprovedSub?.cancel();
     _recipeRejectedSub?.cancel();
+    _recipeDeactivatedSub?.cancel();
     _inventoryChangedSub?.cancel();
     super.dispose();
   }

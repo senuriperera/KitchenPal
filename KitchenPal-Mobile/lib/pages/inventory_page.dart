@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../models/ingredient.dart';
 import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
@@ -37,23 +38,40 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   String? _errorMessage;
 
   final TextEditingController _searchController = TextEditingController();
+  
+  // WebSocket subscription
+  StreamSubscription? _inventoryChangedSub;
 
   @override
   void initState() {
     super.initState();
     _loadIngredients();
+    _setupWebSocketListener();
+  }
 
+  void _setupWebSocketListener() {
     // Connect to WebSocket and listen for inventory changes
-    WebSocketService.instance.connect();
-    WebSocketService.instance.inventoryChanged.listen((_) {
-      // Refresh inventory list when backend reports a change
-      _loadIngredients();
+    WebSocketService.instance.connect().then((_) {
+      if (!mounted) return;
+      
+      _inventoryChangedSub = WebSocketService.instance.inventoryChanged.listen(
+        (_) {
+          if (mounted) {
+            print('[InventoryPage] inventoryChanged event received, reloading...');
+            _loadIngredients();
+          }
+        },
+        onError: (e) => print('[InventoryPage] ERROR: inventoryChanged error: $e'),
+      );
+    }).catchError((e) {
+      print('[InventoryPage] ERROR: Failed to connect WebSocket: $e');
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _inventoryChangedSub?.cancel();
     super.dispose();
   }
 

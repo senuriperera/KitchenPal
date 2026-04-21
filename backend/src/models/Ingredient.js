@@ -9,7 +9,7 @@ class IngredientModel {
                 si.ingredient_id,
                 si.name,
                 si.image_url,
-                si.expiry_date,
+                MIN(ib.expiry_date) AS expiry_date,
                 si.quantity_in_stock,
                 si.unit_weight,
                 wu.code  AS unit_weight_unit_code,
@@ -18,8 +18,13 @@ class IngredientModel {
             FROM stock_ingredients si
             JOIN units AS wu  ON si.unit_weight_unit_id = wu.unit_id
             LEFT JOIN units AS bu  ON si.base_unit_id   = bu.unit_id
+            LEFT JOIN ingredient_batches ib ON si.ingredient_id = ib.ingredient_id
+              AND ib.is_depleted = false
+              AND ib.deleted_at IS NULL
             WHERE si.branch_id = $1 AND si.deleted_at IS NULL
-            ORDER BY si.expiry_date ASC
+            GROUP BY si.ingredient_id, si.name, si.image_url, si.quantity_in_stock,
+                     si.unit_weight, wu.code, si.total_base_quantity, bu.code
+            ORDER BY MIN(ib.expiry_date) ASC NULLS LAST
         `;
     const result = await db.query(query, [branch_id]);
     return result.rows;
@@ -36,8 +41,6 @@ class IngredientModel {
                 si.unit_weight,
                 si.total_base_quantity,
                 si.price,
-                si.manufacture_date,
-                si.expiry_date,
                 si.added_at,
                 wu.unit_id  AS unit_weight_unit_id,
                 wu.code     AS unit_weight_unit_code,
@@ -49,7 +52,17 @@ class IngredientModel {
                 mi.master_ingredient_id,
                 mi.unit_family,
                 u.user_id   AS added_by_id,
-                u.name      AS added_by_name
+                u.name      AS added_by_name,
+                (SELECT MIN(ib.manufacture_date) 
+                 FROM ingredient_batches ib 
+                 WHERE ib.ingredient_id = si.ingredient_id 
+                   AND ib.is_depleted = false 
+                   AND ib.deleted_at IS NULL) AS manufacture_date,
+                (SELECT MIN(ib.expiry_date) 
+                 FROM ingredient_batches ib 
+                 WHERE ib.ingredient_id = si.ingredient_id 
+                   AND ib.is_depleted = false 
+                   AND ib.deleted_at IS NULL) AS expiry_date
             FROM stock_ingredients si
             JOIN units          AS wu  ON si.unit_weight_unit_id = wu.unit_id
             LEFT JOIN units          AS bu  ON si.base_unit_id        = bu.unit_id

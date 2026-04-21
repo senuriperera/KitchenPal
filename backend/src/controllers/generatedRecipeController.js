@@ -223,6 +223,10 @@ async function getGeneratedRecipesForBranch(req, res) {
             return res.status(400).json({ error: 'No branch associated with this account' });
         }
 
+        // First, deactivate generated recipes whose trigger ingredients are depleted or expired
+        const io = req.app && req.app.get ? req.app.get('io') : null;
+        await deactivateDepletedGeneratedRecipes(branchId, io);
+
         const result = await db.query(
             `SELECT
          gr.generated_id,
@@ -698,6 +702,84 @@ async function getGeneratedRecipeIngredients(req, res) {
     }
 }
 
+/**
+ * Helper function to deactivate generated recipes whose trigger ingredients are depleted or expired
+ */
+async function deactivateDepletedGeneratedRecipes(branchId, io = null) {
+    try {
+        console.log('[deactivateDepletedGeneratedRecipes] Checking for depleted recipes in branch:', branchId);
+
+        // Find all active generated recipes with depleted or expired trigger ingredients
+        // A recipe should be deactivated if ANY of its trigger ingredients (specific batches) are depleted or expired
+        const result = await db.query(
+            `UPDATE generated_recipes gr
+             SET is_active = false
+             WHERE gr.branch_id = $1
+               AND gr.is_active = true
+               AND gr.status = 'approved'
+               AND EXISTS (
+                 SELECT 1
+                 FROM generated_recipe_triggers grt
+                 WHERE grt.generated_id = gr.generated_id
+                   AND NOT EXISTS (
+                     SELECT 1
+                     FROM ingredient_batches ib
+                     WHERE ib.ingredient_id = grt.ingredient_id
+                       AND ib.expiry_date = grt.expiry_date
+                       AND ib.is_depleted = false
+                       AND ib.remaining_base_quantity > 0
+                       AND ib.deleted_at IS NULL
+                   )
+               )
+             RETURNING generated_id, recipe_id`,
+            [branchId]
+        );
+
+        if (result.rows.length > 0) {
+            const deactivatedIds = result.rows.map(r => r.generated_id);
+            console.log('[deactivateDepletedGeneratedRecipes] Deactivated recipes:', deactivatedIds);
+
+            // Emit WebSocket event for each deactivated recipe
+            if (io) {
+                for (const row of result.rows) {
+                    // Get recipe name and trigger ingredients for the event
+                    const detailsResult = await db.query(
+                        `SELECT r.name AS recipe_name
+                         FROM recipes r
+                         WHERE r.recipe_id = $1`,
+                        [row.recipe_id]
+                    );
+
+                    const triggerResult = await db.query(
+                        `SELECT ingredient_id FROM generated_recipe_triggers WHERE generated_id = $1`,
+                        [row.generated_id]
+                    );
+
+                    const recipeName = detailsResult.rows[0]?.recipe_name || 'Recipe';
+                    const ingredientIds = triggerResult.rows.map(r => r.ingredient_id);
+
+                    console.log(`📡 [WebSocket] Emitting recipe:deactivated for generated_id ${row.generated_id}`);
+                    io.emit('recipe:deactivated', {
+                        generated_id: row.generated_id,
+                        branch_id: branchId,
+                        ingredient_ids: ingredientIds,
+                        recipe_name: recipeName,
+                        reason: 'ingredients_depleted',
+                    });
+                }
+            }
+        } else {
+            console.log('[deactivateDepletedGeneratedRecipes] No recipes to deactivate');
+        }
+
+        return result.rows.length;
+    } catch (err) {
+        console.error('[deactivateDepletedGeneratedRecipes] Error:', err);
+        // Don't throw - this is a background cleanup task
+        return 0;
+    }
+}
+
 module.exports = {
     createGeneratedRecipe,
     getGeneratedRecipesForBranch,
@@ -707,4 +789,5 @@ module.exports = {
     getRecentlyApprovedRecipes,
     getRecentlyRejectedRecipes,
     getGeneratedRecipeIngredients,
+    deactivateDepletedGeneratedRecipes,
 };
