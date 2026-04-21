@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import '../models/recipe_suggestion.dart';
 import '../models/generated_recipe.dart';
 import '../services/recipe_service.dart';
 import '../services/storage_service.dart';
+import '../services/websocket_service.dart';
 import 'recipe_detail_page.dart';
 import 'generated_recipe_detail_page.dart';
 
@@ -56,6 +58,15 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   Map<int, Map<String, dynamic>> _recipeAvailability = {};
   bool _isLoadingAvailability = false;
 
+  // WebSocket subscriptions (store them to cancel later)
+  StreamSubscription? _recipeCreatedSub;
+  StreamSubscription? _recipeUpdatedSub;
+  StreamSubscription? _recipeDeletedSub;
+  StreamSubscription? _recipeGeneratedSub;
+  StreamSubscription? _recipeApprovedSub;
+  StreamSubscription? _recipeRejectedSub;
+  bool _wsListenersSetup = false;
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +81,99 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     if (widget.initialTabIndex == 1) {
       _loadGeneratedRecipes();
     }
+
+    _setupWebSocketListeners();
+  }
+
+  void _setupWebSocketListeners() {
+    if (_wsListenersSetup) {
+      print('[RecipesPage] WebSocket listeners already setup, skipping');
+      return;
+    }
+
+    print('[RecipesPage] Connecting WebSocket and setting up listeners...');
+    WebSocketService.instance
+        .connect()
+        .then((_) {
+          if (!mounted) return;
+          print(
+            '[RecipesPage] WebSocket connected, registering stream listeners',
+          );
+
+          _recipeCreatedSub = WebSocketService.instance.recipeCreated.listen(
+            (_) {
+              if (mounted) {
+                print('[RecipesPage] recipeCreated event received');
+                _loadStandardRecipes();
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: recipeCreated error: $e'),
+          );
+
+          _recipeUpdatedSub = WebSocketService.instance.recipeUpdated.listen(
+            (_) {
+              if (mounted) {
+                print('[RecipesPage] recipeUpdated event received');
+                _loadStandardRecipes();
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: recipeUpdated error: $e'),
+          );
+
+          _recipeDeletedSub = WebSocketService.instance.recipeDeleted.listen(
+            (_) {
+              if (mounted) {
+                print('[RecipesPage] recipeDeleted event received');
+                _loadStandardRecipes();
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: recipeDeleted error: $e'),
+          );
+
+          _recipeGeneratedSub = WebSocketService.instance.recipeGenerated
+              .listen(
+                (_) {
+                  if (_generatedLoaded && mounted) {
+                    print('[RecipesPage] recipeGenerated event received');
+                    _loadGeneratedRecipes();
+                  }
+                },
+                onError: (e) =>
+                    print('[RecipesPage] ERROR: recipeGenerated error: $e'),
+              );
+
+          _recipeApprovedSub = WebSocketService.instance.recipeApproved.listen(
+            (_) {
+              if (_generatedLoaded && mounted) {
+                print('[RecipesPage] recipeApproved event received');
+                _loadGeneratedRecipes();
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: recipeApproved error: $e'),
+          );
+
+          _recipeRejectedSub = WebSocketService.instance.recipeRejected.listen(
+            (_) {
+              if (_generatedLoaded && mounted) {
+                print('[RecipesPage] recipeRejected event received');
+                _loadGeneratedRecipes();
+              }
+            },
+            onError: (e) =>
+                print('[RecipesPage] ERROR: recipeRejected error: $e'),
+          );
+
+          print('[RecipesPage] All stream listeners registered');
+        })
+        .catchError((e) {
+          print('[RecipesPage] ERROR: Failed to connect WebSocket: $e');
+        });
+
+    _wsListenersSetup = true;
   }
 
   @override
@@ -77,6 +181,12 @@ class _RecipesPageContentState extends State<RecipesPageContent>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _searchController.dispose();
+    _recipeCreatedSub?.cancel();
+    _recipeUpdatedSub?.cancel();
+    _recipeDeletedSub?.cancel();
+    _recipeGeneratedSub?.cancel();
+    _recipeApprovedSub?.cancel();
+    _recipeRejectedSub?.cancel();
     super.dispose();
   }
 
@@ -906,7 +1016,7 @@ class _RecipesPageContentState extends State<RecipesPageContent>
         final result = await showDialog<int>(
           context: context,
           builder: (context) {
-            print('🔵 [_processSale] Building dialog...');
+            print('[_processSale] Building dialog...');
             return _buildSaleQuantityDialog(
               recipeName: recipeName,
               totalServings: servings,

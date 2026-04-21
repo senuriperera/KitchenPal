@@ -97,8 +97,16 @@ class RecipeController {
             // Fetch full recipe with ingredients for the WebSocket payload
             const io = req.app.get('io');
             if (io) {
+                console.log(`📡 [WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
                 const fullRecipe = await Recipe.getStandardRecipeById(recipe.recipe_id);
-                if (fullRecipe) io.emit('recipe:created', fullRecipe);
+                if (fullRecipe) {
+                    console.log(`📡 [WebSocket] Emitting recipe:created for recipe ${recipe.recipe_id}`);
+                    io.emit('recipe:created', fullRecipe);
+                } else {
+                    console.log(`⚠️ [WebSocket] Full recipe not found for ID ${recipe.recipe_id}`);
+                }
+            } else {
+                console.log('⚠️ [WebSocket] io object not available!');
             }
         } catch (error) {
             console.error('Create recipe error:', error);
@@ -193,8 +201,16 @@ class RecipeController {
             // Fetch full recipe with ingredients for the WebSocket payload
             const io = req.app.get('io');
             if (io) {
+                console.log(`📡 [WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
                 const fullRecipe = await Recipe.getStandardRecipeById(recipe.recipe_id);
-                if (fullRecipe) io.emit('recipe:updated', fullRecipe);
+                if (fullRecipe) {
+                    console.log(`📡 [WebSocket] Emitting recipe:updated for recipe ${recipe.recipe_id}`);
+                    io.emit('recipe:updated', fullRecipe);
+                } else {
+                    console.log(`⚠️ [WebSocket] Full recipe not found for ID ${recipe.recipe_id}`);
+                }
+            } else {
+                console.log('⚠️ [WebSocket] io object not available!');
             }
         } catch (error) {
             console.error('Update recipe error:', error);
@@ -230,7 +246,12 @@ class RecipeController {
 
             // Emit WebSocket event for real-time update
             const io = req.app.get('io');
-            if (io) io.emit('recipe:deleted', { id: Number(id) });
+            if (io) {
+                console.log(`📡 [WebSocket] Emitting recipe:deleted for recipe ${id}`);
+                io.emit('recipe:deleted', { id: Number(id) });
+            } else {
+                console.log('⚠️ [WebSocket] io object not available on delete!');
+            }
         } catch (error) {
             console.error('Delete recipe error:', error);
             res.status(500).json({ error: 'Failed to delete recipe' });
