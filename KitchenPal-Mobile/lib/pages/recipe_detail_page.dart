@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 import '../models/ingredient.dart';
 import '../services/ingredient_service.dart';
+import '../services/api_client.dart';
 
 class RecipeDetailPage extends StatefulWidget {
   final Recipe recipe;
@@ -15,53 +17,62 @@ class RecipeDetailPage extends StatefulWidget {
 class _RecipeDetailPageState extends State<RecipeDetailPage> {
   List<Ingredient> _availableIngredients = [];
   bool _isLoading = true;
+  Map<int, bool> _ingredientAvailability = {};
 
   @override
   void initState() {
     super.initState();
-    _loadAvailableIngredients();
+    _loadAvailability();
   }
 
-  Future<void> _loadAvailableIngredients() async {
+  Future<void> _loadAvailability() async {
     try {
-      final ingredients = await IngredientService.getAllIngredients();
-      setState(() {
-        _availableIngredients = ingredients;
-        _isLoading = false;
-      });
+      // Fetch recipe availability from the same endpoint used by recipes page
+      final response = await ApiClient.get('/recipes/availability');
       
-      // Debug: Print available ingredients
-      print('Available ingredients count: ${ingredients.length}');
-      for (var ing in ingredients) {
-        print('Ingredient: ${ing.name}, MasterID: ${ing.masterIngredientId}, Stock: ${ing.quantityInStock}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> availability = data['availability'] ?? {};
+        
+        // Get availability for this specific recipe
+        final recipeAvailability = availability[widget.recipe.recipeId.toString()];
+        
+        if (recipeAvailability != null) {
+          final shortIngredients = (recipeAvailability['short_ingredients'] as List<dynamic>?)
+              ?.cast<String>() ?? [];
+          
+          // Build a map of ingredient availability
+          final Map<int, bool> availabilityMap = {};
+          for (final ingredient in widget.recipe.ingredients) {
+            // Ingredient is available if it's NOT in the short_ingredients list
+            availabilityMap[ingredient.masterIngredientId] = 
+                !shortIngredients.contains(ingredient.name);
+          }
+          
+          setState(() {
+            _ingredientAvailability = availabilityMap;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      print('Error loading ingredients: $e');
+      print('Error loading availability: $e');
       setState(() {
         _isLoading = false;
       });
     }
   }
 
-  bool _isIngredientAvailable(int masterIngredientId, String ingredientName) {
-    // Try matching by master_ingredient_id first
-    final matchById = _availableIngredients.any(
-      (ing) => ing.masterIngredientId == masterIngredientId && ing.quantityInStock > 0,
-    );
-    
-    if (matchById) return true;
-    
-    // Fallback: Try matching by name (case-insensitive)
-    final matchByName = _availableIngredients.any(
-      (ing) => ing.name.toLowerCase() == ingredientName.toLowerCase() && ing.quantityInStock > 0,
-    );
-    
-    // Debug
-    if (!matchById && !matchByName) {
-      print('Ingredient not found: $ingredientName (ID: $masterIngredientId)');
-    }
-    
-    return matchByName;
+  bool _isIngredientAvailable(int masterIngredientId) {
+    return _ingredientAvailability[masterIngredientId] ?? true;
   }
 
   @override
@@ -221,7 +232,6 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                                   final ingredient = widget.recipe.ingredients[index];
                                   final isAvailable = _isIngredientAvailable(
                                     ingredient.masterIngredientId,
-                                    ingredient.name,
                                   );
                                   return _buildIngredientItem(ingredient, isAvailable);
                                 },

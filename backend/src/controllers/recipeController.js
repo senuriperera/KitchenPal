@@ -269,6 +269,7 @@ class RecipeController {
             const db = require('../config/database');
 
             // Fetch all recipe ingredients with their required quantities and available stock
+            // Calculate available stock from non-depleted, non-expired batches only
             const query = `
                 SELECT
                     ri.recipe_id,
@@ -277,15 +278,22 @@ class RecipeController {
                     ri.is_optional,
                     u.to_base_factor,
                     mi.name AS ingredient_name,
-                    COALESCE(si.total_base_quantity, 0) AS available_base_quantity,
+                    COALESCE(
+                        (SELECT SUM(ib.remaining_base_quantity)
+                         FROM ingredient_batches ib
+                         JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
+                         WHERE si.master_ingredient_id = ri.master_ingredient_id
+                           AND si.branch_id = $1
+                           AND ib.is_depleted = false
+                           AND ib.expiry_date > NOW()::DATE
+                           AND ib.deleted_at IS NULL
+                        ), 0
+                    ) AS available_base_quantity,
                     r.total_servings
                 FROM recipe_ingredients ri
                 JOIN units u ON ri.unit_id = u.unit_id
                 JOIN master_ingredients mi ON ri.master_ingredient_id = mi.master_ingredient_id
                 JOIN recipes r ON ri.recipe_id = r.recipe_id
-                LEFT JOIN stock_ingredients si
-                    ON si.master_ingredient_id = ri.master_ingredient_id
-                    AND si.branch_id = $1
                 WHERE r.is_active = true
                 AND (r.branch_id = $1 OR r.branch_id IS NULL)
                 ORDER BY ri.recipe_id
