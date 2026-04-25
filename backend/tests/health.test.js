@@ -1,3 +1,7 @@
+jest.mock('../src/config/database', () => ({ query: jest.fn(), pool: { end: jest.fn() }, testConnection: jest.fn() }));
+jest.mock('../src/cron/expiryNotificationsJob', () => ({ runExpiryNotificationsJob: jest.fn() }));
+jest.mock('../src/jobs/autoExpiryWasteLoggingJob', () => ({ startAutoExpiryWasteLoggingJob: jest.fn() }));
+
 const request = require('supertest');
 const app = require('../src/server');
 

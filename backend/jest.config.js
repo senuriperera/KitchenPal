@@ -2,12 +2,18 @@ module.exports = {
     testEnvironment: 'node',
     testMatch: ['**/tests/**/*.test.js'],
     collectCoverageFrom: [
-        'src/**/*.js',
-        '!src/server.js',
-        '!**/node_modules/**'
+        'src/controllers/**/*.js',
+        'src/middleware/auth.js',
+        'src/middleware/roleAuth.js',
+        'src/middleware/validate.js',
+        '!**/node_modules/**',
     ],
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'html'],
+    coverageThreshold: {
+        global: { lines: 60, functions: 60 },
+    },
     verbose: true,
-    testTimeout: 10000
+    testTimeout: 10000,
+    forceExit: true,
 };
