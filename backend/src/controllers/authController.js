@@ -172,47 +172,6 @@ class AuthController {
         }
     }
 
-    // Google OAuth callback handler
-    static async googleCallback(req, res) {
-        try {
-            // User is already authenticated via passport
-            const user = req.user;
-
-            // Generate access and refresh tokens
-            const accessToken = jwt.sign(
-                { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
-                config.jwt.secret,
-                { expiresIn: config.jwt.accessTokenExpiresIn }
-            );
-
-            const refreshToken = jwt.sign(
-                { user_id: user.user_id, type: 'refresh' },
-                config.jwt.secret,
-                { expiresIn: config.jwt.refreshTokenExpiresIn }
-            );
-
-            // Delete all existing sessions for this user
-            await SessionModel.deleteAllUserSessions(user.user_id);
-
-            // Create session
-            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-            await SessionModel.create({
-                user_id: user.user_id,
-                jwt_token: accessToken,
-                refresh_token: refreshToken,
-                expires_at: expiresAt,
-                user_agent: req.headers['user-agent'],
-                ip_address: req.ip,
-            });
-
-            // Redirect to frontend with tokens
-            res.redirect(`${config.frontend.url}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`);
-        } catch (error) {
-            console.error('Google callback error:', error);
-            res.redirect(`${config.frontend.url}/auth/error`);
-        }
-    }
-
     // Refresh access token
     static async refreshToken(req, res) {
         try {

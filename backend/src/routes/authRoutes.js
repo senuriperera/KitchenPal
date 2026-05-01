@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const passport = require('../middleware/passport');
 const AuthController = require('../controllers/authController');
 const authenticate = require('../middleware/auth');
 const { body } = require('express-validator');
@@ -31,9 +30,5 @@ router.post('/login', loginValidation, AuthController.login);
 router.post('/logout', authenticate, AuthController.logout);
 router.post('/refresh', refreshTokenValidation, AuthController.refreshToken);
 router.get('/me', authenticate, AuthController.getCurrentUser);
-
-// Google OAuth routes
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/google/callback', passport.authenticate('google', { session: false, failureRedirect: '/auth/error' }), AuthController.googleCallback);
 
 module.exports = router;

@@ -18,23 +18,6 @@ module.exports = {
         refreshTokenExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     },
 
-    session: {
-        secret: process.env.SESSION_SECRET || 'your-session-secret',
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-        },
-    },
-
-    google: {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/google/callback',
-    },
-
     frontend: {
         url: process.env.FRONTEND_URL || 'http://localhost:4200',
     },
