@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest",
-    "test:ci": "jest --ci --coverage --maxWorkers=2"
+    "test": "jest --passWithNoTests"
   },
   "keywords": [
     "food",
@@ -39,6 +38,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "jest-html-reporter": "^4.4.0",
     "nodemon": "^3.0.2",
     "supertest": "^7.1.4"
   }

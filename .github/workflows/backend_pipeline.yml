@@ -38,7 +38,15 @@ jobs:
         JWT_SECRET: test_jwt_secret
         SESSION_SECRET: test_session_secret
         FRONTEND_URL: http://localhost:4200
-      run: npm run test:ci
+      run: npm test -- --ci --coverage
+
+    - name: Upload Test HTML Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: jest-test-report
+        path: backend/reports/test-report.html
+        retention-days: 14
 
     - name: Upload Coverage Report
       if: always()

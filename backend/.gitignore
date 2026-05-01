@@ -9,4 +9,9 @@ npm-debug.log*
 coverage/
 dist/
 google-credentials.json
+# Test Reports
+backend/reports/
+reports/
+test-report.html
+
 

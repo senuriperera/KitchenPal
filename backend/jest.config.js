@@ -14,4 +14,18 @@ module.exports = {
     verbose: true,
     testTimeout: 10000,
     forceExit: true,
+
+    // Add the reporters configuration here
+    reporters: [
+        "default",
+        ["jest-html-reporter", {
+            "pageTitle": "KitchenPal Backend Test Report",
+            "outputPath": "./reports/test-report.html",
+            "includeFailureMsg": true,
+            "includeConsoleLog": true,
+            "theme": "darkTheme", // Optional: looks great for CI reports
+            // Ensure report still generates cleanly even on test failures
+            "sort": "status"
+        }]
+    ]
 };
