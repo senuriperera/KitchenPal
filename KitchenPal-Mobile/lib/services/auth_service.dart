@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/auth_response.dart';
 import 'storage_service.dart';
+import '../config/api_constants.dart';
 
 class AuthService {
   // Update this URL to match your backend server
   // For Android Emulator, use 10.0.2.2 instead of localhost
-  static const String baseUrl = 'http://192.168.1.61:3000/api/auth';
+  static const String baseUrl = '${ApiConstants.baseUrl}/auth';
 
   // For Android emulator, use: http://10.0.2.2:3000/api/auth
   // For iOS simulator, use: http://localhost:3000/api/auth
@@ -113,7 +114,7 @@ class AuthService {
 
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:3000/api/users/me'),
+        Uri.parse('$baseUrl/me'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
