@@ -75,13 +75,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _handleForgotPassword() {
-    // TODO: Implement forgot password logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Forgot password feature coming soon')),
-    );
-  }
-
   void _handleSignUp() {
     // TODO: Navigate to sign up page
     ScaffoldMessenger.of(
@@ -277,22 +270,6 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                           const SizedBox(height: 4),
-
-                          // Forgot Password
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: _handleForgotPassword,
-                              child: const Text(
-                                'Forgot Password?',
-                                style: TextStyle(
-                                  color: Colors.black87,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: screenHeight * 0.01),
 
                           // Login Button
                           ElevatedButton(
