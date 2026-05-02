@@ -1,104 +1,75 @@
 name: Mobile Pipeline
 
-# WHAT IS THIS?
-# This is a CI (Continuous Integration) pipeline that automatically tests your Flutter app
-# whenever you push code or create a pull request.
+# CI pipeline for Flutter mobile application
+# Runs tests, code analysis, and builds on push/PR
 
-# WHEN DOES IT RUN?
 on:
   push:
-    branches: ["main", "develop", "mobile-test2"] # Runs when you push to these branches
+    branches: ["main", "mobile-test2"]
     paths:
-      - "KitchenPal-Mobile/**" # Only runs if files in mobile folder change
+      - "KitchenPal-Mobile/**"
   pull_request:
-    branches: ["main", "develop", "mobile-test2"] # Runs when you create a PR to these branches
+    branches: ["main", "mobile-test2"]
     paths:
       - "KitchenPal-Mobile/**"
 
-# WHAT DOES IT DO?
 jobs:
-  # JOB 1: Run Tests
   test:
     name: Test Flutter App
-    runs-on: ubuntu-latest # Uses Ubuntu Linux server
+    runs-on: ubuntu-latest
 
-    # Set the working directory to your Flutter app
     defaults:
       run:
         working-directory: ./KitchenPal-Mobile
 
     steps:
-      # STEP 1: Get your code from GitHub
       - name: Checkout Code
         uses: actions/checkout@v4
-        # This downloads your repository code to the server
 
-      # STEP 2: Install Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.41.2" # Updated to match Dart SDK 3.10.4 requirement
           channel: "stable"
-        # This installs Flutter SDK on the server
 
-      # STEP 3: Verify Flutter installation
       - name: Verify Flutter Installation
         run: |
           flutter --version
           flutter doctor -v
-        # Shows Flutter version and checks if everything is set up correctly
 
-      # STEP 4: Get all dependencies
       - name: Install Dependencies
         run: flutter pub get
-        # Downloads all packages listed in pubspec.yaml
 
-      # STEP 5: Check for code issues
       - name: Analyze Code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-        # Checks your code for errors, warnings, and style issues
-        # --no-fatal-infos: Don't fail on info messages (like print statements)
-        # --no-fatal-warnings: Don't fail on warnings (like unused variables)
-        # Will still fail on actual errors
 
-      # STEP 6: Check code formatting
       - name: Check Code Formatting
         run: dart format --output=none --set-exit-if-changed .
-        # Ensures your code follows Dart formatting standards
-        # Fails if code is not properly formatted
         continue-on-error: true
-        # Allow formatting issues but still show them
 
-      # STEP 7: Run all tests
       - name: Run Tests
         run: flutter test --coverage
-        # Runs all your 103 tests and generates coverage report
-        # Coverage shows which parts of your code are tested
 
-      # STEP 8: Upload test coverage report
       - name: Upload Coverage Report
-        if: always() # Runs even if previous steps fail
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: flutter-coverage
           path: KitchenPal-Mobile/coverage/
           retention-days: 7
-        # Saves the coverage report so you can download and view it
 
-      # STEP 9: Display test summary
       - name: Test Summary
         if: always()
         run: |
-          echo "✅ All tests completed!"
-          echo "📊 Coverage report generated"
-          echo "📁 Check artifacts for detailed reports"
+          echo "All tests completed"
+          echo "Coverage report generated"
+          echo "Check artifacts for detailed reports"
 
-  # JOB 2: Build Android APK (optional, runs after tests pass)
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    needs: test # Only runs if tests pass
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' # Only on main branch
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     defaults:
       run:
@@ -119,14 +90,12 @@ jobs:
         with:
           distribution: "zulu"
           java-version: "17"
-        # Android builds need Java
 
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
-        # Creates a release APK file
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -134,32 +103,3 @@ jobs:
           name: android-apk
           path: KitchenPal-Mobile/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14
-        # Saves the APK so you can download and install it
-
-  # JOB 3: Build iOS (optional, only if you have macOS runner)
-  # Commented out because iOS builds require macOS and Apple Developer account
-  # build-ios:
-  #   name: Build iOS App
-  #   runs-on: macos-latest
-  #   needs: test
-  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  #
-  #   defaults:
-  #     run:
-  #       working-directory: ./KitchenPal-Mobile
-  #
-  #   steps:
-  #   - name: Checkout Code
-  #     uses: actions/checkout@v4
-  #
-  #   - name: Setup Flutter
-  #     uses: subosito/flutter-action@v2
-  #     with:
-  #       flutter-version: '3.10.4'
-  #       channel: 'stable'
-  #
-  #   - name: Install Dependencies
-  #     run: flutter pub get
-  #
-  #   - name: Build iOS
-  #     run: flutter build ios --release --no-codesign
