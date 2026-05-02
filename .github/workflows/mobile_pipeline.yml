@@ -48,7 +48,24 @@ jobs:
         continue-on-error: true
 
       - name: Run Tests
-        run: flutter test --coverage
+        run: flutter test --coverage --reporter=expanded --file-reporter=json:test-results.json
+
+      - name: Generate HTML Test Report
+        if: always()
+        run: |
+          dart pub global activate junitreport
+          flutter test --reporter=json > test-results.json || true
+          cat test-results.json | dart pub global run junitreport:tojunit > test-results.xml || true
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            KitchenPal-Mobile/test-results.json
+            KitchenPal-Mobile/test-results.xml
+          retention-days: 7
 
       - name: Upload Coverage Report
         if: always()
@@ -82,7 +99,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.0"
+          flutter-version: "3.41.2"
           channel: "stable"
 
       - name: Setup Java
