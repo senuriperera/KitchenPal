@@ -37,7 +37,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.24.0" # Updated to match Dart SDK 3.10.4 requirement
+          flutter-version: "3.41.2" # Updated to match Dart SDK 3.10.4 requirement
           channel: "stable"
         # This installs Flutter SDK on the server
 
