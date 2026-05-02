@@ -123,7 +123,7 @@ void main() {
   group('AuthService isTokenValid logic', () {
     test('returns true when user data is non-null', () {
       // Simulate getCurrentUser() returning a user map
-      const Map<String, dynamic>? userData = {
+      final Map<String, dynamic>? userData = {
         'user_id': 1,
         'name': 'Test',
       };

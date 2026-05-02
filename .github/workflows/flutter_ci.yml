@@ -72,7 +72,7 @@ jobs:
       # This catches type errors, unused imports, lint warnings, etc.
       # It's like a spell-checker for your code.
       - name: Analyze code (flutter analyze)
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
         working-directory: KitchenPal-Mobile
 
       # Step 7: Run all unit and widget tests

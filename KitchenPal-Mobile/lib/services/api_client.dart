@@ -8,7 +8,6 @@ import 'storage_service.dart';
 /// token refresh logic in every service.
 class ApiClient {
   static bool _isRefreshing = false;
-  static List<Function> _requestQueue = [];
 
   /// Makes an authenticated HTTP request with automatic token refresh
   /// 

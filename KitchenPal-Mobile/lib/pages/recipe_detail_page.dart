@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 import '../models/ingredient.dart';
-import '../services/ingredient_service.dart';
 import '../services/api_client.dart';
 
 class RecipeDetailPage extends StatefulWidget {
@@ -15,7 +14,6 @@ class RecipeDetailPage extends StatefulWidget {
 }
 
 class _RecipeDetailPageState extends State<RecipeDetailPage> {
-  List<Ingredient> _availableIngredients = [];
   bool _isLoading = true;
   Map<int, bool> _ingredientAvailability = {};
 

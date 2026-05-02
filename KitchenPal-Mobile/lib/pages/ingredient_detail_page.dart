@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../models/ingredient.dart';
 import '../models/ingredient_batch.dart';
 import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
 import '../services/websocket_service.dart';
-import '../config/cloudinary_config.dart';
 import 'login.dart';
 
 class IngredientDetailPage extends StatefulWidget {
@@ -160,24 +155,6 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
       'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  Widget _buildBulletPoint(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8, bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('•  ', style: TextStyle(fontSize: 15, height: 1.5)),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 15, height: 1.5),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -673,7 +650,6 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                 batch.expiryDate.day,
               );
               final daysLeft = bExpiry.difference(today).inDays;
-              final isBatchExpired = daysLeft < 0;
 
               // Format the remaining quantity nicely
               String formattedQty;

@@ -59,9 +59,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
   File? _selectedImage;
   String? _cloudinaryImageUrl;
-  // Separate OCR image state so scanning doesn't overwrite the main ingredient image
-  File? _ocrImage;
-  String? _ocrCloudinaryImageUrl;
+  // OCR variables were here but removed since they were unused
   bool _isUploading = false;
   bool _isScanning = false;
   bool _isSubmitting = false;
@@ -261,11 +259,10 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
           // Auto-fill weight unit
           final unitId = existing['unit_weight_unit_id'];
-          _selectedWeightUnit = _filteredUnits.firstWhere(
-            (u) => u.unitId == unitId,
-            orElse: () =>
-                _filteredUnits.isNotEmpty ? _filteredUnits.first : null!,
-          );
+          final matches = _filteredUnits.where((u) => u.unitId == unitId);
+          _selectedWeightUnit = matches.isNotEmpty 
+              ? matches.first 
+              : (_filteredUnits.isNotEmpty ? _filteredUnits.first : null);
 
           // Auto-fill price
           _priceController.text = existing['price'].toString();
@@ -477,9 +474,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
 
     final imageFile = File(picked.path);
 
-    // Use separate OCR image state so we don't overwrite the main ingredient visual
     setState(() {
-      _ocrImage = imageFile;
       _isScanning = true;
     });
 
@@ -499,7 +494,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
         return;
       }
 
-      _ocrCloudinaryImageUrl = uploadedUrl;
+      // We used to store the OCR url here, but it's only needed locally for the scan
 
       // Step 4 — run OCR on the uploaded URL
       final dates = await OcrService.scanImageUrl(uploadedUrl);
@@ -730,8 +725,7 @@ class _AddIngredientPageContentState extends State<AddIngredientPageContent> {
       _expiryDate = DateTime.now();
       _selectedImage = null;
       _cloudinaryImageUrl = null;
-      _ocrImage = null;
-      _ocrCloudinaryImageUrl = null;
+      // Removed unused OCR state variables
       _isRestocking = false;
     });
   }

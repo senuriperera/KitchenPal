@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kitchenpal_mobile/models/auth_response.dart';
-import 'package:kitchenpal_mobile/models/user.dart';
 
 void main() {
   // ─── AuthResponse Tests ───────────────────────────────────────────────────

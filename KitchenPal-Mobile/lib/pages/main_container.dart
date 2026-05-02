@@ -17,8 +17,6 @@ class MainContainer extends StatefulWidget {
 class _MainContainerState extends State<MainContainer> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [];
-
   @override
   void initState() {
     super.initState();

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../models/expiry_notification.dart';
-import '../services/notification_service.dart';
 import '../services/ingredient_service.dart';
 import '../services/recipe_service.dart';
 import '../services/websocket_service.dart';

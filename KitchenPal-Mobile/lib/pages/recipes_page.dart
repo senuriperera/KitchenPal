@@ -7,7 +7,6 @@ import '../services/recipe_service.dart';
 import '../services/api_client.dart';
 import '../services/websocket_service.dart';
 import 'recipe_detail_page.dart';
-import 'generated_recipe_detail_page.dart';
 
 class RecipesPage extends StatelessWidget {
   final int initialTabIndex;
@@ -53,7 +52,6 @@ class _RecipesPageContentState extends State<RecipesPageContent>
 
   // Availability tracking
   Map<int, Map<String, dynamic>> _recipeAvailability = {};
-  bool _isLoadingAvailability = false;
 
   // WebSocket subscriptions (store them to cancel later)
   StreamSubscription? _recipeCreatedSub;
@@ -279,7 +277,6 @@ class _RecipesPageContentState extends State<RecipesPageContent>
   }
 
   Future<void> _loadAvailability() async {
-    setState(() => _isLoadingAvailability = true);
     try {
       final response = await ApiClient.get('/recipes/availability');
 
@@ -298,12 +295,10 @@ class _RecipesPageContentState extends State<RecipesPageContent>
 
         setState(() {
           _recipeAvailability = parsedAvailability;
-          _isLoadingAvailability = false;
         });
       }
     } catch (e) {
       print('Failed to load availability: $e');
-      setState(() => _isLoadingAvailability = false);
     }
   }
 
