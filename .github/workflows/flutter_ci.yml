@@ -1,0 +1,124 @@
+# .github/workflows/flutter_ci.yml
+#
+# KitchenPal Mobile — Continuous Integration Pipeline
+#
+# This pipeline runs automatically on every push or Pull Request to
+# the 'main' or 'develop' branches.
+#
+# What it does:
+#   1. Checks out your code
+#   2. Installs Flutter
+#   3. Downloads dependencies (flutter pub get)
+#   4. Generates mock files (build_runner for mockito)
+#   5. Runs the Dart analyzer (finds code errors/warnings)
+#   6. Runs all unit and widget tests with coverage
+#   7. Uploads a coverage report (optional, requires Codecov setup)
+
+name: Flutter CI
+
+# ─── Triggers ─────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - mobile-test
+  pull_request:
+    branches:
+      - main
+      - develop
+      - mobile-test
+
+# ─── Jobs ─────────────────────────────────────────────────────────────────────
+jobs:
+  # ── Job 1: Unit & Widget Tests ─────────────────────────────────────────────
+  unit-and-widget-tests:
+    name: Unit & Widget Tests
+    # Ubuntu is free on GitHub Actions and fast (no need for macOS for unit tests)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Download your repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Install Flutter (stable channel, latest version)
+      # This step caches Flutter between runs to speed things up
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+
+      # Step 3: Verify Flutter installation
+      - name: Flutter version info
+        run: flutter --version
+
+      # Step 4: Download all pub dependencies
+      # (reads from pubspec.yaml and pubspec.lock)
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: KitchenPal-Mobile
+
+      # Step 5: Generate mockito mock files
+      # This creates *.mocks.dart files that the tests import.
+      # Must run before tests, otherwise tests won't compile.
+      - name: Generate mock files (build_runner)
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+        working-directory: KitchenPal-Mobile
+
+      # Step 6: Run the Dart/Flutter analyzer
+      # This catches type errors, unused imports, lint warnings, etc.
+      # It's like a spell-checker for your code.
+      - name: Analyze code (flutter analyze)
+        run: flutter analyze
+        working-directory: KitchenPal-Mobile
+
+      # Step 7: Run all unit and widget tests
+      # --coverage generates a coverage report (lcov.info)
+      # This runs everything in the test/ directory ONLY (not integration_test/)
+      - name: Run unit & widget tests
+        run: flutter test --coverage
+        working-directory: KitchenPal-Mobile
+
+      # Step 8 (Optional): Upload coverage to Codecov
+      # Codecov is a free service that shows you which lines of code
+      # are tested. To enable:
+      #   1. Go to https://codecov.io and sign in with GitHub
+      #   2. Add your repository
+      #   3. Uncomment the block below
+      #
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     file: KitchenPal-Mobile/coverage/lcov.info
+      #     fail_ci_if_error: false
+
+  # ── Job 2: Code Quality Check ─────────────────────────────────────────────
+  # This runs in parallel with job 1 to save time.
+  # It checks formatting — Flutter has strict code style rules.
+  code-format-check:
+    name: Code Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: KitchenPal-Mobile
+
+      # Checks that your code is formatted according to Dart style.
+      # If this fails, run: dart format lib/ test/ in your project
+      - name: Check code formatting
+        run: dart format --output=none --set-exit-if-changed lib/ test/
+        working-directory: KitchenPal-Mobile

@@ -205,6 +205,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
+                                key: const Key('email_field'),
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: const InputDecoration(
@@ -242,6 +243,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               const SizedBox(height: 8),
                               TextFormField(
+                                key: const Key('password_field'),
                                 controller: _passwordController,
                                 obscureText: _obscurePassword,
                                 decoration: InputDecoration(
@@ -296,6 +298,7 @@ class _LoginPageState extends State<LoginPage> {
 
                           // Login Button
                           ElevatedButton(
+                            key: const Key('login_button'),
                             onPressed: _isLoading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFF59E0B),
@@ -308,6 +311,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             child: _isLoading
                                 ? const SizedBox(
+                                    key: Key('login_loading_indicator'),
                                     height: 20,
                                     width: 20,
                                     child: CircularProgressIndicator(
@@ -326,8 +330,8 @@ class _LoginPageState extends State<LoginPage> {
                           SizedBox(height: screenHeight * 0.02),
 
                           // Sign Up Link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
                             children: [
                               Text(
                                 "Doesn't have an account? ",

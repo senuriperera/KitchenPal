@@ -1,0 +1,88 @@
+name: Mobile App CI/CD
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'KitchenPal-Mobile/**'
+      - '.github/workflows/mobile_pipeline.yml'
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'KitchenPal-Mobile/**'
+
+jobs:
+  test:
+    name: Test & Analyze Flutter App
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./KitchenPal-Mobile
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.10.4'
+        channel: 'stable'
+        cache: true
+
+    - name: Get Dependencies
+      run: flutter pub get
+
+    - name: Run Analyzer (Lint Check)
+      run: flutter analyze
+
+    - name: Run Unit Tests with Coverage
+      run: flutter test --coverage
+
+    - name: Upload Coverage Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: flutter-coverage
+        path: KitchenPal-Mobile/coverage/
+        retention-days: 7
+
+    - name: Build APK (Android)
+      run: flutter build apk --split-per-abi
+
+    - name: Upload APK
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: flutter-apk
+        path: KitchenPal-Mobile/build/app/outputs/flutter-apk/
+        retention-days: 7
+
+  lint_check:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./KitchenPal-Mobile
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.10.4'
+        channel: 'stable'
+        cache: true
+
+    - name: Get Dependencies
+      run: flutter pub get
+
+    - name: Format Check
+      run: flutter format --set-exit-if-changed --line-length=80 lib/ test/
+      continue-on-error: true
+
+    - name: Pub Outdated Check
+      run: flutter pub outdated --exit-code 0
+      continue-on-error: true
