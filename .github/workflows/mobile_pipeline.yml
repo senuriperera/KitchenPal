@@ -41,24 +41,6 @@ jobs:
       - name: Run Tests
         run: flutter test --coverage --reporter=expanded --file-reporter=json:test-results.json
 
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            KitchenPal-Mobile/test-results.json
-            KitchenPal-Mobile/test-results.xml
-          retention-days: 7
-
-      - name: Upload Coverage Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-coverage
-          path: KitchenPal-Mobile/coverage/
-          retention-days: 7
-
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
