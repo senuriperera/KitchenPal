@@ -32,30 +32,14 @@ jobs:
           flutter-version: "3.41.2" # Updated to match Dart SDK 3.10.4 requirement
           channel: "stable"
 
-      - name: Verify Flutter Installation
-        run: |
-          flutter --version
-          flutter doctor -v
-
       - name: Install Dependencies
         run: flutter pub get
 
       - name: Analyze Code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Check Code Formatting
-        run: dart format --output=none --set-exit-if-changed .
-        continue-on-error: true
-
       - name: Run Tests
         run: flutter test --coverage --reporter=expanded --file-reporter=json:test-results.json
-
-      - name: Generate HTML Test Report
-        if: always()
-        run: |
-          dart pub global activate junitreport
-          flutter test --reporter=json > test-results.json || true
-          cat test-results.json | dart pub global run junitreport:tojunit > test-results.xml || true
 
       - name: Upload Test Results
         if: always()
@@ -74,13 +58,6 @@ jobs:
           name: flutter-coverage
           path: KitchenPal-Mobile/coverage/
           retention-days: 7
-
-      - name: Test Summary
-        if: always()
-        run: |
-          echo "All tests completed"
-          echo "Coverage report generated"
-          echo "Check artifacts for detailed reports"
 
   build-android:
     name: Build Android APK
