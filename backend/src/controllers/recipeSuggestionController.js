@@ -70,7 +70,7 @@ class RecipeSuggestionController {
         }
     }
 
-    // Get suggestion by ID
+    // Fetch a single suggestion by its ID, along with the recipe details
     static async getSuggestionById(req, res) {
         try {
             const { id } = req.params;
