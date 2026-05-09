@@ -8,7 +8,7 @@
 
 ### *Smarter Kitchens. Less Waste. More Savings.*
 
-**An AI-powered food waste management platform for modern cafe chains**
+**A food waste management platform for modern cafe chains**
 
 <br/>
 
@@ -29,7 +29,7 @@
 
 ## 📖 What is KitchenPal?
 
-**KitchenPal** is a full-stack, multi-platform food waste management system designed for cafe chains. It combines **real-time inventory tracking**, **AI-powered recipe generation**, and **smart discount management** to minimize food waste and maximize savings — all from a single platform.
+**KitchenPal** is a full-stack, multi-platform food waste management system designed for cafe chains. It combines **real-time inventory tracking**, **recipe generation**, and **smart discount management** to minimize food waste and maximize savings — all from a single platform.
 
 > Restaurants waste up to **10% of food** before it even reaches the customer. KitchenPal changes that.
 
