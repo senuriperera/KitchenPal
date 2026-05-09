@@ -50,7 +50,7 @@
 ### 📦 Inventory Management
 Track every ingredient with expiry dates, quantities, units, and storage types. FIFO batch deduction ensures nothing goes unnoticed.
 
-### 🤖 AI Recipe Generation
+### 🤖 Recipe Generation
 Automatically generate creative recipes from ingredients nearing expiry — powered by intelligent suggestion workflows.
 
 ### 🔔 Smart Notifications
