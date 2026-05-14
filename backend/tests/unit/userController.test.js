@@ -85,10 +85,10 @@ describe('UserController.updateUser', () => {
         UserModel.findById
             .mockResolvedValueOnce({ user_id: 1, email: 'a@b.com' })
             .mockResolvedValueOnce({ user_id: 1, name: 'Admin', email: 'a@b.com', role: 'admin' });
-        UserModel.updateRole.mockResolvedValue();
+        UserModel.update.mockResolvedValue();
         const res = mockRes();
         await UserController.updateUser({ params: { id: '1' }, body: { role: 'admin' } }, res);
-        expect(UserModel.updateRole).toHaveBeenCalledWith('1', 'admin');
+        expect(UserModel.update).toHaveBeenCalledWith(1, { role: 'admin' });
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'User updated successfully' }));
     });
 });
