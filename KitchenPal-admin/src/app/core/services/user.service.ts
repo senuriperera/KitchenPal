@@ -24,6 +24,7 @@ export interface UpdateUserRequest {
     email?: string;
     role?: string;
     password?: string;
+    branch_id?: number | null;
 }
 
 export interface UserResponse {

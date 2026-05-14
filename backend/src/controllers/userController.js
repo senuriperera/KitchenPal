@@ -102,8 +102,8 @@ class UserController {
     // Update user
     static async updateUser(req, res) {
         try {
-            const { id } = req.params;
-            const { name, email, role, password } = req.body;
+            const id = parseInt(req.params.id, 10);
+            const { name, email, role, password, branch_id } = req.body;
 
             // Check if user exists
             const existingUser = await UserModel.findById(id);
@@ -119,12 +119,20 @@ class UserController {
                 }
             }
 
-            // Update role if provided
-            if (role) {
-                await UserModel.updateRole(id, role);
+            // Build update fields — use explicit undefined check so falsy values aren't skipped
+            const updateFields = {};
+            if (name !== undefined && name !== null) updateFields.name = name;
+            if (email !== undefined && email !== null) updateFields.email = email;
+            if (role !== undefined && role !== null) updateFields.role = role;
+            // branch_id can legitimately be null (unassign) or a positive int
+            if (branch_id !== undefined) {
+                updateFields.branch_id = branch_id === null ? null : parseInt(branch_id, 10);
+            }
+            if (password) {
+                updateFields.password_hash = await bcrypt.hash(password, 10);
             }
 
-            // TODO: Add methods to update name, email, password in UserModel if needed
+            await UserModel.update(id, updateFields);
 
             const updatedUser = await UserModel.findById(id);
 
@@ -134,7 +142,8 @@ class UserController {
                     id: updatedUser.user_id,
                     name: updatedUser.name,
                     email: updatedUser.email,
-                    role: updatedUser.role
+                    role: updatedUser.role,
+                    branch_id: updatedUser.branch_id
                 }
             });
         } catch (error) {

@@ -79,11 +79,11 @@
               <td>
                 <span
                   class="role-badge"
-                  [class.admin]="user.role === 'admin'"
-                  [class.manager]="user.role === 'manager'"
+                  [class.admin]="user.role?.toLowerCase() === 'admin'"
+                  [class.manager]="user.role === 'branch_manager' || user.role === 'manager'"
                   [class.staff]="user.role === 'staff'"
                 >
-                  {{ user.role }}
+                  {{ (user.role === 'branch_manager' || user.role === 'manager') ? 'Branch Manager' : user.role === 'staff' ? 'Staff' : (user.role | titlecase) }}
                 </span>
               </td>
               <td>{{ user.branch }}</td>
@@ -256,15 +256,26 @@
 
         <div class="form-group">
           <label for="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            [(ngModel)]="userFormData.password"
-            name="newUserPassword"
-            class="form-input"
-            autocomplete="new-password"
-            required
-          />
+          <div class="password-wrapper">
+            <input
+              [type]="showAddUserPassword ? 'text' : 'password'"
+              id="password"
+              [(ngModel)]="userFormData.password"
+              name="newUserPassword"
+              class="form-input"
+              autocomplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              (click)="showAddUserPassword = !showAddUserPassword"
+              tabindex="-1"
+              title="Toggle password visibility"
+            >
+              <span class="material-icons">{{ showAddUserPassword ? 'visibility_off' : 'visibility' }}</span>
+            </button>
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -283,8 +294,7 @@
       </form>
     </div>
   </div>
-
-  <!-- Add Branch Modal -->
+  <!-- Add Branch Modal -->
   <div
     class="modal-overlay"
     *ngIf="showAddBranchModal"
@@ -370,4 +380,184 @@
       </form>
     </div>
   </div>
+
+  <!-- Edit User Modal -->
+  <div class="modal-overlay" *ngIf="showEditUserModal" (click)="closeEditUserModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit User</h3>
+        <button class="close-button" (click)="closeEditUserModal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="submitEditUser()" autocomplete="off">
+        <!-- Error Message in Modal -->
+        <div class="alert alert-error" *ngIf="userErrorMessage">
+          {{ userErrorMessage }}
+        </div>
+
+        <div class="form-group">
+          <label for="editName">Name</label>
+          <input
+            type="text"
+            id="editName"
+            [(ngModel)]="editUserFormData.name"
+            name="editName"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="editEmail">Email</label>
+          <input
+            type="email"
+            id="editEmail"
+            [(ngModel)]="editUserFormData.email"
+            name="editEmail"
+            class="form-input"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="editBranch">Branch</label>
+          <select
+            id="editBranch"
+            [(ngModel)]="editUserFormData.branch_id"
+            name="editBranch"
+            class="form-select"
+          >
+            <option [ngValue]="null">No Branch</option>
+            <option *ngFor="let branch of branches" [ngValue]="branch.id">
+              {{ branch.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editRole">Role</label>
+          <select
+            id="editRole"
+            [(ngModel)]="editUserFormData.role"
+            name="editRole"
+            class="form-select"
+            required
+          >
+            <option value="" disabled>Select role</option>
+            <option *ngFor="let role of roles" [value]="role.value">
+              {{ role.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editPassword">New Password <span class="optional-hint">(leave blank to keep current)</span></label>
+          <input
+            type="password"
+            id="editPassword"
+            [(ngModel)]="editUserFormData.password"
+            name="editPassword"
+            class="form-input"
+            autocomplete="new-password"
+            placeholder="Leave blank to keep current password"
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="closeEditUserModal()"
+            [disabled]="isLoading"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="submit-button" [disabled]="isLoading">
+            {{ isLoading ? "Saving..." : "Save Changes" }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Branch Modal -->
+  <div class="modal-overlay" *ngIf="showEditBranchModal" (click)="closeEditBranchModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Branch</h3>
+        <button class="close-button" (click)="closeEditBranchModal()">×</button>
+      </div>
+
+      <form class="modal-form" (ngSubmit)="submitEditBranch()">
+        <!-- Error Message in Modal -->
+        <div class="alert alert-error" *ngIf="branchErrorMessage">
+          {{ branchErrorMessage }}
+        </div>
+
+        <div class="form-group">
+          <label for="editBranchName">Branch Name</label>
+          <input
+            type="text"
+            id="editBranchName"
+            [(ngModel)]="editBranchFormData.name"
+            name="editBranchName"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="editAddress">Address</label>
+          <textarea
+            id="editAddress"
+            [(ngModel)]="editBranchFormData.address"
+            name="editAddress"
+            class="form-textarea"
+            rows="3"
+            required
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="editContactEmail">Contact Email</label>
+          <input
+            type="email"
+            id="editContactEmail"
+            [(ngModel)]="editBranchFormData.contact_email"
+            name="editContactEmail"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="editContactNumber">Contact Number</label>
+          <input
+            type="tel"
+            id="editContactNumber"
+            [(ngModel)]="editBranchFormData.contact_number"
+            name="editContactNumber"
+            class="form-input"
+            required
+          />
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            (click)="closeEditBranchModal()"
+            [disabled]="isLoading"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="submit-button" [disabled]="isLoading">
+            {{ isLoading ? "Saving..." : "Save Changes" }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>

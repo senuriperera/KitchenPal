@@ -88,6 +88,32 @@ class UserModel {
         return result.rows[0];
     }
 
+    // Generic update for any combination of fields
+    static async update(user_id, fields) {
+        const allowedFields = ['name', 'email', 'role', 'branch_id', 'password_hash'];
+        const setClauses = [];
+        const values = [];
+        let paramIndex = 1;
+
+        for (const field of allowedFields) {
+            if (fields[field] !== undefined) {
+                setClauses.push(`${field} = $${paramIndex}`);
+                values.push(fields[field]);
+                paramIndex++;
+            }
+        }
+
+        if (setClauses.length === 0) {
+            // Nothing to update, just return the existing user
+            return await UserModel.findById(user_id);
+        }
+
+        values.push(user_id);
+        const query = `UPDATE users SET ${setClauses.join(', ')} WHERE user_id = $${paramIndex} RETURNING user_id, name, email, role, branch_id`;
+        const result = await db.query(query, values);
+        return result.rows[0];
+    }
+
     // Delete user
     static async delete(user_id) {
         const query = 'DELETE FROM users WHERE user_id = $1';

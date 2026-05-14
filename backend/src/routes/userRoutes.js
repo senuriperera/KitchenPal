@@ -20,6 +20,12 @@ const updateUserValidation = [
     body('email').optional().isEmail().withMessage('Valid email is required'),
     body('role').optional().isIn(['admin', 'branch_manager', 'staff']).withMessage('Invalid role'),
     body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('branch_id').optional({ nullable: true, checkFalsy: false }).custom((value) => {
+        // Allow null (unassign branch) or a positive integer
+        if (value === null || value === undefined) return true;
+        if (Number.isInteger(Number(value)) && Number(value) >= 1) return true;
+        throw new Error('Invalid branch');
+    }),
     validate,
 ];
 

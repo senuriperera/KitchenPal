@@ -6,10 +6,12 @@ import {
   UserService,
   User as ApiUser,
   CreateUserRequest,
+  UpdateUserRequest,
 } from '../../core/services/user.service';
 import {
   BranchService,
   CreateBranchRequest,
+  UpdateBranchRequest,
 } from '../../core/services/branch.service';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -29,6 +31,23 @@ interface UserFormData {
   branch_id: number | null;
   role: string;
   password: string;
+}
+
+interface EditUserFormData {
+  id: number;
+  name: string;
+  email: string;
+  branch_id: number | null;
+  role: string;
+  password: string; // optional – blank means no change
+}
+
+interface EditBranchFormData {
+  id: number;
+  name: string;
+  address: string;
+  contact_email: string;
+  contact_number: string;
 }
 
 interface Branch {
@@ -58,8 +77,14 @@ interface BranchFormData {
 export class UserManagementComponent implements OnInit {
   activeTab: 'users' | 'branches' = 'users';
   showAddUserModal = false;
+  showEditUserModal = false;
   showAddBranchModal = false;
+  showEditBranchModal = false;
   isLoading = false;
+
+  // Password visibility toggles
+  showAddUserPassword = false;
+  showEditUserPassword = false;
 
   // Role-based access control
   isAdmin = false;
@@ -86,7 +111,24 @@ export class UserManagementComponent implements OnInit {
     password: '',
   };
 
+  editUserFormData: EditUserFormData = {
+    id: 0,
+    name: '',
+    email: '',
+    branch_id: null,
+    role: '',
+    password: '',
+  };
+
   branchFormData: BranchFormData = {
+    name: '',
+    address: '',
+    contact_email: '',
+    contact_number: '',
+  };
+
+  editBranchFormData: EditBranchFormData = {
+    id: 0,
     name: '',
     address: '',
     contact_email: '',
@@ -215,6 +257,7 @@ export class UserManagementComponent implements OnInit {
 
   closeModal(): void {
     this.showAddUserModal = false;
+    this.showAddUserPassword = false;
     this.resetForm();
     this.userErrorMessage = '';
     this.userSuccessMessage = '';
@@ -261,9 +304,93 @@ export class UserManagementComponent implements OnInit {
   }
 
   editUser(user: User): void {
-    console.log('Edit user:', user);
-    // TODO: Implement edit user modal
-    alert('Edit functionality coming soon!');
+    this.userErrorMessage = '';
+    this.userSuccessMessage = '';
+
+    const openModal = () => {
+      this.editUserFormData = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        branch_id: this.getBranchIdByName(user.branch),
+        role: user.role,
+        password: '',
+      };
+      this.showEditUserModal = true;
+    };
+
+    // Branches must be loaded before we can resolve the branch name → ID mapping
+    if (this.branches.length === 0) {
+      this.branchService.getBranches().subscribe({
+        next: (branches) => {
+          this.branches = branches;
+          openModal();
+        },
+        error: () => {
+          // Open modal anyway, branch dropdown will just show "No Branch"
+          openModal();
+        },
+      });
+    } else {
+      openModal();
+    }
+  }
+
+  closeEditUserModal(): void {
+    this.showEditUserModal = false;
+    this.editUserFormData = {
+      id: 0,
+      name: '',
+      email: '',
+      branch_id: null,
+      role: '',
+      password: '',
+    };
+    this.userErrorMessage = '';
+    this.userSuccessMessage = '';
+  }
+
+  submitEditUser(): void {
+    this.isLoading = true;
+    this.userErrorMessage = '';
+    this.userSuccessMessage = '';
+
+    const updateData: UpdateUserRequest = {
+      name: this.editUserFormData.name,
+      email: this.editUserFormData.email,
+      role: this.editUserFormData.role,
+      branch_id: this.editUserFormData.branch_id,
+    };
+
+    // Only include password if it was provided
+    if (this.editUserFormData.password.trim()) {
+      updateData.password = this.editUserFormData.password;
+    }
+
+    this.userService.updateUser(this.editUserFormData.id, updateData).subscribe({
+      next: (response) => {
+        console.log('User updated successfully:', response);
+        this.userSuccessMessage = 'User updated successfully!';
+        this.isLoading = false;
+        this.closeEditUserModal();
+        this.loadUsers();
+      },
+      error: (error) => {
+        console.error('Error updating user:', error);
+        this.userErrorMessage =
+          error.error?.error || 'Failed to update user. Please try again.';
+        this.isLoading = false;
+      },
+    });
+  }
+
+  /** Helper: resolve branch name back to its ID for pre-population */
+  private getBranchIdByName(branchName: string): number | null {
+    if (!branchName || branchName === 'N/A') return null;
+    const found = this.branches.find(
+      (b) => b.name.toLowerCase() === branchName.toLowerCase()
+    );
+    return found ? found.id : null;
   }
 
   deleteUser(user: User): void {
@@ -345,8 +472,58 @@ export class UserManagementComponent implements OnInit {
   }
 
   editBranch(branch: Branch): void {
-    console.log('Edit branch:', branch);
-    alert('Edit functionality coming soon!');
+    this.editBranchFormData = {
+      id: branch.id,
+      name: branch.name,
+      address: branch.address,
+      contact_email: branch.contact_email,
+      contact_number: branch.contact_number,
+    };
+    this.branchErrorMessage = '';
+    this.branchSuccessMessage = '';
+    this.showEditBranchModal = true;
+  }
+
+  closeEditBranchModal(): void {
+    this.showEditBranchModal = false;
+    this.editBranchFormData = {
+      id: 0,
+      name: '',
+      address: '',
+      contact_email: '',
+      contact_number: '',
+    };
+    this.branchErrorMessage = '';
+    this.branchSuccessMessage = '';
+  }
+
+  submitEditBranch(): void {
+    this.isLoading = true;
+    this.branchErrorMessage = '';
+    this.branchSuccessMessage = '';
+
+    const updateData: UpdateBranchRequest = {
+      name: this.editBranchFormData.name,
+      address: this.editBranchFormData.address,
+      contact_email: this.editBranchFormData.contact_email,
+      contact_number: this.editBranchFormData.contact_number,
+    };
+
+    this.branchService.updateBranch(this.editBranchFormData.id, updateData).subscribe({
+      next: (response) => {
+        console.log('Branch updated successfully:', response);
+        this.branchSuccessMessage = 'Branch updated successfully!';
+        this.isLoading = false;
+        this.closeEditBranchModal();
+        this.loadBranches();
+      },
+      error: (error) => {
+        console.error('Error updating branch:', error);
+        this.branchErrorMessage =
+          error.error?.error || 'Failed to update branch. Please try again.';
+        this.isLoading = false;
+      },
+    });
   }
 
   deleteBranch(branch: Branch): void {
