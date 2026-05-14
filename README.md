@@ -1,14 +1,11 @@
 <div align="center">
-
-<img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=400&fit=crop&crop=center" alt="KitchenPal Banner" width="100%" style="border-radius: 12px;" />
-
 <br/><br/>
 
 # 🍳 KitchenPal
 
 ### *Smarter Kitchens. Less Waste. More Savings.*
 
-**A food waste management platform for modern cafe chains**
+**A food waste prevention and management platform for modern cafe chains**
 
 <br/>
 
