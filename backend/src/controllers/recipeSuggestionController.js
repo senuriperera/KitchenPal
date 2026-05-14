@@ -2,7 +2,6 @@ const RecipeSuggestionModel = require('../models/RecipeSuggestion');
 const RecipeModel = require('../models/Recipe');
 const DiscountModel = require('../models/Discount');
 const { calculateDiscount } = require('../utils/discountCalculator');
-const { generateRecipeSuggestion } = require('../utils/ragService');
 
 class RecipeSuggestionController {
     // Generate recipe suggestion from expiring ingredients
