@@ -96,8 +96,8 @@ KitchenPal is a **three-tier, multi-platform system**:
 ┌─────────────────────────────────────────────────────────┐
 │                    BACKEND (Node.js)                    │
 │                                                         │
-│  Express.js  │  JWT Auth  │  Google OAuth  │  node-cron │
-│  Socket.IO   │  Cloudinary│  Google Vision │  Jest Tests │
+│  Express.js  │  JWT Auth  │   Google  │  node-cron  │
+│  Socket.IO   │  Cloudinary│   Vision  │  Jest Tests │
 └──────────────────────────┬──────────────────────────────┘
                            │
                ┌───────────▼───────────┐
@@ -122,7 +122,7 @@ KitchenPal is a **three-tier, multi-platform system**:
 
 | Area | Technologies |
 |------|-------------|
-| **Backend** | Node.js 18, Express.js, Socket.IO, node-cron, JWT, Passport.js |
+| **Backend** | Node.js 18, Express.js, Socket.IO, node-cron, JWT |
 | **Database** | PostgreSQL 15, custom SQL schema (17+ tables) |
 | **Admin Panel** | Angular 20, TypeScript, Chart.js, RxJS |
 | **Mobile** | Flutter 3.41, Dart 3.10, Provider, FL Chart |
@@ -471,8 +471,8 @@ Update the base URL in `KitchenPal-Mobile/lib/config/` to your machine's local I
 KitchenPal_New/
 ├── backend/                  # Node.js + Express REST API
 │   ├── src/
-│   │   ├── controllers/      # Route logic (14 controllers)
-│   │   ├── models/           # Data models (11 models)
+│   │   ├── controllers/      # Route logic 
+│   │   ├── models/           # Data models 
 │   │   ├── routes/           # API routes
 │   │   ├── middleware/       # Auth, error handling
 │   │   ├── cron/             # Expiry notification jobs
