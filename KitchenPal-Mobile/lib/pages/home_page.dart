@@ -48,9 +48,18 @@ class _HomePageContentState extends State<HomePageContent> {
     _loadNotificationCount();
     _loadAnalyticsData();
 
-    // Connect to WebSocket and refresh nearing-expiry section
+    // Connect to WebSocket and refresh analytics
     WebSocketService.instance.connect();
+
+    // Listen for inventory changes
     WebSocketService.instance.inventoryChanged.listen((_) {
+      print('[HomePage] Inventory changed, refreshing analytics...');
+      _loadAnalyticsData();
+    });
+
+    // Listen for analytics updates
+    WebSocketService.instance.analyticsUpdated.listen((_) {
+      print('[HomePage] Analytics updated, refreshing dashboard...');
       _loadAnalyticsData();
     });
 

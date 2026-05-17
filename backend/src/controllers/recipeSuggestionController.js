@@ -133,6 +133,16 @@ class RecipeSuggestionController {
                 admin_notes
             );
 
+            // Broadcast analytics update since approval affects saved food metrics
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('analytics:updated', {
+                    action: 'recipe_approved',
+                    branch_id: suggestion.branch_id,
+                    timestamp: new Date(),
+                });
+            }
+
             res.json({
                 message: 'Suggestion approved successfully',
                 suggestion: approvedSuggestion,
@@ -154,6 +164,16 @@ class RecipeSuggestionController {
 
             if (!suggestion) {
                 return res.status(404).json({ error: 'Suggestion not found' });
+            }
+
+            // Broadcast analytics update since rejection affects analytics
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('analytics:updated', {
+                    action: 'recipe_rejected',
+                    branch_id: suggestion.branch_id,
+                    timestamp: new Date(),
+                });
             }
 
             res.json({

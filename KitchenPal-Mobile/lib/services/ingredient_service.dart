@@ -10,6 +10,10 @@ class IngredientService {
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       final List<dynamic> list = json['ingredients'] ?? [];
+      print('[IngredientService] Got ${list.length} ingredients from API');
+      for (var item in list) {
+        print('[IngredientService] Ingredient: ${item['name']}, expiry: ${item['expiry_date']}, batch_count: ${item['batch_count']}');
+      }
       return list.map((j) => Ingredient.fromJson(j)).toList();
     } else {
       throw Exception('Failed to load ingredients: ${response.statusCode}');

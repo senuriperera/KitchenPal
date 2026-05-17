@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/analytics_service.dart';
+import '../services/websocket_service.dart';
 import '../models/monthly_summary.dart';
 import '../models/top_wasted.dart';
 
@@ -24,6 +26,8 @@ class _WasteReportPageState extends State<WasteReportPage> {
   MonthlySummary? _monthlySummary;
   TopWastedReport? _topWasted;
 
+  late StreamSubscription<dynamic> _analyticsUpdatedSubscription;
+
   final List<Color> _pieColors = const [
     Color(0xFF10B981),
     Color(0xFFF97316),
@@ -36,6 +40,24 @@ class _WasteReportPageState extends State<WasteReportPage> {
   void initState() {
     super.initState();
     _loadReport();
+    _setupRealtimeUpdates();
+  }
+
+  void _setupRealtimeUpdates() {
+    WebSocketService.instance.connect();
+    _analyticsUpdatedSubscription =
+        WebSocketService.instance.analyticsUpdated.listen((_) {
+      print('[WasteReportPage] Analytics updated, refreshing report...');
+      if (mounted) {
+        _loadReport();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _analyticsUpdatedSubscription.cancel();
+    super.dispose();
   }
 
   Future<void> _loadReport() async {

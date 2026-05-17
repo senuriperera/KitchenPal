@@ -12,11 +12,13 @@ export class WebSocketService implements OnDestroy {
   private recipeGeneratedSubject = new Subject<any>();
   private recipeApprovedSubject = new Subject<any>();
   private recipeRejectedSubject = new Subject<any>();
+  private analyticsUpdatedSubject = new Subject<any>();
 
   notificationsChanged$ = this.notificationsChangedSubject.asObservable();
   recipeGenerated$ = this.recipeGeneratedSubject.asObservable();
   recipeApproved$ = this.recipeApprovedSubject.asObservable();
   recipeRejected$ = this.recipeRejectedSubject.asObservable();
+  analyticsUpdated$ = this.analyticsUpdatedSubject.asObservable();
 
   constructor(private ngZone: NgZone) {
     this.socket = io(environment.wsUrl, {
@@ -61,6 +63,14 @@ export class WebSocketService implements OnDestroy {
     this.socket.on('recipe:rejected', (data) => {
       this.ngZone.run(() => {
         this.recipeRejectedSubject.next(data);
+      });
+    });
+
+    // Listen for analytics updates
+    this.socket.on('analytics:updated', (data) => {
+      console.log('🔌 [WebSocket] Received analytics:updated:', data);
+      this.ngZone.run(() => {
+        this.analyticsUpdatedSubject.next(data);
       });
     });
   }

@@ -245,8 +245,6 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
               const SizedBox(height: 24),
               _buildInfoSection(i),
               const SizedBox(height: 24),
-              _buildDatesSection(i),
-              const SizedBox(height: 24),
               _buildBatchesSection(i.batches, i.baseUnitCode),
               const SizedBox(height: 24),
               _buildDeleteButton(),
@@ -457,122 +455,6 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
   }
 
   Widget _divider() => Divider(height: 1, color: Colors.grey.shade100);
-
-  // ─── Dates section ────────────────────────────────────────────────────────
-  Widget _buildDatesSection(Ingredient i) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'INVENTORY DATES',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.black54,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildDateTile(
-            icon: Icons.factory,
-            iconColor: const Color(0xFF2196F3),
-            bgColor: const Color(0xFFE3F2FD),
-            label: 'Manufacture Date',
-            value: _formatDate(i.manufactureDate),
-          ),
-          const SizedBox(height: 12),
-          _buildDateTile(
-            icon: Icons.event_busy,
-            iconColor: Colors.red,
-            bgColor: const Color(0xFFFFEBEE),
-            label: 'Expiry Date',
-            value: _formatDate(i.expiryDate),
-            isExpirySoon: i.isExpired || i.daysUntilExpiry <= 3,
-            isExpired: i.isExpired,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateTile({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required String label,
-    required String value,
-    bool isExpirySoon = false,
-    bool isExpired = false,
-  }) {
-    final displayValue = isExpired ? 'Expired' : value;
-    final textColor = isExpirySoon ? Colors.red : Colors.black87;
-    final badgeText = isExpired ? 'Expired' : 'Expiring Soon';
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: isExpirySoon ? Colors.red.shade200 : Colors.grey.shade300,
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  displayValue,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isExpirySoon)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                badgeText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 
   // ─── Batches section ──────────────────────────────────────────────────────
   Widget _buildBatchesSection(

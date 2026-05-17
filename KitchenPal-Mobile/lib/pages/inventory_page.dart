@@ -380,6 +380,43 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
   }
 
   Widget _buildIngredientCard(Ingredient ingredient) {
+    // Format quantity display (without batch count)
+    final quantityDisplay = ingredient.displayTotalWeight;
+    
+    // Format expiry info
+    final daysLeft = ingredient.daysUntilExpiry;
+    final isExpired = ingredient.isExpired;
+    
+    String daysLeftText;
+    Color daysLeftColor;
+    
+    if (isExpired) {
+      daysLeftText = 'Expired';
+      daysLeftColor = Colors.red;
+    } else if (daysLeft == 0) {
+      daysLeftText = 'Expires today';
+      daysLeftColor = Colors.red;
+    } else if (daysLeft == 1) {
+      daysLeftText = '1 day left';
+      daysLeftColor = Colors.red;
+    } else if (daysLeft == 2) {
+      daysLeftText = '2 days left';
+      daysLeftColor = Colors.red;
+    } else if (daysLeft == 3) {
+      daysLeftText = '3 days left';
+      daysLeftColor = Colors.orange;
+    } else if (daysLeft <= 7) {
+      daysLeftText = '$daysLeft days left';
+      daysLeftColor = Colors.orange;
+    } else {
+      daysLeftText = '$daysLeft days left';
+      daysLeftColor = Colors.green;
+    }
+    
+    // Format expiry date
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final expiryDateText = '${ingredient.expiryDate.day} ${months[ingredient.expiryDate.month - 1]} ${ingredient.expiryDate.year}';
+    
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.push(
@@ -395,42 +432,40 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Row(
-          children: [
-            // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              // Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  color: Colors.grey[200],
+                  child:
+                      ingredient.imageUrl != null &&
+                          ingredient.imageUrl!.isNotEmpty
+                      ? Image.network(
+                          ingredient.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                        )
+                      : _buildPlaceholder(),
+                ),
               ),
-              child: Container(
-                width: 80,
-                height: 80,
-                color: Colors.grey[200],
-                child:
-                    ingredient.imageUrl != null &&
-                        ingredient.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        ingredient.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholder(),
-                      )
-                    : _buildPlaceholder(),
-              ),
-            ),
-            // Details
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
+              const SizedBox(width: 12),
+              // Details (Name and Quantity)
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -438,7 +473,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                       ingredient.name,
                       style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                         color: Color(0xFF2C2C54),
                       ),
                       maxLines: 1,
@@ -446,37 +481,47 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      ingredient.formattedExpiryDate,
+                      quantityDisplay,
                       style: TextStyle(
                         fontSize: 14,
-                        color: ingredient.daysUntilExpiry <= 3
-                            ? Colors.red
-                            : Colors.grey[600],
-                        fontWeight: ingredient.daysUntilExpiry <= 3
-                            ? FontWeight.w600
-                            : FontWeight.normal,
+                        color: Colors.grey[600],
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    // Display total weight — Flutter-side calculation, never stored
-                    Text(
-                      ingredient.displayTotalWeight,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
                 ),
               ),
-            ),
-            // Arrow
-            Padding(
-              padding: const EdgeInsets.only(right: 12.0),
-              child: Icon(
+              const SizedBox(width: 12),
+              // Expiry info (Days left and Date)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    daysLeftText,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: daysLeftColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    expiryDateText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+              // Arrow
+              Icon(
                 Icons.chevron_right,
                 color: Colors.grey[400],
-                size: 28,
+                size: 24,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

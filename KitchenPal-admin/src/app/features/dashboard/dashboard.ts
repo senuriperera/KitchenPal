@@ -1,8 +1,10 @@
-import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, inject, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from '../../shared/components/header/header';
 import { AnalyticsService } from '../../core/services/analytics.service';
-import { forkJoin } from 'rxjs';
+import { WebSocketService } from '../../core/services/websocket.service';
+import { forkJoin, Subject } from 'rxjs';
+import { takeUntil, debounceTime } from 'rxjs/operators';
 
 declare var Chart: any;
 
@@ -13,9 +15,12 @@ declare var Chart: any;
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.scss']
 })
-export class DashboardComponent implements OnInit, AfterViewInit {
+export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   private analyticsService = inject(AnalyticsService);
-  
+  private webSocketService = inject(WebSocketService);
+  private destroy$ = new Subject<void>();
+  private analyticsUpdateSubject$ = new Subject<void>();
+
   stats: any = null;
   summary: any = null;
   activities: any[] = [];
@@ -27,6 +32,19 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.loadDashboardData();
+    this.setupRealtimeUpdates();
+  }
+
+  setupRealtimeUpdates(): void {
+    // Listen for analytics updates and debounce to avoid excessive refreshes
+    this.webSocketService.analyticsUpdated$
+      .pipe(
+        debounceTime(2000), // Wait 2 seconds before refreshing
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.loadDashboardData();
+      });
   }
 
   ngAfterViewInit(): void {
@@ -34,6 +52,11 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     if (this.summary?.monthlyData) {
       this.renderAreaChart();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadDashboardData(): void {

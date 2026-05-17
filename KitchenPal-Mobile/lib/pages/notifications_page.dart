@@ -396,6 +396,16 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
     );
   }
 
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
   Widget _buildIngredientCard(Map<String, dynamic> ingredient) {
     final batchId = ingredient['batch_id'] as int;
     final status = ingredient['status'] as String;
@@ -528,7 +538,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Expires: ${ingredient['expiry_date'].toString().split(' ').first}',
+                      'Expires: ${_formatDate(ingredient['expiry_date'].toString())}',
                       style:
                           TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),

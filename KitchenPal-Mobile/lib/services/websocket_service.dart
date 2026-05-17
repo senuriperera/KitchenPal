@@ -43,9 +43,12 @@ class WebSocketService {
   final StreamController<Map<String, dynamic>> _recipeDeactivatedController =
       StreamController<Map<String, dynamic>>.broadcast();
 
-  /// Emitted whenever the backend signals that inventory changed
-  /// (ingredient created/deleted, expiry-related updates, etc.).
-  Stream<void> get inventoryChanged => _inventoryChangedController.stream;
+  final StreamController<Map<String, dynamic>> _analyticsUpdatedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  /// Emitted whenever the backend signals that analytics changed
+  Stream<Map<String, dynamic>> get analyticsUpdated =>
+      _analyticsUpdatedController.stream;
 
   /// Emitted whenever the backend signals that notifications changed
   /// (recipe approved/rejected notifications).
@@ -195,6 +198,12 @@ class WebSocketService {
       print('[WS] Received: recipe:deactivated');
       _recipeDeactivatedController.add(Map<String, dynamic>.from(data ?? {}));
     });
+
+    // Analytics updated event
+    socket.on('analytics:updated', (data) {
+      print('[WS] Received: analytics:updated');
+      _analyticsUpdatedController.add(Map<String, dynamic>.from(data ?? {}));
+    });
   }
 
   void dispose() {
@@ -209,5 +218,6 @@ class WebSocketService {
     _recipeUpdatedController.close();
     _recipeDeletedController.close();
     _recipeDeactivatedController.close();
+    _analyticsUpdatedController.close();
   }
 }

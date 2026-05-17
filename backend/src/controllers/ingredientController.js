@@ -61,6 +61,8 @@ class IngredientController {
                 return res.status(400).json({ error: 'No branch associated with this account' });
             }
 
+            console.log(`[IngredientCreate] Creating: ${name}, branch: ${branch_id}, expiry: ${expiry_date}`);
+
             const ingredient = await IngredientModel.createWithTransaction({
                 master_ingredient_id: master_ingredient_id || null,
                 name,
@@ -76,6 +78,8 @@ class IngredientController {
                 branch_id,
             });
 
+            console.log(`[IngredientCreate] Success: created ${ingredient.name} (id: ${ingredient.ingredient_id})`);
+
             // Broadcast inventory change to all connected clients
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
@@ -84,6 +88,12 @@ class IngredientController {
                     branch_id,
                     ingredient,
                 });
+                // Also broadcast analytics update since a new ingredient affects dashboard stats
+                io.emit('analytics:updated', {
+                    action: 'ingredient_created',
+                    branch_id,
+                    timestamp: new Date(),
+                });
             }
 
             res.status(201).json({
@@ -91,7 +101,7 @@ class IngredientController {
                 ingredient,
             });
         } catch (error) {
-            console.error('Create ingredient error:', error);
+            console.error(`[IngredientCreate] ERROR: ${error.message}`, error);
             res.status(500).json({ error: `Failed to create ingredient: ${error.message}` });
         }
     }
@@ -139,6 +149,12 @@ class IngredientController {
                     action: 'deleted',
                     branch_id,
                     ingredient_id,
+                });
+                // Also broadcast analytics update since deletion affects dashboard stats
+                io.emit('analytics:updated', {
+                    action: 'ingredient_deleted',
+                    branch_id,
+                    timestamp: new Date(),
                 });
             }
 

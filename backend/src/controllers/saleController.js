@@ -23,6 +23,16 @@ class SaleController {
                 await deactivateDepletedGeneratedRecipes(branch_id, io);
             }
 
+            // Broadcast analytics update since sale affects saved food metrics
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('analytics:updated', {
+                    action: 'sale_created',
+                    branch_id,
+                    timestamp: new Date(),
+                });
+            }
+
             res.status(201).json({
                 message: 'Sale recorded successfully',
                 sale,
@@ -106,6 +116,15 @@ class SaleController {
         try {
             const { id } = req.params;
             await SaleModel.delete(id);
+
+            // Broadcast analytics update since deletion affects analytics
+            const io = req.app && req.app.get ? req.app.get('io') : null;
+            if (io) {
+                io.emit('analytics:updated', {
+                    action: 'sale_deleted',
+                    timestamp: new Date(),
+                });
+            }
 
             res.json({ message: 'Sale deleted successfully' });
         } catch (error) {

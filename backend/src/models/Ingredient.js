@@ -9,7 +9,7 @@ class IngredientModel {
                 si.ingredient_id,
                 si.name,
                 si.image_url,
-                MIN(ib.expiry_date) AS expiry_date,
+                MIN(CASE WHEN ib.expiry_date >= CURRENT_DATE THEN ib.expiry_date END) AS expiry_date,
                 si.quantity_in_stock,
                 si.unit_weight,
                 wu.code  AS unit_weight_unit_code,
@@ -24,9 +24,11 @@ class IngredientModel {
             WHERE si.branch_id = $1 AND si.deleted_at IS NULL
             GROUP BY si.ingredient_id, si.name, si.image_url, si.quantity_in_stock,
                      si.unit_weight, wu.code, si.total_base_quantity, bu.code
-            ORDER BY MIN(ib.expiry_date) ASC NULLS LAST
+            ORDER BY MIN(CASE WHEN ib.expiry_date >= CURRENT_DATE THEN ib.expiry_date END) ASC NULLS LAST
         `;
     const result = await db.query(query, [branch_id]);
+    console.log(`[IngredientModel] getAllByBranch returned ${result.rows.length} ingredients for branch ${branch_id}`);
+    console.log(`[IngredientModel] Ingredients: ${result.rows.map(r => r.name).join(', ')}`);
     return result.rows;
   }
 
@@ -147,6 +149,7 @@ class IngredientModel {
 
     try {
       await client.query('BEGIN');
+      console.log(`[IngredientModel] Starting transaction for: ${data.name}`);
 
       // Step 1 — Resolve master_ingredient_id (create custom if new)
       let masterIngredientId = data.master_ingredient_id;
@@ -231,7 +234,7 @@ class IngredientModel {
           );
           ingredient_id = existing.ingredient_id;
         } else {
-          // Ingredient does not exist — INSERT
+          // Ingredient doesn't exist — INSERT
           const stockRow = await client.query(
             `INSERT INTO stock_ingredients
                         (branch_id, master_ingredient_id, name, quantity_in_stock,
@@ -277,6 +280,8 @@ class IngredientModel {
         ingredient_id = stockRow.rows[0].ingredient_id;
       }
 
+      console.log(`[IngredientModel] Inserted ingredient_id: ${ingredient_id}, creating batch...`);
+
       // Step 4 — Insert into ingredient_batches
       await client.query(
         `INSERT INTO ingredient_batches
@@ -319,6 +324,7 @@ class IngredientModel {
 
       // Step 6 — Commit
       await client.query('COMMIT');
+      console.log(`[IngredientModel] Transaction committed for ingredient_id: ${ingredient_id}`);
 
       // Return full detail
       return this.findByIdDetailed(ingredient_id);

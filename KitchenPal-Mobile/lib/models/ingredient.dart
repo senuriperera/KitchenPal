@@ -47,6 +47,7 @@ class Ingredient {
 
   factory Ingredient.fromJson(Map<String, dynamic> json) {
     final batchesJson = json['batches'] as List<dynamic>? ?? [];
+    
     return Ingredient(
       ingredientId: json['ingredient_id'] ?? 0,
       name: json['name'] ?? '',
