@@ -44,12 +44,24 @@
           <div class="stat-sub">{{ stats.foodWasted.weight.display }}</div>
           <div class="stat-sub">{{ stats.foodWasted.volume.display }}</div>
           <div class="stat-sub">{{ stats.foodWasted.count.display }}</div>
-          <div class="stat-trend" [class.red]="stats.foodWasted.changePercent > 0" [class.green]="stats.foodWasted.changePercent < 0">
-            <span class="trend-arrow" [class.up]="stats.foodWasted.changePercent > 0" [class.down]="stats.foodWasted.changePercent < 0">
-              <span class="material-icons">{{ stats.foodWasted.changePercent > 0 ? 'trending_up' : 'trending_down' }}</span>
+          <div
+            class="stat-trend"
+            [class.red]="stats.foodWasted.changePercent > 0"
+            [class.green]="stats.foodWasted.changePercent < 0"
+          >
+            <span
+              class="trend-arrow"
+              [class.up]="stats.foodWasted.changePercent > 0"
+              [class.down]="stats.foodWasted.changePercent < 0"
+            >
+              <span class="material-icons">{{
+                stats.foodWasted.changePercent > 0
+                  ? "trending_up"
+                  : "trending_down"
+              }}</span>
             </span>
             <span class="trend-text">
-              {{ stats.foodWasted.changePercent > 0 ? '↑' : '↓' }}
+              {{ stats.foodWasted.changePercent > 0 ? "↑" : "↓" }}
               {{ abs(stats.foodWasted.changePercent) }}% vs last month
             </span>
           </div>
@@ -66,12 +78,24 @@
           <div class="stat-sub">{{ stats.foodSaved.weight.display }}</div>
           <div class="stat-sub">{{ stats.foodSaved.volume.display }}</div>
           <div class="stat-sub">{{ stats.foodSaved.count.display }}</div>
-          <div class="stat-trend" [class.green]="stats.foodSaved.changePercent > 0" [class.red]="stats.foodSaved.changePercent < 0">
-            <span class="trend-arrow" [class.up]="stats.foodSaved.changePercent > 0" [class.down]="stats.foodSaved.changePercent < 0">
-              <span class="material-icons">{{ stats.foodSaved.changePercent > 0 ? 'trending_up' : 'trending_down' }}</span>
+          <div
+            class="stat-trend"
+            [class.green]="stats.foodSaved.changePercent > 0"
+            [class.red]="stats.foodSaved.changePercent < 0"
+          >
+            <span
+              class="trend-arrow"
+              [class.up]="stats.foodSaved.changePercent > 0"
+              [class.down]="stats.foodSaved.changePercent < 0"
+            >
+              <span class="material-icons">{{
+                stats.foodSaved.changePercent > 0
+                  ? "trending_up"
+                  : "trending_down"
+              }}</span>
             </span>
             <span class="trend-text">
-              {{ stats.foodSaved.changePercent > 0 ? '↑' : '↓' }}
+              {{ stats.foodSaved.changePercent > 0 ? "↑" : "↓" }}
               {{ abs(stats.foodSaved.changePercent) }}% vs last month
             </span>
           </div>
@@ -96,7 +120,9 @@
               <span class="material-icons">trending_up</span>
             </div>
           </div>
-          <div class="stat-value">Rs {{ stats.profitFromDiscounts.current | number:'1.2-2' }}</div>
+          <div class="stat-value">
+            Rs {{ stats.profitFromDiscounts.current | number: "1.2-2" }}
+          </div>
           <div class="stat-trend green">
             <span class="trend-arrow up">
               <span class="material-icons">trending_up</span>
@@ -108,24 +134,30 @@
         </div>
       </div>
 
-    <!-- Quick Actions -->
-    <section class="section">
-      <h2 class="section-title">Quick Actions</h2>
-      <div class="quick-actions">
-        <button class="action-card">
-          <span class="action-icon yellow-bg"><span class="material-icons">warning</span></span>
-          <span class="action-label">View Expiry Alerts</span>
-        </button>
-        <button class="action-card">
-          <span class="action-icon purple-bg"><span class="material-icons">thumb_up</span></span>
-          <span class="action-label">Approve Discounts</span>
-        </button>
-        <button class="action-card">
-          <span class="action-icon orange-bg"><span class="material-icons">assessment</span></span>
-          <span class="action-label">Generate Report</span>
-        </button>
-      </div>
-    </section>
+      <!-- Quick Actions -->
+      <section class="section">
+        <h2 class="section-title">Quick Actions</h2>
+        <div class="quick-actions">
+          <button class="action-card">
+            <span class="action-icon yellow-bg"
+              ><span class="material-icons">warning</span></span
+            >
+            <span class="action-label">View Expiry Alerts</span>
+          </button>
+          <button class="action-card">
+            <span class="action-icon purple-bg"
+              ><span class="material-icons">thumb_up</span></span
+            >
+            <span class="action-label">Approve Discounts</span>
+          </button>
+          <button class="action-card">
+            <span class="action-icon orange-bg"
+              ><span class="material-icons">assessment</span></span
+            >
+            <span class="action-label">Generate Report</span>
+          </button>
+        </div>
+      </section>
 
       <!-- Bottom Section -->
       <div class="bottom-section">
@@ -137,19 +169,23 @@
           </div>
           <div class="activity-list">
             <div class="activity-item" *ngFor="let activity of activities">
-              <div class="activity-icon"
+              <div
+                class="activity-icon"
                 [ngClass]="{
                   'icon-sale': activity.type === 'sale',
                   'icon-approval': activity.type === 'approval',
-                  'icon-expiry': activity.type === 'expiry_alert'
-                }">
+                  'icon-expiry': activity.type === 'expiry_alert',
+                }"
+              >
                 <span class="material-icons">
                   {{ getActivityIcon(activity.type) }}
                 </span>
               </div>
               <div class="activity-body">
                 <div class="activity-message">{{ activity.message }}</div>
-                <div class="activity-meta">{{ activity.actor }} · {{ activity.time_ago }}</div>
+                <div class="activity-meta">
+                  {{ activity.actor }} · {{ activity.time_ago }}
+                </div>
               </div>
             </div>
             <div *ngIf="activities.length === 0" class="no-activity">
@@ -162,19 +198,22 @@
         <section class="section chart-section">
           <h2 class="section-title">Food Saved vs. Wasted</h2>
           <div class="family-tabs">
-            <button 
+            <button
               [class.active]="selectedFamily === 'weight'"
-              (click)="switchFamily('weight')">
+              (click)="switchFamily('weight')"
+            >
               Weight (kg/g)
             </button>
-            <button 
+            <button
               [class.active]="selectedFamily === 'volume'"
-              (click)="switchFamily('volume')">
+              (click)="switchFamily('volume')"
+            >
               Volume (L/ml)
             </button>
-            <button 
+            <button
               [class.active]="selectedFamily === 'count'"
-              (click)="switchFamily('count')">
+              (click)="switchFamily('count')"
+            >
               Count (units)
             </button>
           </div>

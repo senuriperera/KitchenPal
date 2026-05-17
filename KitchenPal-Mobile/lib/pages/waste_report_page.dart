@@ -45,13 +45,13 @@ class _WasteReportPageState extends State<WasteReportPage> {
 
   void _setupRealtimeUpdates() {
     WebSocketService.instance.connect();
-    _analyticsUpdatedSubscription =
-        WebSocketService.instance.analyticsUpdated.listen((_) {
-      print('[WasteReportPage] Analytics updated, refreshing report...');
-      if (mounted) {
-        _loadReport();
-      }
-    });
+    _analyticsUpdatedSubscription = WebSocketService.instance.analyticsUpdated
+        .listen((_) {
+          print('[WasteReportPage] Analytics updated, refreshing report...');
+          if (mounted) {
+            _loadReport();
+          }
+        });
   }
 
   @override
@@ -120,8 +120,8 @@ class _WasteReportPageState extends State<WasteReportPage> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: _green))
             : _errorMessage != null
-                ? _buildError()
-                : _buildContent(),
+            ? _buildError()
+            : _buildContent(),
       ),
     );
   }
@@ -145,7 +145,10 @@ class _WasteReportPageState extends State<WasteReportPage> {
               onPressed: _loadReport,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _green,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
@@ -199,7 +202,9 @@ class _WasteReportPageState extends State<WasteReportPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8),
+        ],
       ),
       child: Row(
         children: ranges.map((entry) {
@@ -256,16 +261,27 @@ class _WasteReportPageState extends State<WasteReportPage> {
             Expanded(
               child: Text(
                 'Total Waste — $_dateRangeLabel',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
               ),
             ),
             if (changePercent != 0)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: increased ? Colors.red.shade50 : Colors.green.shade50,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: increased ? Colors.red.shade100 : Colors.green.shade100),
+                  border: Border.all(
+                    color: increased
+                        ? Colors.red.shade100
+                        : Colors.green.shade100,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -273,7 +289,9 @@ class _WasteReportPageState extends State<WasteReportPage> {
                     Icon(
                       increased ? Icons.trending_up : Icons.trending_down,
                       size: 14,
-                      color: increased ? Colors.red.shade700 : Colors.green.shade700,
+                      color: increased
+                          ? Colors.red.shade700
+                          : Colors.green.shade700,
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -281,7 +299,9 @@ class _WasteReportPageState extends State<WasteReportPage> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: increased ? Colors.red.shade700 : Colors.green.shade700,
+                        color: increased
+                            ? Colors.red.shade700
+                            : Colors.green.shade700,
                       ),
                     ),
                   ],
@@ -295,7 +315,10 @@ class _WasteReportPageState extends State<WasteReportPage> {
             increased
                 ? 'Waste increased compared to previous period'
                 : 'Waste decreased compared to previous period',
-            style: TextStyle(fontSize: 11, color: increased ? Colors.red.shade400 : Colors.green.shade400),
+            style: TextStyle(
+              fontSize: 11,
+              color: increased ? Colors.red.shade400 : Colors.green.shade400,
+            ),
           ),
         ],
         const SizedBox(height: 12),
@@ -343,7 +366,13 @@ class _WasteReportPageState extends State<WasteReportPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,12 +388,19 @@ class _WasteReportPageState extends State<WasteReportPage> {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.black45)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.black45),
+            ),
           ],
         ),
       ),
@@ -383,11 +419,19 @@ class _WasteReportPageState extends State<WasteReportPage> {
               const Expanded(
                 child: Text(
                   'Monthly Trend',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               _buildFamilyTabs(
-                const [('weight', 'Weight'), ('volume', 'Volume'), ('count', 'Count')],
+                const [
+                  ('weight', 'Weight'),
+                  ('volume', 'Volume'),
+                  ('count', 'Count'),
+                ],
                 _selectedTrendFamily,
                 (f) => setState(() => _selectedTrendFamily = f),
               ),
@@ -446,35 +490,66 @@ class _WasteReportPageState extends State<WasteReportPage> {
                 toY: _familyValue(months[i].wasted, family),
                 color: _wastedColor,
                 width: 10,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
               ),
               BarChartRodData(
                 toY: _familyValue(months[i].saved, family),
                 color: _green,
                 width: 10,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
               ),
             ],
           );
         }),
         titlesData: FlTitlesData(
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 24,
               getTitlesWidget: (value, meta) {
                 final idx = value.toInt();
-                if (idx < 0 || idx >= months.length) return const SizedBox.shrink();
+                if (idx < 0 || idx >= months.length)
+                  return const SizedBox.shrink();
                 final parts = months[idx].month.split('-');
                 if (parts.length >= 2) {
                   final num = int.tryParse(parts[1]) ?? 1;
-                  const abbr = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  const abbr = [
+                    '',
+                    'Jan',
+                    'Feb',
+                    'Mar',
+                    'Apr',
+                    'May',
+                    'Jun',
+                    'Jul',
+                    'Aug',
+                    'Sep',
+                    'Oct',
+                    'Nov',
+                    'Dec',
+                  ];
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text(abbr[num], style: const TextStyle(fontSize: 10, color: Colors.black45)),
+                    child: Text(
+                      abbr[num],
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Colors.black45,
+                      ),
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -486,7 +561,8 @@ class _WasteReportPageState extends State<WasteReportPage> {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: interval > 0 ? interval : 1,
-          getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 1),
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: Colors.grey.shade100, strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
@@ -500,7 +576,11 @@ class _WasteReportPageState extends State<WasteReportPage> {
                   : _familyDisplay(m.saved, family);
               return BarTooltipItem(
                 '$label\n$display',
-                const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               );
             },
           ),
@@ -538,7 +618,9 @@ class _WasteReportPageState extends State<WasteReportPage> {
   // ── Top Wasted Items ─────────────────────────────────────────────────────────
 
   Widget _buildTopWastedCard() {
-    final items = _topWasted!.topWasted.where((i) => i.unitFamily == _selectedTopFamily).toList();
+    final items = _topWasted!.topWasted
+        .where((i) => i.unitFamily == _selectedTopFamily)
+        .toList();
 
     return _buildCard(
       child: Column(
@@ -549,11 +631,19 @@ class _WasteReportPageState extends State<WasteReportPage> {
               const Expanded(
                 child: Text(
                   'Top Wasted Items',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
               _buildFamilyTabs(
-                const [('weight', 'Weight'), ('volume', 'Volume'), ('count', 'Count')],
+                const [
+                  ('weight', 'Weight'),
+                  ('volume', 'Volume'),
+                  ('count', 'Count'),
+                ],
                 _selectedTopFamily,
                 (f) => setState(() => _selectedTopFamily = f),
               ),
@@ -599,7 +689,11 @@ class _WasteReportPageState extends State<WasteReportPage> {
                   Expanded(
                     child: Text(
                       item.name,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.black87),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -607,7 +701,11 @@ class _WasteReportPageState extends State<WasteReportPage> {
                   const SizedBox(width: 8),
                   Text(
                     item.quantity.display,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -640,8 +738,19 @@ class _WasteReportPageState extends State<WasteReportPage> {
     final savedPct = cm.savedPercentage;
     final now = DateTime.now();
     const monthNames = [
-      '', 'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      '',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     return _buildCard(
@@ -650,10 +759,17 @@ class _WasteReportPageState extends State<WasteReportPage> {
         children: [
           Text(
             '${monthNames[now.month]} ${now.year} Summary',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 2),
-          Text('Current month performance', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+          Text(
+            'Current month performance',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -676,9 +792,16 @@ class _WasteReportPageState extends State<WasteReportPage> {
                       children: [
                         Text(
                           '${savedPct.toStringAsFixed(0)}%',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
-                        const Text('saved', style: TextStyle(fontSize: 9, color: Colors.black45)),
+                        const Text(
+                          'saved',
+                          style: TextStyle(fontSize: 9, color: Colors.black45),
+                        ),
                       ],
                     ),
                   ],
@@ -701,24 +824,58 @@ class _WasteReportPageState extends State<WasteReportPage> {
     );
   }
 
-  Widget _buildFamilyRow(String label, MonthlyFamilyTotals totals, Color color) {
+  Widget _buildFamilyRow(
+    String label,
+    MonthlyFamilyTotals totals,
+    Color color,
+  ) {
     return Row(
       children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
+        ),
         const Spacer(),
         Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (totals.weight.value > 0)
-              Text(totals.weight.display, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(
+                totals.weight.display,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             if (totals.volume.value > 0)
-              Text(totals.volume.display, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(
+                totals.volume.display,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             if (totals.count.value > 0)
-              Text(totals.count.display, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-            if (totals.weight.value == 0 && totals.volume.value == 0 && totals.count.value == 0)
-              Text('None', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+              Text(
+                totals.count.display,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            if (totals.weight.value == 0 &&
+                totals.volume.value == 0 &&
+                totals.count.value == 0)
+              Text(
+                'None',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+              ),
           ],
         ),
       ],
@@ -734,7 +891,13 @@ class _WasteReportPageState extends State<WasteReportPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: child,
     );
@@ -764,7 +927,12 @@ class _WasteReportPageState extends State<WasteReportPage> {
                 color: isSel ? Colors.white : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
                 boxShadow: isSel
-                    ? [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 4)]
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 4,
+                        ),
+                      ]
                     : null,
               ),
               child: Text(
@@ -789,10 +957,16 @@ class _WasteReportPageState extends State<WasteReportPage> {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.black45)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.black45),
+        ),
       ],
     );
   }
@@ -804,9 +978,16 @@ class _WasteReportPageState extends State<WasteReportPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.bar_chart_outlined, size: 32, color: Colors.grey.shade300),
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 32,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 8),
-            Text('No data for this period', style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+            Text(
+              'No data for this period',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            ),
           ],
         ),
       ),

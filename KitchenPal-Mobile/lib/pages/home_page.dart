@@ -162,35 +162,35 @@ class _HomePageContentState extends State<HomePageContent> {
                 _errorMessage != null
                     ? _buildErrorState()
                     : _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : Column(
-                            children: [
-                              _buildWasteSummaryCard(),
-                              const SizedBox(height: 20),
-                              _buildNearingExpiryHeader(),
-                              const SizedBox(height: 12),
-                              _nearingExpiryItems.isEmpty
-                                  ? const Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(32.0),
-                                        child: Text(
-                                          'No items nearing expiry',
-                                          style: TextStyle(color: Colors.grey),
-                                        ),
-                                      ),
-                                    )
-                                  : Column(
-                                      children: _nearingExpiryItems
-                                          .map((item) {
-                                        return Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 12),
-                                          child: _buildExpiryItemCard(item),
-                                        );
-                                      }).toList(),
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
+                        children: [
+                          _buildWasteSummaryCard(),
+                          const SizedBox(height: 20),
+                          _buildNearingExpiryHeader(),
+                          const SizedBox(height: 12),
+                          _nearingExpiryItems.isEmpty
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(32.0),
+                                    child: Text(
+                                      'No items nearing expiry',
+                                      style: TextStyle(color: Colors.grey),
                                     ),
-                            ],
-                          ),
+                                  ),
+                                )
+                              : Column(
+                                  children: _nearingExpiryItems.map((item) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
+                                      child: _buildExpiryItemCard(item),
+                                    );
+                                  }).toList(),
+                                ),
+                        ],
+                      ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -342,7 +342,8 @@ class _HomePageContentState extends State<HomePageContent> {
     final summary = _monthlySummary!;
     final currentMonth = DateTime.now();
     final monthName = _getMonthName(currentMonth.month);
-    final savedPercentage = summary.currentMonth.savedPercentage.toStringAsFixed(0);
+    final savedPercentage = summary.currentMonth.savedPercentage
+        .toStringAsFixed(0);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -376,9 +377,7 @@ class _HomePageContentState extends State<HomePageContent> {
               GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const WasteReportPage(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const WasteReportPage()),
                   );
                 },
                 child: Container(
@@ -389,7 +388,9 @@ class _HomePageContentState extends State<HomePageContent> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF00C853).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF00C853).withOpacity(0.3)),
+                    border: Border.all(
+                      color: const Color(0xFF00C853).withOpacity(0.3),
+                    ),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -403,7 +404,11 @@ class _HomePageContentState extends State<HomePageContent> {
                         ),
                       ),
                       SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF00C853)),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 10,
+                        color: Color(0xFF00C853),
+                      ),
                     ],
                   ),
                 ),
@@ -415,7 +420,10 @@ class _HomePageContentState extends State<HomePageContent> {
             children: [
               Text(
                 '$savedPercentage% ',
-                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const Text(
                 'Saved',
@@ -514,7 +522,10 @@ class _HomePageContentState extends State<HomePageContent> {
                     const SizedBox(height: 12),
                     Text(
                       'Saved percentage: ${summary.currentMonth.savedPercentage.toStringAsFixed(1)}%',
-                      style: const TextStyle(fontSize: 12, color: Colors.black54),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black54,
+                      ),
                     ),
                   ],
                 ),
@@ -539,7 +550,7 @@ class _HomePageContentState extends State<HomePageContent> {
       'September',
       'October',
       'November',
-      'December'
+      'December',
     ];
     return months[month - 1];
   }
@@ -594,7 +605,8 @@ class _HomePageContentState extends State<HomePageContent> {
       badgeBgColor = const Color(0xFFFFFDE7);
     }
 
-    final qtyStr = item.quantityRemaining == item.quantityRemaining.roundToDouble()
+    final qtyStr =
+        item.quantityRemaining == item.quantityRemaining.roundToDouble()
         ? item.quantityRemaining.toInt().toString()
         : item.quantityRemaining.toStringAsFixed(1);
 
@@ -630,11 +642,7 @@ class _HomePageContentState extends State<HomePageContent> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 12,
-                        color: badgeColor,
-                      ),
+                      Icon(Icons.access_time, size: 12, color: badgeColor),
                       const SizedBox(width: 4),
                       Text(
                         '$daysLeft day${daysLeft != 1 ? 's' : ''} left',

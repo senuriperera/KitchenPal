@@ -46,36 +46,36 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
 
     // Keep ingredients in sync with inventory changes
     WebSocketService.instance.connect();
-    _inventoryChangedSubscription =
-        WebSocketService.instance.inventoryChanged.listen((_) {
-      _loadAvailableIngredients();
-    });
+    _inventoryChangedSubscription = WebSocketService.instance.inventoryChanged
+        .listen((_) {
+          _loadAvailableIngredients();
+        });
 
     // Listen to recipe status changes for real-time updates
-    _recipeGeneratedSubscription =
-        WebSocketService.instance.recipeGenerated.listen((event) {
-      _updateIngredientStatus(
-        event['ingredient_ids'] as List<dynamic>,
-        'awaiting_approval',
-        recipeName: event['recipe_name'] as String?,
-      );
-    });
+    _recipeGeneratedSubscription = WebSocketService.instance.recipeGenerated
+        .listen((event) {
+          _updateIngredientStatus(
+            event['ingredient_ids'] as List<dynamic>,
+            'awaiting_approval',
+            recipeName: event['recipe_name'] as String?,
+          );
+        });
 
-    _recipeApprovedSubscription =
-        WebSocketService.instance.recipeApproved.listen((event) {
-      _updateIngredientStatus(
-        event['ingredient_ids'] as List<dynamic>,
-        'approved',
-      );
-    });
+    _recipeApprovedSubscription = WebSocketService.instance.recipeApproved
+        .listen((event) {
+          _updateIngredientStatus(
+            event['ingredient_ids'] as List<dynamic>,
+            'approved',
+          );
+        });
 
-    _recipeRejectedSubscription =
-        WebSocketService.instance.recipeRejected.listen((event) {
-      _updateIngredientStatus(
-        event['ingredient_ids'] as List<dynamic>,
-        'available',
-      );
-    });
+    _recipeRejectedSubscription = WebSocketService.instance.recipeRejected
+        .listen((event) {
+          _updateIngredientStatus(
+            event['ingredient_ids'] as List<dynamic>,
+            'available',
+          );
+        });
   }
 
   @override
@@ -98,9 +98,9 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
 
   void _updateIngredientStatus(
     List<dynamic> ingredientIds,
-    String newStatus,
-    {String? recipeName}
-  ) {
+    String newStatus, {
+    String? recipeName,
+  }) {
     setState(() {
       for (var ingredient in _availableIngredients) {
         if (ingredientIds.contains(ingredient['ingredient_id'])) {
@@ -365,15 +365,13 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
 
           // Generate Recipe Button
           if (_availableIngredients.isNotEmpty &&
-              _availableIngredients
-                  .any((ing) => ing['status'] == 'available'))
+              _availableIngredients.any((ing) => ing['status'] == 'available'))
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed:
-                      _selectedBatchIds.isEmpty ? null : _generateRecipe,
+                  onPressed: _selectedBatchIds.isEmpty ? null : _generateRecipe,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _selectedBatchIds.isEmpty
                         ? Colors.grey[400]
@@ -399,7 +397,20 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[date.month - 1]} ${date.day}, ${date.year}';
     } catch (e) {
       return dateString;
@@ -420,9 +431,7 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
 
     // Format the quantity display
     final qty = ingredient['remaining_quantity'];
-    final qtyNum = qty is num
-        ? qty
-        : (double.tryParse(qty.toString()) ?? 0.0);
+    final qtyNum = qty is num ? qty : (double.tryParse(qty.toString()) ?? 0.0);
     final qtyStr = qtyNum == qtyNum.toInt()
         ? qtyNum.toInt().toString()
         : qtyNum.toStringAsFixed(1);
@@ -471,8 +480,8 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
                     border: Border.all(
                       color: isAvailable
                           ? (isSelected
-                              ? const Color(0xFFF59E0B)
-                              : Colors.grey[400]!)
+                                ? const Color(0xFFF59E0B)
+                                : Colors.grey[400]!)
                           : Colors.grey[300]!,
                       width: 2,
                     ),
@@ -495,7 +504,8 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
                   width: 70,
                   height: 70,
                   color: Colors.grey[200],
-                  child: ingredient['image_url'] != null &&
+                  child:
+                      ingredient['image_url'] != null &&
                           (ingredient['image_url'] as String).isNotEmpty
                       ? Image.network(
                           ingredient['image_url'] as String,
@@ -539,14 +549,12 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
                     const SizedBox(height: 4),
                     Text(
                       'Expires: ${_formatDate(ingredient['expiry_date'].toString())}',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '$qtyStr ${ingredient['unit_name']}',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -554,8 +562,10 @@ class _NotificationsPageContentState extends State<NotificationsPageContent>
 
               // Days until expiry badge
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: daysUntilExpiry <= 3
                       ? const Color(0xFFFFEBEE)

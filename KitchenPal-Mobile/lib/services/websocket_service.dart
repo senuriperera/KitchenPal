@@ -47,8 +47,7 @@ class WebSocketService {
       StreamController<Map<String, dynamic>>.broadcast();
 
   /// Emitted whenever inventory changes (ingredients added/deleted/updated)
-  Stream<void> get inventoryChanged =>
-      _inventoryChangedController.stream;
+  Stream<void> get inventoryChanged => _inventoryChangedController.stream;
 
   /// Emitted whenever the backend signals that analytics changed
   Stream<Map<String, dynamic>> get analyticsUpdated =>
