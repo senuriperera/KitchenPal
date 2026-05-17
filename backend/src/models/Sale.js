@@ -47,7 +47,19 @@ class SaleModel {
             }
 
             const totalServings = recipe.total_servings || 1;
-            const basePrice = parseFloat(recipe.base_price);
+            let basePrice = parseFloat(recipe.base_price);
+            
+            // If this is a sale from a generated recipe, use the discounted price
+            if (generated_id) {
+                const generatedResult = await client.query(
+                    `SELECT final_discount_price FROM generated_recipes WHERE generated_id = $1 AND status = 'approved'`,
+                    [generated_id]
+                );
+                if (generatedResult.rows.length > 0 && generatedResult.rows[0].final_discount_price != null) {
+                    basePrice = parseFloat(generatedResult.rows[0].final_discount_price);
+                }
+            }
+            
             console.log('[SaleModel.create] totalServings:', totalServings);
             console.log('[SaleModel.create] basePrice:', basePrice);
 

@@ -116,6 +116,7 @@ class AnalyticsController {
           JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
           JOIN units u ON si.base_unit_id = u.unit_id
           JOIN sales s ON sd.sale_id = s.sale_id
+          JOIN generated_recipe_triggers grt ON s.generated_id = grt.generated_id AND si.ingredient_id = grt.ingredient_id
           WHERE s.generated_id IS NOT NULL
             AND DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', NOW())
             ${branchFilter}
@@ -133,6 +134,7 @@ class AnalyticsController {
           JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
           JOIN units u ON si.base_unit_id = u.unit_id
           JOIN sales s ON sd.sale_id = s.sale_id
+          JOIN generated_recipe_triggers grt ON s.generated_id = grt.generated_id AND si.ingredient_id = grt.ingredient_id
           WHERE s.generated_id IS NOT NULL
             AND DATE_TRUNC('month', s.sold_at) = DATE_TRUNC('month', $${getParamIndex(1)}::timestamp)
             ${branchFilter}
@@ -273,6 +275,7 @@ class AnalyticsController {
           JOIN stock_ingredients si ON ib.ingredient_id = si.ingredient_id
           JOIN units u ON si.base_unit_id = u.unit_id
           JOIN sales s ON sd.sale_id = s.sale_id
+          JOIN generated_recipe_triggers grt ON s.generated_id = grt.generated_id AND si.ingredient_id = grt.ingredient_id
           WHERE s.generated_id IS NOT NULL
             AND s.sold_at >= $${getParamIndex(1)}
             ${branchFilter}
