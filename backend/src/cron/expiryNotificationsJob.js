@@ -9,7 +9,7 @@ const db = require('../config/database');
  * - Inserts one notification row per staff user per batch.
  */
 async function runExpiryNotificationsJob() {
-    console.log('\n⏰ Running daily expiry notifications job...');
+    console.log('\n Running daily expiry notifications job...');
 
     const client = await db.getClient();
     try {
@@ -35,7 +35,7 @@ async function runExpiryNotificationsJob() {
         );
 
         if (expiringResult.rows.length === 0) {
-            console.log('📭 No expiring batches found for notifications.');
+            console.log('No expiring batches found for notifications.');
             await client.query('COMMIT');
             return;
         }
@@ -113,10 +113,10 @@ async function runExpiryNotificationsJob() {
         }
 
         await client.query('COMMIT');
-        console.log('✅ Daily expiry notifications job completed.');
+        console.log('Daily expiry notifications job completed.');
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error('❌ Expiry notifications job failed:', err.message);
+        console.error('Expiry notifications job failed:', err.message);
     } finally {
         client.release();
     }

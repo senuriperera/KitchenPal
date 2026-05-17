@@ -22,9 +22,9 @@ class SaleModel {
             console.log('[SaleModel.create] Starting transaction...');
             await client.query('BEGIN');
 
-            // ─────────────────────────────────────────────────────────
-            // STEP 1: Fetch recipe details and total_servings
-            // ─────────────────────────────────────────────────────────
+
+            // Fetch recipe details and total_servings
+
             console.log('[SaleModel.create] STEP 1: Fetching recipe details...');
             const recipeResult = await client.query(
                 `SELECT recipe_id, name, base_price, total_servings, is_active
@@ -51,9 +51,9 @@ class SaleModel {
             console.log('[SaleModel.create] totalServings:', totalServings);
             console.log('[SaleModel.create] basePrice:', basePrice);
 
-            // ─────────────────────────────────────────────────────────
-            // STEP 2: Fetch all recipe ingredients with unit conversion
-            // ─────────────────────────────────────────────────────────
+
+            // Fetch all recipe ingredients with unit conversion
+
             console.log('[SaleModel.create] STEP 2: Fetching recipe ingredients...');
             const ingredientsResult = await client.query(
                 `SELECT
@@ -88,9 +88,9 @@ class SaleModel {
                     servingFraction,
             }));
 
-            // ─────────────────────────────────────────────────────────
-            // STEP 3: Stock check with FOR UPDATE lock (collect all failures)
-            // ─────────────────────────────────────────────────────────
+
+            // Stock check with FOR UPDATE lock (collect all failures)
+
             const insufficientIngredients = [];
 
             for (const ing of ingredientsToDeduct) {
@@ -141,10 +141,10 @@ class SaleModel {
 
             console.log('[SaleModel.create] All ingredients have sufficient stock!');
 
-            // ─────────────────────────────────────────────────────────
-            // STEP 4: Insert into sales table
-            // ─────────────────────────────────────────────────────────
-            console.log('[SaleModel.create] STEP 4: Inserting into sales table...');
+
+            // Insert into sales table
+
+            console.log('[SaleModel.create] Inserting into sales table...');
             const totalRevenue = basePrice * quantity_sold;
             console.log('[SaleModel.create] totalRevenue:', totalRevenue);
 
@@ -162,10 +162,10 @@ class SaleModel {
             const soldAt = saleResult.rows[0].sold_at;
             console.log('[SaleModel.create] Sale created! saleId:', saleId, 'soldAt:', soldAt);
 
-            // ─────────────────────────────────────────────────────────
-            // STEP 5 & 6: FIFO deduction for each ingredient + Update stock_ingredients
-            // ─────────────────────────────────────────────────────────
-            console.log('[SaleModel.create] STEP 5 & 6: Starting FIFO deduction...');
+
+            // FIFO deduction for each ingredient + Update stock_ingredients
+
+            console.log('[SaleModel.create] Starting FIFO deduction...');
             for (const ing of ingredientsToDeduct) {
                 if (ing.is_optional || !ing.ingredient_id) {
                     console.log('[SaleModel.create] Skipping optional or missing ingredient:', ing.ingredient_name);
