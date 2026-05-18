@@ -79,13 +79,11 @@ class MasterIngredientModel {
         return this._mapRow(result.rows[0]);
     }
 
-    /**
-     * Derive unit_family and base_unit_id from a unit_id.
-     * Returns { unit_family, base_unit_id } or null if unit not found.
-     * Change 2 helper.
-     */
+
+    // Derive unit_family and base_unit_id from a unit_id.
+
     static async deriveUnitFamilyFields(unitId) {
-        // Step 1: get unit_family and base_unit_code from the selected unit
+        // get unit_family and base_unit_code from the selected unit
         const unitQuery = `
       SELECT unit_family, base_unit_code
       FROM units
@@ -96,7 +94,7 @@ class MasterIngredientModel {
 
         const { unit_family, base_unit_code } = unitResult.rows[0];
 
-        // Step 2: look up base_unit_id from the code
+        // look up base_unit_id from the code
         const baseQuery = `
       SELECT unit_id
       FROM units
@@ -110,8 +108,7 @@ class MasterIngredientModel {
 
     /**
      * Find or create a master ingredient by name
-     * If exists, return it. If not, create with is_custom = true
-     * Change 2: accepts unitId and derives unit_family + base_unit_id before inserting
+     * If exists, return it.
      */
     static async findOrCreate({ name, default_unit_id = null, unit_id = null }) {
         // First try to find existing
