@@ -2,14 +2,14 @@ class IngredientBatch {
   final int batchId;
   final double remainingBaseQuantity;
   final String baseUnitCode;
-  final DateTime expiryDate;
+  final DateTime? expiryDate;
   final bool isDepleted;
 
   IngredientBatch({
     required this.batchId,
     required this.remainingBaseQuantity,
     required this.baseUnitCode,
-    required this.expiryDate,
+    this.expiryDate,
     required this.isDepleted,
   });
 
@@ -18,7 +18,7 @@ class IngredientBatch {
       batchId: json['batch_id'] ?? 0,
       remainingBaseQuantity: _parseDouble(json['remaining_base_quantity']),
       baseUnitCode: json['base_unit_code'] ?? '',
-      expiryDate: DateTime.parse(json['expiry_date']),
+      expiryDate: json['expiry_date'] != null ? DateTime.tryParse(json['expiry_date']) : null,
       isDepleted: json['is_depleted'] ?? false,
     );
   }

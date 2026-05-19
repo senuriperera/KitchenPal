@@ -9,7 +9,7 @@ class IngredientModel {
                 si.ingredient_id,
                 si.name,
                 si.image_url,
-                MIN(CASE WHEN ib.expiry_date >= CURRENT_DATE THEN ib.expiry_date END) AS expiry_date,
+                MIN(ib.expiry_date) AS expiry_date,
                 si.quantity_in_stock,
                 si.unit_weight,
                 wu.code  AS unit_weight_unit_code,
@@ -24,7 +24,7 @@ class IngredientModel {
             WHERE si.branch_id = $1 AND si.deleted_at IS NULL
             GROUP BY si.ingredient_id, si.name, si.image_url, si.quantity_in_stock,
                      si.unit_weight, wu.code, si.total_base_quantity, bu.code
-            ORDER BY MIN(CASE WHEN ib.expiry_date >= CURRENT_DATE THEN ib.expiry_date END) ASC NULLS LAST
+            ORDER BY MIN(ib.expiry_date) ASC NULLS LAST
         `;
     const result = await db.query(query, [branch_id]);
     console.log(`[IngredientModel] getAllByBranch returned ${result.rows.length} ingredients for branch ${branch_id}`);
@@ -203,7 +203,7 @@ class IngredientModel {
 
       if (masterIngredientId) {
         const duplicateCheck = await client.query(
-          `SELECT ingredient_id, total_base_quantity, quantity_in_stock
+          `SELECT ingredient_id, total_base_quantity, quantity_in_stock, deleted_at
            FROM stock_ingredients
            WHERE branch_id = $1 AND master_ingredient_id = $2`,
           [data.branch_id, masterIngredientId]
@@ -212,15 +212,18 @@ class IngredientModel {
         if (duplicateCheck.rows.length > 0) {
           // Ingredient exists — UPDATE
           const existing = duplicateCheck.rows[0];
+          const isDeleted = existing.deleted_at !== null;
+          
           await client.query(
             `UPDATE stock_ingredients SET
-              total_base_quantity = total_base_quantity + $1,
-              quantity_in_stock = quantity_in_stock + $2,
+              total_base_quantity = ${isDeleted ? '$1' : 'total_base_quantity + $1'},
+              quantity_in_stock = ${isDeleted ? '$2' : 'quantity_in_stock + $2'},
               price = $3,
               unit_weight = $4,
               unit_weight_unit_id = $5,
               image_url = COALESCE($6, image_url),
-              last_updated = NOW()
+              last_updated = NOW(),
+              deleted_at = NULL
              WHERE ingredient_id = $7`,
             [
               total_base_quantity,
@@ -301,25 +304,27 @@ class IngredientModel {
       );
 
       // Step 5 — Expiry notification if within 3 days
-      const expiryDate = new Date(data.expiry_date);
-      const now = new Date();
-      const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+      if (data.expiry_date) {
+        const expiryDate = new Date(data.expiry_date);
+        const now = new Date();
+        const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
 
-      if (daysUntilExpiry <= 3) {
-        await client.query(
-          `INSERT INTO notifications
-                        (user_id, branch_id, ingredient_id, title, message,
-                         notification_type, status, days_until_expiry, is_read)
-                     VALUES ($1,$2,$3,$4,$5,'expiry_alert','unread',$6,false)`,
-          [
-            data.added_by,
-            data.branch_id,
-            ingredient_id,
-            `Expiry Alert: ${data.name}`,
-            `${data.name} expires in ${daysUntilExpiry} day(s).`,
-            daysUntilExpiry,
-          ]
-        );
+        if (daysUntilExpiry <= 3) {
+          await client.query(
+            `INSERT INTO notifications
+                          (user_id, branch_id, ingredient_id, title, message,
+                           notification_type, status, days_until_expiry, is_read)
+                       VALUES ($1,$2,$3,$4,$5,'expiry_alert','unread',$6,false)`,
+            [
+              data.added_by,
+              data.branch_id,
+              ingredient_id,
+              `Expiry Alert: ${data.name}`,
+              `${data.name} expires in ${daysUntilExpiry} day(s).`,
+              daysUntilExpiry,
+            ]
+          );
+        }
       }
 
       // Step 6 — Commit

@@ -11,7 +11,7 @@ class Ingredient {
   final String baseUnitCode;
   final double price;
   final DateTime? manufactureDate;
-  final DateTime expiryDate;
+  final DateTime? expiryDate;
   final int storageTypeId;
   final String storageTypeName;
   final int masterIngredientId;
@@ -34,7 +34,7 @@ class Ingredient {
     required this.baseUnitCode,
     required this.price,
     this.manufactureDate,
-    required this.expiryDate,
+    this.expiryDate,
     required this.storageTypeId,
     required this.storageTypeName,
     required this.masterIngredientId,
@@ -61,7 +61,7 @@ class Ingredient {
       manufactureDate: json['manufacture_date'] != null
           ? DateTime.tryParse(json['manufacture_date'])
           : null,
-      expiryDate: DateTime.parse(json['expiry_date']),
+      expiryDate: json['expiry_date'] != null ? DateTime.tryParse(json['expiry_date']) : null,
       storageTypeId: json['storage_type_id'] ?? 0,
       storageTypeName: json['storage_type_name'] ?? '',
       masterIngredientId: json['master_ingredient_id'] ?? 0,
@@ -86,25 +86,29 @@ class Ingredient {
     return '${totalBaseQuantity.toStringAsFixed(0)} $baseUnitCode';
   }
 
-  int get daysUntilExpiry {
+  int? get daysUntilExpiry {
+    if (expiryDate == null) return null;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final expiry = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+    final expiry = DateTime(expiryDate!.year, expiryDate!.month, expiryDate!.day);
     return expiry.difference(today).inDays;
   }
 
   bool get isExpired {
+    if (expiryDate == null) return false;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final expiry = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+    final expiry = DateTime(expiryDate!.year, expiryDate!.month, expiryDate!.day);
     return expiry.isBefore(today);
   }
 
   String get formattedExpiryDate {
+    if (expiryDate == null) return 'No Expiry';
     if (isExpired) return 'Expired';
-    if (daysUntilExpiry == 0) return 'Expires Today';
-    if (daysUntilExpiry == 1) return 'Expires Tomorrow';
-    if (daysUntilExpiry <= 7) return 'Exp: $daysUntilExpiry Days';
-    return '${expiryDate.day}/${expiryDate.month}/${expiryDate.year}';
+    final days = daysUntilExpiry!;
+    if (days == 0) return 'Expires Today';
+    if (days == 1) return 'Expires Tomorrow';
+    if (days <= 7) return 'Exp: $days Days';
+    return '${expiryDate!.day}/${expiryDate!.month}/${expiryDate!.year}';
   }
 }

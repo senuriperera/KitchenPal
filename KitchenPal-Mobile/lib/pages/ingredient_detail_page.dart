@@ -549,13 +549,13 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
               final batch = entry.value;
               final now = DateTime.now();
               final today = DateTime(now.year, now.month, now.day);
-              final bExpiry = DateTime(
-                batch.expiryDate.year,
-                batch.expiryDate.month,
-                batch.expiryDate.day,
-              );
-              final daysLeft = bExpiry.difference(today).inDays;
-              final isBatchExpired = daysLeft < 0;
+              final bExpiry = batch.expiryDate != null ? DateTime(
+                batch.expiryDate!.year,
+                batch.expiryDate!.month,
+                batch.expiryDate!.day,
+              ) : null;
+              final daysLeft = bExpiry?.difference(today).inDays;
+              final isBatchExpired = daysLeft != null && daysLeft < 0;
 
               // Format the remaining quantity nicely
               String formattedQty;
@@ -574,7 +574,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                   color: const Color(0xFFF9F9F9),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: daysLeft <= 3
+                    color: daysLeft != null && daysLeft <= 3
                         ? Colors.red.shade200
                         : Colors.grey.shade200,
                   ),
@@ -616,7 +616,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                             'Expires: ${_formatDate(batch.expiryDate)}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: daysLeft <= 3
+                              color: daysLeft != null && daysLeft <= 3
                                   ? Colors.red
                                   : Colors.grey[600],
                             ),
@@ -624,7 +624,7 @@ class _IngredientDetailPageState extends State<IngredientDetailPage> {
                         ],
                       ),
                     ),
-                    if (daysLeft <= 3)
+                    if (daysLeft != null && daysLeft <= 3)
                       const Icon(
                         Icons.warning_amber_rounded,
                         color: Colors.red,

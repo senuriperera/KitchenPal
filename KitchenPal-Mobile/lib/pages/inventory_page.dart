@@ -390,7 +390,10 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     String daysLeftText;
     Color daysLeftColor;
     
-    if (isExpired) {
+    if (daysLeft == null) {
+      daysLeftText = 'No Expiry';
+      daysLeftColor = Colors.green;
+    } else if (isExpired) {
       daysLeftText = 'Expired';
       daysLeftColor = Colors.red;
     } else if (daysLeft == 0) {
@@ -415,7 +418,7 @@ class _InventoryPageContentState extends State<InventoryPageContent> {
     
     // Format expiry date
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final expiryDateText = '${ingredient.expiryDate.day} ${months[ingredient.expiryDate.month - 1]} ${ingredient.expiryDate.year}';
+    final expiryDateText = ingredient.expiryDate != null ? '${ingredient.expiryDate!.day} ${months[ingredient.expiryDate!.month - 1]} ${ingredient.expiryDate!.year}' : 'N/A';
     
     return GestureDetector(
       onTap: () async {
