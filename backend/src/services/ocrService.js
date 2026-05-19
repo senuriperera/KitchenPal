@@ -1,6 +1,5 @@
 const vision = require('@google-cloud/vision');
 
-// Initialize the Vision client lazily to avoid crashes if credentials are missing at startup
 let client = null;
 
 const getClient = () => {
@@ -18,9 +17,7 @@ const getClient = () => {
     return client;
 };
 
-// ─── Month name helpers ───────────────────────────────────────────────────────
 
-// Maps both full and abbreviated month names to their numeric equivalent
 const MONTH_MAP = {
     jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
     jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
@@ -30,16 +27,12 @@ const MONTH_MAP = {
 
 const monthNameToNum = (name) => MONTH_MAP[name.toLowerCase().slice(0, 3)] || null;
 
-// ─── Date parser ──────────────────────────────────────────────────────────────
-// Parse a raw date string into a Date object.
 const parseDate = (raw) => {
     if (!raw) return null;
     const s = raw.trim();
 
-    // Reject years outside the expected product date range to filter out lot codes and serial numbers
     const validYear = (yr) => yr >= 2000 && yr <= 2040;
 
-    // YYYY-MM-DD  or  YYYY/MM/DD
     let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
     if (m) {
         const yr = +m[1];
@@ -48,7 +41,6 @@ const parseDate = (raw) => {
         return isNaN(d) ? null : d;
     }
 
-    // DD/MM/YYYY  DD-MM-YYYY  DD.MM.YYYY
     m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})$/);
     if (m) {
         let yr = +m[3];
@@ -58,7 +50,6 @@ const parseDate = (raw) => {
         return isNaN(d) ? null : d;
     }
 
-    // MM/YYYY  or  MM-YYYY  
     m = s.match(/^(\d{1,2})[-/](\d{4})$/);
     if (m && +m[1] >= 1 && +m[1] <= 12) {
         const yr = +m[2];
@@ -67,7 +58,6 @@ const parseDate = (raw) => {
         return isNaN(d) ? null : d;
     }
 
-    // MM/YY  or  MM-YY  
     m = s.match(/^(0[1-9]|1[0-2])[-/](\d{2})$/);
     if (m) {
         let yr = +m[2];
@@ -77,7 +67,6 @@ const parseDate = (raw) => {
         return isNaN(d) ? null : d;
     }
 
-    // DD MMM YYYY  or  DD MMM YY  
     m = s.match(/^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{2,4})$/);
     if (m) {
         const mo = monthNameToNum(m[2]);
@@ -90,7 +79,6 @@ const parseDate = (raw) => {
         }
     }
 
-    // MMM YYYY  or  MMM YY  
     m = s.match(/^([A-Za-z]{3,})\s+(\d{2,4})$/);
     if (m) {
         const mo = monthNameToNum(m[1]);
@@ -103,7 +91,6 @@ const parseDate = (raw) => {
         }
     }
 
-    // MMM-YYYY  or  MMM/YYYY  
     m = s.match(/^([A-Za-z]{3,})[-/](\d{2,4})$/);
     if (m) {
         const mo = monthNameToNum(m[1]);
@@ -116,7 +103,6 @@ const parseDate = (raw) => {
         }
     }
 
-    // DD/MM  
     m = s.match(/^(\d{1,2})[-/](\d{1,2})$/);
     if (m && +m[1] >= 1 && +m[1] <= 31 && +m[2] >= 1 && +m[2] <= 12) {
         const yr = new Date().getFullYear();
@@ -127,19 +113,16 @@ const parseDate = (raw) => {
     return null;
 };
 
-// Date regex patterns
-// Each pattern targets a specific date format found on product packaging.
 const DATE_PATTERNS = [
-    /\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/g,                                               // YYYY-MM-DD
-    /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})\b/g,                                         // DD/MM/YYYY or DD-MM-YYYY (2 or 4 digit year)
-    /\b(\d{1,2})[-/](\d{4})\b/g,                                                               // MM/YYYY or MM-YYYY
-    /\b(0[1-9]|1[0-2])[-/](\d{2})\b/g,                                                         // MM/YY (zero-padded month only)
-    /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{2,4})\b/gi,  // DD MMM YYYY / DD MMM YY
-    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{2,4})\b/gi,              // MMM YYYY / MMM YY
-    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/](\d{2,4})\b/gi,             // MMM-YYYY / MMM/YYYY
+    /\b(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\b/g,
+    /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4}|\d{2})\b/g,
+    /\b(\d{1,2})[-/](\d{4})\b/g,
+    /\b(0[1-9]|1[0-2])[-/](\d{2})\b/g,
+    /\b(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{2,4})\b/gi,
+    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(\d{2,4})\b/gi,
+    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-/](\d{2,4})\b/gi,
 ];
 
-// Grab all dates found anywhere in the text so we can use them later if needed
 const extractAllDates = (text) => {
     const hits = [];
     const seen = new Set();
@@ -163,9 +146,7 @@ const extractAllDates = (text) => {
     return hits;
 };
 
-// ─── Keyword lists ─────────────────────────────────────────────────────────────
 
-// Common labels found on packaging that indicate an expiry date
 const EXPIRY_KEYWORDS = [
     'best before', 'best by', 'use by', 'use before',
     'valid until', 'valid thru', 'sell by',
@@ -173,7 +154,6 @@ const EXPIRY_KEYWORDS = [
     'exp', 'bb', 'bbd', 'bd',
 ];
 
-// Common labels found on packaging that indicate a manufacture date
 const MFG_KEYWORDS = [
     'manufacture date', 'manufactured on', 'manufactured',
     'date of manufacture', 'date of mfg', 'date of mfd',
@@ -183,7 +163,6 @@ const MFG_KEYWORDS = [
     'dom', 'MFD', 'M.F.D',
 ];
 
-// Combine all our keywords into a search pattern to easily find them in the text
 const buildKeywordRegex = (keywords) => {
     const escaped = keywords
         .slice()
@@ -196,7 +175,6 @@ const buildKeywordRegex = (keywords) => {
 const EXPIRY_RE = buildKeywordRegex(EXPIRY_KEYWORDS);
 const MFG_RE = buildKeywordRegex(MFG_KEYWORDS);
 
-// Look for a keyword (like 'EXP') and a date on the exact same line
 const extractDateLineAware = (keywordRe, text) => {
     const lines = text.split(/\r?\n/);
     for (const line of lines) {
@@ -216,7 +194,6 @@ const extractDateLineAware = (keywordRe, text) => {
     return null;
 };
 
-// Look for a date sitting right next to or just below the keyword
 const extractDateAfterKeyword = (keywordRe, text) => {
     keywordRe.lastIndex = 0;
     let m;
@@ -234,7 +211,6 @@ const extractDateAfterKeyword = (keywordRe, text) => {
     return null;
 };
 
-// Find the date that is physically closest to the keyword in the text
 const proximityMatch = (keywordsRe, allDates, text, maxDist = 120) => {
     keywordsRe.lastIndex = 0;
     const keywordPositions = [];
@@ -260,7 +236,6 @@ const proximityMatch = (keywordsRe, allDates, text, maxDist = 120) => {
     return best;
 };
 
-// ─── Main export ──────────────────────────────────────────────────────────────
 exports.extractDatesFromUrl = async (imageUrl) => {
     const visionClient = getClient();
     if (!visionClient) {
@@ -274,10 +249,8 @@ exports.extractDatesFromUrl = async (imageUrl) => {
         return { expiryDate: null, manufactureDate: null };
     }
 
-    // The first annotation contains the full concatenated text from the image
     const fullText = detections[0].description;
 
-    // Log raw OCR output in development to help debug mismatches without re-calling the API
     if (process.env.NODE_ENV !== 'production') {
         console.debug('[OCRService] Raw OCR text:\n', fullText);
     }
@@ -288,11 +261,9 @@ exports.extractDatesFromUrl = async (imageUrl) => {
         return { expiryDate: null, manufactureDate: null };
     }
 
-    // Check for keywords and dates on the exact same line
     let expiryDate = extractDateLineAware(new RegExp(EXPIRY_RE.source, 'gi'), fullText);
     let manufactureDate = extractDateLineAware(new RegExp(MFG_RE.source, 'gi'), fullText);
 
-    // Check for dates sitting right next to keywords
     if (!expiryDate) {
         expiryDate = extractDateAfterKeyword(new RegExp(EXPIRY_RE.source, 'gi'), fullText);
     }
@@ -300,7 +271,6 @@ exports.extractDatesFromUrl = async (imageUrl) => {
         manufactureDate = extractDateAfterKeyword(new RegExp(MFG_RE.source, 'gi'), fullText);
     }
 
-    // Check for dates mathematically closest to keywords
     if (!expiryDate) {
         expiryDate = proximityMatch(new RegExp(EXPIRY_RE.source, 'gi'), allDates, fullText);
     }
@@ -308,12 +278,10 @@ exports.extractDatesFromUrl = async (imageUrl) => {
         manufactureDate = proximityMatch(new RegExp(MFG_RE.source, 'gi'), allDates, fullText);
     }
 
-    // If no keywords found, assume the only date is the Expiry Date
     if (!expiryDate && !manufactureDate && allDates.length > 0) {
         expiryDate = allDates[0].parsed;
     }
 
-    // Failsafe: Swap dates if Manufacture Date is accidentally after Expiry Date
     if (expiryDate && manufactureDate && manufactureDate >= expiryDate) {
         [expiryDate, manufactureDate] = [manufactureDate, expiryDate];
     }

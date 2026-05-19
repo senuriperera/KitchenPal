@@ -1,10 +1,7 @@
 const Recipe = require('../models/Recipe');
 
 class RecipeController {
-    /**
-     * Get all standard recipes with ingredients
-     * GET /api/recipes
-     */
+    
     static async getAllRecipes(req, res) {
         try {
             const recipes = await Recipe.getAllStandardRecipes();
@@ -15,10 +12,7 @@ class RecipeController {
         }
     }
 
-    /**
-     * Get a single recipe by ID
-     * GET /api/recipes/:id
-     */
+    
     static async getRecipeById(req, res) {
         try {
             const { id } = req.params;
@@ -35,19 +29,11 @@ class RecipeController {
         }
     }
 
-    /**
-     * Create a new recipe with ingredients and keywords
-     * POST /api/recipes
-     * Body: {
-     *   name, image_url, cooking_time_minutes, description, base_price,
-     *   ingredients: [{master_ingredient_id, quantity_required, unit_id}]
-     * }
-     */
+    
     static async createRecipe(req, res) {
         try {
             const { name, image_url, cooking_time_minutes, description, base_price, ingredients, total_servings, serving_description } = req.body;
 
-            // Validation
             if (!name || name.trim() === '') {
                 return res.status(400).json({ error: 'Recipe name is required' });
             }
@@ -60,7 +46,6 @@ class RecipeController {
                 return res.status(400).json({ error: 'At least one ingredient is required' });
             }
 
-            // Validate each ingredient
             for (const ing of ingredients) {
                 if (!ing.master_ingredient_id || !ing.quantity_required || !ing.unit_id) {
                     return res.status(400).json({
@@ -73,7 +58,6 @@ class RecipeController {
                 }
             }
 
-            // Get user ID from authenticated request (if auth middleware is set up)
             const created_by = req.user?.user_id || null;
 
             const recipeData = {
@@ -94,7 +78,6 @@ class RecipeController {
                 recipe
             });
 
-            // Fetch full recipe with ingredients for the WebSocket payload
             const io = req.app.get('io');
             if (io) {
                 console.log(`📡 [WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
@@ -111,15 +94,13 @@ class RecipeController {
         } catch (error) {
             console.error('Create recipe error:', error);
 
-            // Handle specific database errors
-            if (error.code === '23505') { // Unique violation
+            if (error.code === '23505') {
                 return res.status(409).json({ error: 'Recipe with this name already exists' });
             }
-            if (error.code === '23503') { // Foreign key violation
+            if (error.code === '23503') {
                 return res.status(400).json({ error: 'Invalid ingredient or unit ID' });
             }
 
-            // Surface explicit status codes thrown from model (unit mismatch = 400)
             if (error.statusCode) {
                 return res.status(error.statusCode).json({ error: error.message });
             }
@@ -128,10 +109,7 @@ class RecipeController {
         }
     }
 
-    /**
-     * Update a recipe
-     * PUT /api/recipes/:id
-     */
+    
     static async updateRecipe(req, res) {
         try {
             const { id } = req.params;
@@ -147,7 +125,6 @@ class RecipeController {
                 return res.status(400).json({ error: 'Valid base price is required' });
             }
 
-            // Validate ingredients if provided
             if (ingredients) {
                 if (!Array.isArray(ingredients) || ingredients.length === 0) {
                     return res.status(400).json({ error: 'At least one ingredient is required' });
@@ -178,11 +155,9 @@ class RecipeController {
 
             let recipe;
             if (ingredients) {
-                // Update recipe with ingredients (transaction)
                 console.log('Updating recipe with ingredients...');
                 recipe = await Recipe.updateWithIngredients(id, recipeData, ingredients);
             } else {
-                // Update recipe only
                 console.log('Updating recipe only (no ingredients)...');
                 recipe = await Recipe.update(id, recipeData);
             }
@@ -198,7 +173,6 @@ class RecipeController {
                 recipe
             });
 
-            // Fetch full recipe with ingredients for the WebSocket payload
             const io = req.app.get('io');
             if (io) {
                 console.log(`📡 [WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
@@ -215,13 +189,11 @@ class RecipeController {
         } catch (error) {
             console.error('Update recipe error:', error);
 
-            // Surface explicit status codes thrown from model (unit mismatch = 400, inactive = 404)
             if (error.statusCode) {
                 return res.status(error.statusCode).json({ error: error.message });
             }
 
-            // Handle specific database errors
-            if (error.code === '23503') { // Foreign key violation
+            if (error.code === '23503') {
                 return res.status(400).json({ error: 'Invalid ingredient or unit ID' });
             }
 
@@ -229,10 +201,7 @@ class RecipeController {
         }
     }
 
-    /**
-     * Delete a recipe (soft delete — sets is_active = false)
-     * DELETE /api/recipes/:id
-     */
+    
     static async deleteRecipe(req, res) {
         try {
             const { id } = req.params;
@@ -244,7 +213,6 @@ class RecipeController {
 
             res.json({ message: 'Recipe deleted successfully' });
 
-            // Emit WebSocket event for real-time update
             const io = req.app.get('io');
             if (io) {
                 console.log(`📡 [WebSocket] Emitting recipe:deleted for recipe ${id}`);
@@ -258,18 +226,12 @@ class RecipeController {
         }
     }
 
-    /**
-     * Check recipe availability based on current stock
-     * GET /api/recipes/availability
-     * Returns which recipes can be made with current stock
-     */
+    
     static async checkAvailability(req, res) {
         try {
             const branch_id = req.user.branch_id;
             const db = require('../config/database');
 
-            // Fetch all recipe ingredients with their required quantities and available stock
-            // Calculate available stock from non-depleted, non-expired batches only
             const query = `
                 SELECT
                     ri.recipe_id,
@@ -301,7 +263,6 @@ class RecipeController {
 
             const result = await db.query(query, [branch_id]);
 
-            // Group by recipe_id and check availability
             const recipeMap = {};
 
             for (const row of result.rows) {
@@ -314,14 +275,11 @@ class RecipeController {
                     };
                 }
 
-                // Skip optional ingredients
                 if (row.is_optional) continue;
 
-                // Calculate required base quantity (for 1 full recipe = total_servings)
                 const required_base = parseFloat(row.quantity_required) * parseFloat(row.to_base_factor);
                 const available_base = parseFloat(row.available_base_quantity);
 
-                // Check if sufficient stock exists
                 if (available_base < required_base) {
                     recipeMap[recipeId].available = false;
                     recipeMap[recipeId].short_ingredients.push(row.ingredient_name);

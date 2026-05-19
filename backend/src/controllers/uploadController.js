@@ -1,16 +1,13 @@
 const { uploadImage, deleteImage, getPublicIdFromUrl } = require('../utils/cloudinaryService');
 
 class UploadController {
-    /**
-     * Upload single image to Cloudinary
-     */
+    
     static async uploadImage(req, res) {
         try {
             if (!req.file) {
                 return res.status(400).json({ error: 'No image file provided' });
             }
 
-            // Upload to Cloudinary with timeout handling
             const result = await uploadImage(req.file.buffer, 'kitchenpal/recipes');
 
             res.status(200).json({
@@ -21,7 +18,6 @@ class UploadController {
         } catch (error) {
             console.error('Upload image error:', error);
 
-            // Provide more specific error messages
             if (error.message && error.message.includes('timeout')) {
                 return res.status(408).json({ error: 'Image upload timeout. Please try again.' });
             }
@@ -33,16 +29,13 @@ class UploadController {
         }
     }
 
-    /**
-     * Upload multiple images to Cloudinary
-     */
+    
     static async uploadMultipleImages(req, res) {
         try {
             if (!req.files || req.files.length === 0) {
                 return res.status(400).json({ error: 'No image files provided' });
             }
 
-            // Upload all images to Cloudinary
             const uploadPromises = req.files.map(file =>
                 uploadImage(file.buffer, 'kitchenpal/recipes')
             );
@@ -64,9 +57,7 @@ class UploadController {
         }
     }
 
-    /**
-     * Delete image from Cloudinary
-     */
+    
     static async deleteImage(req, res) {
         try {
             const { imageUrl, publicId } = req.body;

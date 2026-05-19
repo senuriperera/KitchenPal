@@ -1,10 +1,7 @@
 const MasterIngredientModel = require('../models/MasterIngredient');
 
 class MasterIngredientController {
-    /**
-     * Search master ingredients by name
-     * GET /api/master-ingredients/search?q=<searchTerm>&limit=<limit>
-     */
+    
     static async search(req, res) {
         try {
             const { q = '', limit = 20 } = req.query;
@@ -21,10 +18,7 @@ class MasterIngredientController {
         }
     }
 
-    /**
-     * Get all master ingredients
-     * GET /api/master-ingredients
-     */
+    
     static async getAll(req, res) {
         try {
             const ingredients = await MasterIngredientModel.getAll();
@@ -35,10 +29,7 @@ class MasterIngredientController {
         }
     }
 
-    /**
-     * Get master ingredient by ID
-     * GET /api/master-ingredients/:id
-     */
+    
     static async getById(req, res) {
         try {
             const { id } = req.params;
@@ -55,11 +46,7 @@ class MasterIngredientController {
         }
     }
 
-    /**
-     * Create a new master ingredient
-     * POST /api/master-ingredients
-     * Body: { name, default_unit_id?, is_custom? }
-     */
+    
     static async create(req, res) {
         try {
             const { name, default_unit_id, is_custom } = req.body;
@@ -68,7 +55,6 @@ class MasterIngredientController {
                 return res.status(400).json({ error: 'Name is required' });
             }
 
-            // Check if ingredient already exists
             const existing = await MasterIngredientModel.findByName(name.trim());
             if (existing) {
                 return res.status(409).json({
@@ -93,11 +79,7 @@ class MasterIngredientController {
         }
     }
 
-    /**
-     * Find or create a master ingredient by name
-     * POST /api/master-ingredients/find-or-create
-     * Body: { name, default_unit_id? }
-     */
+    
     static async findOrCreate(req, res) {
         try {
             const { name, default_unit_id, unit_id } = req.body;
@@ -109,7 +91,7 @@ class MasterIngredientController {
             const { ingredient, created } = await MasterIngredientModel.findOrCreate({
                 name: name.trim(),
                 default_unit_id,
-                unit_id  // Change 2: passed so backend can derive unit_family and base_unit_id
+                unit_id
             });
 
             res.status(created ? 201 : 200).json({
@@ -123,10 +105,7 @@ class MasterIngredientController {
         }
     }
 
-    /**
-     * Update a master ingredient
-     * PUT /api/master-ingredients/:id
-     */
+    
     static async update(req, res) {
         try {
             const { id } = req.params;
@@ -148,10 +127,7 @@ class MasterIngredientController {
         }
     }
 
-    /**
-     * Delete a master ingredient
-     * DELETE /api/master-ingredients/:id
-     */
+    
     static async delete(req, res) {
         try {
             const { id } = req.params;

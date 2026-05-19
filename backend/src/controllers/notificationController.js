@@ -2,9 +2,6 @@ const NotificationModel = require('../models/Notification');
 const db = require('../config/database');
 
 class NotificationController {
-    // Get expiry-nearing notifications for the logged-in user
-    // GET /api/notifications
-    // Returns all expiring ingredients (within 7 days) regardless of notification status
     static async getExpiryNotificationsForUser(req, res) {
         try {
             const user_id = req.user.user_id;
@@ -15,8 +12,6 @@ class NotificationController {
                 return res.status(400).json({ error: 'User branch context missing' });
             }
 
-            // Query all expiring batches for the branch (same as homepage)
-            // This ensures consistency between homepage and notifications page
             const query = `
                 SELECT DISTINCT
                     ib.batch_id,
@@ -43,7 +38,6 @@ class NotificationController {
 
             const result = await db.query(query, [branch_id, days]);
 
-            // Map to match Flutter's ExpiryNotification model field names
             const items = result.rows.map(row => ({
                 batch_id: row.batch_id,
                 ingredient_id: row.ingredient_id,
@@ -62,7 +56,6 @@ class NotificationController {
             res.status(500).json({ error: 'Failed to fetch expiry notifications' });
         }
     }
-    // Get all notifications for a branch
     static async getAllNotifications(req, res) {
         try {
             const { branch_id } = req.params;
@@ -78,7 +71,6 @@ class NotificationController {
         }
     }
 
-    // Get notification by ID
     static async getNotificationById(req, res) {
         try {
             const { id } = req.params;
@@ -95,7 +87,6 @@ class NotificationController {
         }
     }
 
-    // Create notification
     static async createNotification(req, res) {
         try {
             const { branch_id, ingredient_id, type, message, expiry_date } = req.body;
@@ -108,7 +99,6 @@ class NotificationController {
                 expiry_date,
             });
 
-            // Broadcast notification/inventory-related change
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
                 io.emit('notifications:changed', {
@@ -128,7 +118,6 @@ class NotificationController {
         }
     }
 
-    // Mark notification as resolved
     static async resolveNotification(req, res) {
         try {
             const { id } = req.params;
@@ -157,7 +146,6 @@ class NotificationController {
         }
     }
 
-    // Delete notification
     static async deleteNotification(req, res) {
         try {
             const { id } = req.params;
@@ -177,7 +165,6 @@ class NotificationController {
         }
     }
 
-    // Auto-create expiry notifications
     static async createExpiryNotifications(req, res) {
         try {
             const { branch_id } = req.params;
@@ -204,7 +191,6 @@ class NotificationController {
         }
     }
 
-    // Acknowledge a single expiry notification for the logged-in user
     static async acknowledgeNotification(req, res) {
         try {
             const { id } = req.params;
@@ -233,7 +219,6 @@ class NotificationController {
         }
     }
 
-    // Get bell notifications (recipe_approved, recipe_rejected, expiry_alert) for the logged-in user
     static async getBellNotifications(req, res) {
         try {
             const user_id = req.user.user_id;
@@ -266,7 +251,6 @@ class NotificationController {
         }
     }
 
-    // Mark a single bell notification as read
     static async markBellAsRead(req, res) {
         try {
             const { id } = req.params;
@@ -294,7 +278,6 @@ class NotificationController {
         }
     }
 
-    // Mark all bell notifications as read for the logged-in user
     static async markAllBellAsRead(req, res) {
         try {
             const user_id = req.user.user_id;
@@ -317,13 +300,11 @@ class NotificationController {
         }
     }
 
-    // Get admin bell notifications (recipe_pending) for the logged-in user
     static async getAdminBellNotifications(req, res) {
         try {
             const user_id = req.user.user_id;
             console.log('Admin fetching notifications for user_id:', user_id);
 
-            // First, check if there are ANY recipe_pending notifications in the database
             const allPendingResult = await db.query(
                 `SELECT COUNT(*) as count FROM notifications WHERE notification_type = 'recipe_pending'`
             );
@@ -359,7 +340,6 @@ class NotificationController {
         }
     }
 
-    // Mark a single admin bell notification as read
     static async markAdminBellAsRead(req, res) {
         try {
             const { id } = req.params;
@@ -387,7 +367,6 @@ class NotificationController {
         }
     }
 
-    // Mark all admin bell notifications as read for the logged-in user
     static async markAllAdminBellAsRead(req, res) {
         try {
             const user_id = req.user.user_id;

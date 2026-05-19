@@ -3,8 +3,6 @@ const OCRService = require('../services/ocrService');
 
 class IngredientController {
 
-    // ─── GET /api/ingredients ──────────────────────────────────────────────────
-    // branch_id is extracted from the JWT payload (req.user.branch_id)
     static async getIngredients(req, res) {
         try {
             const branch_id = req.user.branch_id;
@@ -19,7 +17,6 @@ class IngredientController {
         }
     }
 
-    // ─── GET /api/ingredients/:ingredient_id ──────────────────────────────────
     static async getIngredientById(req, res) {
         try {
             const { ingredient_id } = req.params;
@@ -36,12 +33,10 @@ class IngredientController {
         }
     }
 
-    // ─── POST /api/ingredients ────────────────────────────────────────────────
-    // All 6 steps run inside a single DB transaction in the model layer
     static async createIngredient(req, res) {
         try {
             const {
-                master_ingredient_id,   // null if new custom ingredient
+                master_ingredient_id,
                 name,
                 quantity_in_stock,
                 unit_weight,
@@ -53,7 +48,6 @@ class IngredientController {
                 image_url,
             } = req.body;
 
-            // branch_id and added_by come exclusively from the JWT — never from the request body
             const branch_id = req.user.branch_id;
             const added_by = req.user.user_id;
 
@@ -80,7 +74,6 @@ class IngredientController {
 
             console.log(`[IngredientCreate] Success: created ${ingredient.name} (id: ${ingredient.ingredient_id})`);
 
-            // Broadcast inventory change to all connected clients
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
                 io.emit('inventory:changed', {
@@ -88,7 +81,6 @@ class IngredientController {
                     branch_id,
                     ingredient,
                 });
-                // Also broadcast analytics update since a new ingredient affects dashboard stats
                 io.emit('analytics:updated', {
                     action: 'ingredient_created',
                     branch_id,
@@ -106,7 +98,6 @@ class IngredientController {
         }
     }
 
-    // ─── GET /api/ingredients/existing ────────────────────────────────────────
     static async getExistingIngredient(req, res) {
         try {
             const branch_id = req.user.branch_id;
@@ -136,12 +127,10 @@ class IngredientController {
         }
     }
 
-    // ─── DELETE /api/ingredients/:ingredient_id ───────────────────────────────
     static async deleteIngredient(req, res) {
         try {
             const { ingredient_id } = req.params;
             await IngredientModel.delete(ingredient_id);
-            // Broadcast inventory change to all connected clients
             const io = req.app && req.app.get ? req.app.get('io') : null;
             const branch_id = req.user ? req.user.branch_id : undefined;
             if (io) {
@@ -150,7 +139,6 @@ class IngredientController {
                     branch_id,
                     ingredient_id,
                 });
-                // Also broadcast analytics update since deletion affects dashboard stats
                 io.emit('analytics:updated', {
                     action: 'ingredient_deleted',
                     branch_id,
@@ -165,7 +153,6 @@ class IngredientController {
         }
     }
 
-    // ─── GET /api/ingredients/expiring ────────────────────────────────────────
     static async getExpiringIngredients(req, res) {
         try {
             const branch_id = req.user.branch_id;
@@ -181,8 +168,6 @@ class IngredientController {
         }
     }
 
-    // ─── POST /api/ingredients/scan ──────────────────────────────────────────
-    // Expects { imageUrl } — scans an ALREADY UPLOADED Cloudinary image
     static async scanIngredient(req, res) {
         try {
             const { imageUrl } = req.body;
@@ -198,8 +183,6 @@ class IngredientController {
         }
     }
 
-    // ─── GET /api/ingredients/available-for-generation ────────────────────────
-    // Returns ingredients near expiry with their lock status for recipe generation
     static async getAvailableIngredientsForRecipeGeneration(req, res) {
         try {
             const db = require('../config/database');
@@ -209,7 +192,6 @@ class IngredientController {
                 return res.status(400).json({ error: 'No branch associated with this account' });
             }
 
-            // Get all ingredients expiring within 3 days with their lock status
             const result = await db.query(`
                 SELECT
                     si.ingredient_id,
@@ -278,8 +260,8 @@ class IngredientController {
                 unit_name: row.unit_name,
                 expiry_date: row.expiry_date,
                 days_until_expiry: parseInt(row.days_until_expiry),
-                status: row.status, // 'available', 'awaiting_approval', or 'approved'
-                locked_in_recipe: row.locked_in_recipe, // Recipe name if awaiting_approval
+                status: row.status,
+                locked_in_recipe: row.locked_in_recipe,
                 message: row.status === 'awaiting_approval'
                     ? `Awaiting approval (Selected for ${row.locked_in_recipe})`
                     : row.status === 'approved'

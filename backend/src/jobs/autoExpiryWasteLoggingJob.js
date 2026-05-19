@@ -1,10 +1,7 @@
 const cron = require('node-cron');
 const db = require('../config/database');
 
-/**
- * Core logic: logs all expired-but-undepleted batches as waste.
- * Called on server startup AND daily at midnight so no batches are missed.
- */
+
 async function runAutoExpiryWasteLogging() {
   console.log('🕐 Auto-expiry waste logging job started...');
 
@@ -43,7 +40,6 @@ async function runAutoExpiryWasteLogging() {
     let loggedCount = 0;
 
     for (const batch of expiredBatchesRes.rows) {
-      // Resolve unit_id: prefer si.base_unit_id, fall back to master_ingredient base_unit_id
       let unit_id = batch.base_unit_id;
       if (!unit_id) {
         const unitFallback = await client.query(
@@ -79,30 +75,25 @@ async function runAutoExpiryWasteLogging() {
     }
 
     await client.query('COMMIT');
-    console.log(`✅ Auto-expiry waste logging completed: ${loggedCount} batches logged`);
+    console.log(`Auto-expiry waste logging completed: ${loggedCount} batches logged`);
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Auto-expiry waste logging job failed:', error.message);
+    console.error('Auto-expiry waste logging job failed:', error.message);
   } finally {
     client.release();
   }
 }
 
-/**
- * Schedules the waste logging job at midnight (Asia/Colombo).
- * Also runs immediately on startup to catch any batches missed while server was down.
- */
+
 function startAutoExpiryWasteLoggingJob() {
-  // Run immediately on startup to catch any missed expired batches
   runAutoExpiryWasteLogging().catch(err =>
-    console.error('❌ Startup waste logging failed:', err.message)
+    console.error('Startup waste logging failed:', err.message)
   );
 
-  // Schedule daily at midnight
   const job = cron.schedule('0 0 * * *', () => {
     runAutoExpiryWasteLogging().catch(err =>
-      console.error('❌ Midnight waste logging failed:', err.message)
+      console.error('Midnight waste logging failed:', err.message)
     );
   }, {
     timezone: 'Asia/Colombo'

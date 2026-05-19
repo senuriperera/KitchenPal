@@ -1,10 +1,5 @@
 const db = require('../config/database');
 
-// Generate recipe suggestions based on selected expiring ingredients.
-// Takes a list of items (ingredient_id, name, days until expiry, etc.)
-// and returns ranked recipes that can use those ingredients, along with
-// pricing recommendations and ingredient availability info.
-// Nothing gets saved to DB here - just analysis and suggestions.
 async function generateRecipes(req, res) {
     try {
         const { selected_items: selectedItems } = req.body || {};
@@ -18,7 +13,6 @@ async function generateRecipes(req, res) {
             return res.status(400).json({ error: 'No branch associated with this account' });
         }
 
-        // Extract keywords from the ingredient names (split by spaces, filter out short words)
         const rawWords = selectedItems
             .flatMap((item) => (item.name || '').toLowerCase().split(/\s+/))
             .filter((w) => w && w.length > 2);
@@ -30,7 +24,6 @@ async function generateRecipes(req, res) {
 
         const queryWords = Array.from(querySet);
 
-        // Look up recipes that contain any of our keywords
         const matchingResult = await db.query(
             `SELECT
          rk.recipe_id,
@@ -51,7 +44,6 @@ async function generateRecipes(req, res) {
             return res.status(404).json({ error: 'No matching recipes found' });
         }
 
-        // Calculate Jaccard score for each matched recipe
         const candidateRecipeIds = matchingResult.rows.map((r) => r.recipe_id);
 
         const keywordsByRecipe = new Map();
@@ -90,7 +82,6 @@ async function generateRecipes(req, res) {
         const topCandidates = jaccardCandidates.slice(0, 5);
         const topRecipeIds = topCandidates.map((c) => c.recipeId);
 
-        // Figure out discount % based on how urgent the expiry is
         const minDaysUntilExpiry = Math.min(
             ...selectedItems.map((i) => Number(i.days_until_expiry))
         );
@@ -99,7 +90,6 @@ async function generateRecipes(req, res) {
         else if (minDaysUntilExpiry <= 2) suggestedDiscountPercent = 20;
         else suggestedDiscountPercent = 10;
 
-        // Fetch full recipe details for top candidates (including total_servings)
         const detailsResult = await db.query(
             `SELECT
          r.recipe_id,
@@ -120,7 +110,6 @@ async function generateRecipes(req, res) {
             detailsById.set(row.recipe_id, row);
         }
 
-        // Check what ingredients are available at this branch and their quantities
         const availabilityResult = await db.query(
             `SELECT
          ri.recipe_id,
@@ -141,7 +130,6 @@ async function generateRecipes(req, res) {
             [branchId, topRecipeIds]
         );
 
-        // Map the expiring stock items to their master ingredient IDs for easier lookup later
         const stockIngredientIdToMaster = new Map();
         if (selectedItems.length > 0) {
             const siIds = selectedItems.map((s) => s.ingredient_id).filter(Boolean);
@@ -156,7 +144,6 @@ async function generateRecipes(req, res) {
             }
         }
 
-        // Track how much of each master ingredient we have from expiring batches
         const expiringByMaster = new Map();
         for (const item of selectedItems) {
             const masterId = stockIngredientIdToMaster.get(item.ingredient_id);
@@ -166,7 +153,6 @@ async function generateRecipes(req, res) {
             }
         }
 
-        // Organize the availability data by recipe so we can process each one
         const ingredientsByRecipe = new Map();
         for (const row of availabilityResult.rows) {
             if (!ingredientsByRecipe.has(row.recipe_id)) {
@@ -175,7 +161,6 @@ async function generateRecipes(req, res) {
             ingredientsByRecipe.get(row.recipe_id).push(row);
         }
 
-        // Now build the final response - for each recipe, figure out servings and what we can make
         const responseItems = [];
         for (const candidate of topCandidates) {
             const details = detailsById.get(candidate.recipeId);
@@ -184,7 +169,6 @@ async function generateRecipes(req, res) {
             const totalServings = Number(details.total_servings) || 1;
             const rawIngredients = ingredientsByRecipe.get(candidate.recipeId) || [];
 
-            // For each ingredient in the recipe, check if we can make at least 1 serving
             let recipeIsInfeasible = true;
             let hasAtLeastOneNonOptional = false;
             let hasStockWarning = false;
@@ -210,12 +194,11 @@ async function generateRecipes(req, res) {
                 if (!isOptional) {
                     hasAtLeastOneNonOptional = true;
                     if (availabilityStatus !== 'insufficient') {
-                        recipeIsInfeasible = false; // at least one non-optional ingredient is available
+                        recipeIsInfeasible = false;
                     }
                     if (availabilityStatus === 'needs_non_expiring') {
                         hasStockWarning = true;
                     }
-                    // See how many servings we can make from the expiring stock of this ingredient
                     if (expiringAvailable > 0 && baseQtyPerServing > 0 && expiringByMaster.has(row.master_ingredient_id)) {
                         const servingsFromBatch = Math.floor(expiringAvailable / baseQtyPerServing);
                         suggestedServings = Math.min(suggestedServings, servingsFromBatch);
@@ -233,18 +216,15 @@ async function generateRecipes(req, res) {
                 });
             }
 
-            // Skip recipes where we're missing required ingredients
             if (hasAtLeastOneNonOptional && recipeIsInfeasible) {
                 continue;
             }
 
-            // Finalise suggested servings
             if (!isFinite(suggestedServings) || suggestedServings <= 0) {
                 suggestedServings = 1;
             }
             suggestedServings = Math.min(suggestedServings, 50);
 
-            // What percentage of the recipe's full serving size can we make with expiring stock?
             const coveragePercent = Math.min(100,
                 Math.round((suggestedServings / totalServings) * 100)
             );
@@ -281,7 +261,6 @@ async function generateRecipes(req, res) {
             return res.status(404).json({ error: 'No suitable recipes found' });
         }
 
-        // Return the results (already sorted by best match first)
         res.status(200).json({ recipes: responseItems });
     } catch (err) {
         console.error('Generate recipes error:', err);

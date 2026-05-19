@@ -2,7 +2,6 @@ const SaleModel = require('../models/Sale');
 const { deactivateDepletedGeneratedRecipes } = require('./generatedRecipeController');
 
 class SaleController {
-    // Create new sale
     static async createSale(req, res) {
         try {
             const { recipe_id, generated_id, quantity_sold } = req.body;
@@ -17,13 +16,11 @@ class SaleController {
                 sold_by,
             });
 
-            // After sale, check if any generated recipes should be deactivated due to depleted ingredients
             if (generated_id) {
                 const io = req.app && req.app.get ? req.app.get('io') : null;
                 await deactivateDepletedGeneratedRecipes(branch_id, io);
             }
 
-            // Broadcast analytics update since sale affects saved food metrics
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
                 io.emit('analytics:updated', {
@@ -55,7 +52,6 @@ class SaleController {
         }
     }
 
-    // Get all sales for a branch
     static async getAllSales(req, res) {
         try {
             const { branch_id } = req.params;
@@ -76,7 +72,6 @@ class SaleController {
         }
     }
 
-    // Get sale by ID
     static async getSaleById(req, res) {
         try {
             const { id } = req.params;
@@ -93,7 +88,6 @@ class SaleController {
         }
     }
 
-    // Get sales statistics
     static async getSalesStatistics(req, res) {
         try {
             const { branch_id } = req.params;
@@ -111,13 +105,11 @@ class SaleController {
         }
     }
 
-    // Delete sale
     static async deleteSale(req, res) {
         try {
             const { id } = req.params;
             await SaleModel.delete(id);
 
-            // Broadcast analytics update since deletion affects analytics
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
                 io.emit('analytics:updated', {

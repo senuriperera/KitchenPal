@@ -1,13 +1,5 @@
 const db = require('../config/database');
 
-/**
- * Daily expiry detection job.
- *
- * - Runs the ingredient_batches query for batches expiring in 0–3 days.
- * - For each batch, checks if an expiry_alert notification already exists for today.
- * - If not, fetches all active staff/branch_manager users for that branch.
- * - Inserts one notification row per staff user per batch.
- */
 async function runExpiryNotificationsJob() {
     console.log('\n Running daily expiry notifications job...');
 
