@@ -42,7 +42,7 @@ async function createGeneratedRecipe(req, res) {
            FROM generated_recipe_triggers grt
            JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
            WHERE gr.branch_id = $1
-             AND gr.status = 'pending'
+             AND ((gr.status = 'pending') OR (gr.status = 'approved' AND gr.is_active = true))
              AND grt.ingredient_id = ANY($2)`,
                 [branchId, ingredientIds]
             );
@@ -51,7 +51,7 @@ async function createGeneratedRecipe(req, res) {
                 await client.query('ROLLBACK');
                 const lockedIngredientIds = lockedIngredientsResult.rows.map(row => row.ingredient_id);
                 return res.status(400).json({
-                    error: 'One or more selected ingredients are already locked in pending recipes',
+                    error: 'One or more selected ingredients are already locked in an active or pending recipe',
                     locked_ingredient_ids: lockedIngredientIds
                 });
             }

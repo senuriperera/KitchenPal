@@ -154,8 +154,15 @@ export class DiscountApprovalComponent implements OnInit, OnDestroy {
     };
   }
 
-  toggleEdit(generatedId: number): void {
+  toggleEdit(item: PendingGeneratedRecipe): void {
+    const generatedId = item.generated_id;
     this.editMode[generatedId] = !this.editMode[generatedId];
+
+    if (!this.editMode[generatedId]) {
+      // Save edited values to the item when closing
+      item.suggested_discount_percent = this.editValues[generatedId].percent;
+      item.suggested_discount_price = this.editValues[generatedId].price;
+    }
   }
 
   onDiscountPercentChange(item: PendingGeneratedRecipe): void {

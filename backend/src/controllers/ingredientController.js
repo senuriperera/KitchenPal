@@ -218,6 +218,7 @@ class IngredientController {
                             AND grt.expiry_date = ib.expiry_date
                             AND gr.branch_id = $1
                             AND gr.status = 'approved'
+                            AND gr.is_active = true
                         ) THEN 'approved'
                         ELSE 'available'
                     END as status,
