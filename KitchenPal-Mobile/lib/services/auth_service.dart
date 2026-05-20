@@ -5,13 +5,7 @@ import 'storage_service.dart';
 import '../config/api_constants.dart';
 
 class AuthService {
-  // Update this URL to match your backend server
-  // For Android Emulator, use 10.0.2.2 instead of localhost
-  static const String baseUrl = '${ApiConstants.baseUrl}/auth';
-
-  // For Android emulator, use: http://10.0.2.2:3000/api/auth
-  // For iOS simulator, use: http://localhost:3000/api/auth
-  // For real device, use your computer's IP: http://192.168.x.x:3000/api/auth
+  static String get baseUrl => '${ApiConstants.baseUrl}/auth';
 
   // Login
   static Future<AuthResponse> login(String email, String password) async {

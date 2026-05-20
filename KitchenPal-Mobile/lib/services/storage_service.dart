@@ -11,6 +11,8 @@ class StorageService {
   static const String _userEmailKey = 'user_email';
   static const String _userRoleKey = 'user_role';
   static const String _branchIdKey = 'branch_id';
+  static const String _serverIpKey = 'server_ip';
+  static const String _defaultServerIp = '192.168.1.61';
 
   // Save auth data
   static Future<void> saveAuthData({
@@ -103,5 +105,15 @@ class StorageService {
   // Clear all storage
   static Future<void> clearAll() async {
     await _storage.deleteAll();
+  }
+
+  // Get saved server IP (returns default if not set)
+  static Future<String> getServerIp() async {
+    return await _storage.read(key: _serverIpKey) ?? _defaultServerIp;
+  }
+
+  // Save server IP
+  static Future<void> saveServerIp(String ip) async {
+    await _storage.write(key: _serverIpKey, value: ip);
   }
 }

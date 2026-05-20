@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../config/api_constants.dart';
 import '../services/auth_service.dart';
+import '../services/storage_service.dart';
 import 'main_container.dart';
 
 class LoginPage extends StatefulWidget {
@@ -21,6 +23,67 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _showServerConfigDialog() {
+    final ipController = TextEditingController(text: ApiConstants.serverIp);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Server Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter your computer\'s WiFi IP address.\nMake sure both devices are on the same network.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ipController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Server IP Address',
+                hintText: '192.168.1.x',
+                prefixIcon: Icon(Icons.wifi),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              final ip = ipController.text.trim();
+              if (ip.isNotEmpty) {
+                await StorageService.saveServerIp(ip);
+                ApiConstants.setServerIp(ip);
+                if (mounted) {
+                  setState(() {});
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Server IP updated to $ip'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleLogin() async {
@@ -328,6 +391,36 @@ class _LoginPageState extends State<LoginPage> {
                             ],
                           ),
                           SizedBox(height: screenHeight * 0.02),
+
+                          // Server IP indicator
+                          GestureDetector(
+                            onTap: _showServerConfigDialog,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.wifi,
+                                  size: 14,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Server: ${ApiConstants.serverIp}',
+                                  style: TextStyle(
+                                    color: Colors.grey[400],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.edit,
+                                  size: 12,
+                                  color: Colors.grey[400],
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
                         ],
                       ),
                     ),

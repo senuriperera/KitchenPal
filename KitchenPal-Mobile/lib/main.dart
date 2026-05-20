@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'config/api_constants.dart';
 import 'pages/login.dart';
-// import 'pages/login.dart';
+import 'services/storage_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final savedIp = await StorageService.getServerIp();
+  ApiConstants.setServerIp(savedIp);
   runApp(const KitchenPalApp());
 }
 

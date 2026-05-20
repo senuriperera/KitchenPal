@@ -48,3 +48,4 @@ temp/
 # Build outputs (if any are added later)
 dist/
 build/
+.claude/settings.local.json
