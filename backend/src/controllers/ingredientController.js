@@ -207,6 +207,7 @@ class IngredientController {
                             SELECT 1 FROM generated_recipe_triggers grt
                             JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
                             WHERE grt.ingredient_id = si.ingredient_id
+                            AND grt.expiry_date = ib.expiry_date
                             AND gr.branch_id = $1
                             AND gr.status = 'pending'
                         ) THEN 'awaiting_approval'
@@ -214,6 +215,7 @@ class IngredientController {
                             SELECT 1 FROM generated_recipe_triggers grt
                             JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
                             WHERE grt.ingredient_id = si.ingredient_id
+                            AND grt.expiry_date = ib.expiry_date
                             AND gr.branch_id = $1
                             AND gr.status = 'approved'
                         ) THEN 'approved'
@@ -225,6 +227,7 @@ class IngredientController {
                             JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
                             JOIN recipes r ON gr.recipe_id = r.recipe_id
                             WHERE grt.ingredient_id = si.ingredient_id
+                            AND grt.expiry_date = ib.expiry_date
                             AND gr.branch_id = $1
                             AND gr.status = 'pending'
                             LIMIT 1
@@ -233,6 +236,7 @@ class IngredientController {
                             JOIN generated_recipes gr ON grt.generated_id = gr.generated_id
                             JOIN recipes r ON gr.recipe_id = r.recipe_id
                             WHERE grt.ingredient_id = si.ingredient_id
+                            AND grt.expiry_date = ib.expiry_date
                             AND gr.branch_id = $1
                             AND gr.status = 'pending'
                             LIMIT 1

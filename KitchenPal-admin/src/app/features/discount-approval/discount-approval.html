@@ -62,16 +62,25 @@
               </div>
               <div class="meta-row">
                 <span class="meta-label">Suggested Price:</span>
-                <span class="meta-value"
+                <span class="meta-value" *ngIf="!editMode[item.generated_id]"
                   >Rs
                   {{ item.suggested_discount_price | number: "1.2-2" }}</span
+                >
+                <span class="meta-value" *ngIf="editMode[item.generated_id]"
+                  >Rs
+                  {{ editValues[item.generated_id].price | number: "1.2-2" }}</span
                 >
               </div>
               <div class="meta-row">
                 <span class="meta-label">Discount:</span>
-                <span class="meta-value"
+                <span class="meta-value" *ngIf="!editMode[item.generated_id]"
                   >{{
                     item.suggested_discount_percent | number: "1.0-1"
+                  }}%</span
+                >
+                <span class="meta-value" *ngIf="editMode[item.generated_id]"
+                  >{{
+                    editValues[item.generated_id].percent | number: "1.0-1"
                   }}%</span
                 >
               </div>

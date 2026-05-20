@@ -199,9 +199,9 @@ async function generateRecipes(req, res) {
                     if (availabilityStatus === 'needs_non_expiring') {
                         hasStockWarning = true;
                     }
-                    if (expiringAvailable > 0 && baseQtyPerServing > 0 && expiringByMaster.has(row.master_ingredient_id)) {
-                        const servingsFromBatch = Math.floor(expiringAvailable / baseQtyPerServing);
-                        suggestedServings = Math.min(suggestedServings, servingsFromBatch);
+                    if (baseQtyPerServing > 0) {
+                        const servingsFromStock = Math.floor(totalAvailable / baseQtyPerServing);
+                        suggestedServings = Math.min(suggestedServings, servingsFromStock);
                     }
                 }
 

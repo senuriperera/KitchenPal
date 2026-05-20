@@ -272,6 +272,7 @@ class RecipeController {
                     recipeMap[recipeId] = {
                         available: true,
                         short_ingredients: [],
+                        max_servings: Infinity
                     };
                 }
 
@@ -279,10 +280,24 @@ class RecipeController {
 
                 const required_base = parseFloat(row.quantity_required) * parseFloat(row.to_base_factor);
                 const available_base = parseFloat(row.available_base_quantity);
+                const total_servings = parseFloat(row.total_servings) || 1;
+                const required_per_serving = required_base / total_servings;
 
                 if (available_base < required_base) {
                     recipeMap[recipeId].available = false;
                     recipeMap[recipeId].short_ingredients.push(row.ingredient_name);
+                }
+
+                if (required_per_serving > 0) {
+                    const servings_from_stock = Math.floor(available_base / required_per_serving);
+                    recipeMap[recipeId].max_servings = Math.min(recipeMap[recipeId].max_servings, servings_from_stock);
+                }
+            }
+
+            // Cleanup any recipes with no non-optional ingredients
+            for (const recipeId in recipeMap) {
+                if (recipeMap[recipeId].max_servings === Infinity) {
+                    recipeMap[recipeId].max_servings = 1;
                 }
             }
 

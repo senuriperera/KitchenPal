@@ -567,7 +567,9 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                           ? () => _processSale(
                               recipeId: recipe.recipeId,
                               recipeName: recipe.recipeName,
-                              totalServings: recipe.totalServings,
+                              // Use live max_servings from the availability check so the
+                              // popup reflects actual current stock, not the static recipe value
+                              totalServings: (availabilityInfo?['max_servings'] as int?) ?? recipe.totalServings,
                               servingDescription: recipe.servingDescription,
                               generatedId: null,
                             )
@@ -798,7 +800,9 @@ class _RecipesPageContentState extends State<RecipesPageContent>
                       onPressed: () => _processSale(
                         recipeId: recipe.recipeId,
                         recipeName: recipe.name,
-                        totalServings: recipe.totalServings,
+                        // Use live max_servings from the availability check so the
+                        // popup reflects actual current stock, not the static value
+                        totalServings: (_recipeAvailability[recipe.recipeId]?['max_servings'] as int?) ?? recipe.totalServings,
                         servingDescription: recipe.servingDescription,
                         generatedId: recipe.generatedId,
                       ),

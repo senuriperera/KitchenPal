@@ -1,11 +1,9 @@
-/**
- * Role-based authorization middleware
- */
+
 
 /**
  * Middleware to check if user has required role
- * @param {Array<string>} allowedRoles - Array of roles that are allowed to access the route
- * @returns {Function} Express middleware function
+ * @param {Array<string>} allowedRoles 
+ * @returns {Function} 
  */
 const requireRole = (allowedRoles) => {
     return (req, res, next) => {
@@ -25,21 +23,16 @@ const requireRole = (allowedRoles) => {
     };
 };
 
-/**
- * Middleware to attach branch filter for managers
- * Managers can only access data from their own branch
- * Admins can access all data
- */
 const filterByBranch = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // If user is a manager, attach their branch_id to the request (case-insensitive check)
+    // If user is a manager, attach their branch_id to the request 
     if (req.user.role?.toLowerCase() === 'branch_manager') {
         req.branchFilter = req.user.branch_id;
     }
-    // If user is admin, no filter is applied (can access all branches)
+    // If user is admin, no filter is applied 
 
     next();
 };
