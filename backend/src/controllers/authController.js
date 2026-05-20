@@ -5,21 +5,18 @@ const SessionModel = require('../models/Session');
 const config = require('../config/config');
 
 class AuthController {
-    // Register new user
+
     static async register(req, res) {
         try {
             const { name, email, password, role } = req.body;
 
-            // Check if user exists
             const existingUser = await UserModel.findByEmail(email);
             if (existingUser) {
                 return res.status(400).json({ error: 'Email already registered' });
             }
 
-            // Hash password
             const password_hash = await bcrypt.hash(password, 10);
 
-            // Create user
             const user = await UserModel.create({
                 name,
                 email,
@@ -27,7 +24,6 @@ class AuthController {
                 role: role || 'user',
             });
 
-            // Generate access and refresh tokens
             const accessToken = jwt.sign(
                 { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
@@ -40,10 +36,8 @@ class AuthController {
                 { expiresIn: config.jwt.refreshTokenExpiresIn }
             );
 
-            // Delete all existing sessions for this user
             await SessionModel.deleteAllUserSessions(user.user_id);
 
-            // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
             await SessionModel.create({
                 user_id: user.user_id,
@@ -72,27 +66,22 @@ class AuthController {
         }
     }
 
-    // Login user
     static async login(req, res) {
         try {
             const { email, password } = req.body;
 
-            // Find user
             const user = await UserModel.findByEmail(email);
             if (!user) {
                 return res.status(401).json({ error: 'Invalid credentials' });
             }
 
-            // Check password
             const isValidPassword = await bcrypt.compare(password, user.password_hash);
             if (!isValidPassword) {
                 return res.status(401).json({ error: 'Invalid credentials' });
             }
 
-            // Update last login
             await UserModel.updateLastLogin(user.user_id);
 
-            // Generate access and refresh tokens
             const accessToken = jwt.sign(
                 { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
@@ -105,10 +94,8 @@ class AuthController {
                 { expiresIn: config.jwt.refreshTokenExpiresIn }
             );
 
-            // Delete all existing sessions for this user
             await SessionModel.deleteAllUserSessions(user.user_id);
 
-            // Create session
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
             await SessionModel.create({
                 user_id: user.user_id,
@@ -137,7 +124,6 @@ class AuthController {
         }
     }
 
-    // Logout
     static async logout(req, res) {
         try {
             const token = req.headers.authorization?.split(' ')[1];
@@ -156,7 +142,6 @@ class AuthController {
         }
     }
 
-    // Get current user
     static async getCurrentUser(req, res) {
         try {
             const user = await UserModel.findById(req.user.user_id);
@@ -172,7 +157,6 @@ class AuthController {
         }
     }
 
-    // Refresh access token
     static async refreshToken(req, res) {
         try {
             const { refreshToken } = req.body;
@@ -181,7 +165,6 @@ class AuthController {
                 return res.status(400).json({ error: 'Refresh token required' });
             }
 
-            // Verify refresh token
             let decoded;
             try {
                 decoded = jwt.verify(refreshToken, config.jwt.secret);
@@ -189,31 +172,26 @@ class AuthController {
                 return res.status(401).json({ error: 'Invalid refresh token' });
             }
 
-            // Check if it's a refresh token
             if (decoded.type !== 'refresh') {
                 return res.status(401).json({ error: 'Invalid token type' });
             }
 
-            // Find session by refresh token
             const session = await SessionModel.findByRefreshToken(refreshToken);
             if (!session) {
                 return res.status(401).json({ error: 'Session not found or expired' });
             }
 
-            // Get user details
             const user = await UserModel.findById(decoded.user_id);
             if (!user) {
                 return res.status(404).json({ error: 'User not found' });
             }
 
-            // Generate new access token
             const newAccessToken = jwt.sign(
                 { user_id: user.user_id, email: user.email, role: user.role, branch_id: user.branch_id },
                 config.jwt.secret,
                 { expiresIn: config.jwt.accessTokenExpiresIn }
             );
 
-            // Update session with new access token
             await SessionModel.updateAccessToken(session.session_id, newAccessToken);
 
             res.json({

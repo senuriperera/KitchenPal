@@ -1,9 +1,6 @@
 const db = require('../config/database');
 
 class MasterIngredientModel {
-    /**
-     * Search master ingredients by name (case-insensitive, partial match)
-     */
     static async search(searchTerm, limit = 20) {
         const query = `
       SELECT mi.*,
@@ -24,9 +21,6 @@ class MasterIngredientModel {
         return result.rows.map(row => this._mapRow(row));
     }
 
-    /**
-     * Get all master ingredients
-     */
     static async getAll() {
         const query = `
       SELECT mi.*, u.code as unit_code, u.name as unit_name
@@ -38,9 +32,6 @@ class MasterIngredientModel {
         return result.rows.map(row => this._mapRow(row));
     }
 
-    /**
-     * Get master ingredient by ID
-     */
     static async findById(masterIngredientId) {
         const query = `
       SELECT mi.*, u.code as unit_code, u.name as unit_name
@@ -52,9 +43,6 @@ class MasterIngredientModel {
         return result.rows[0] ? this._mapRow(result.rows[0]) : null;
     }
 
-    /**
-     * Find master ingredient by exact name (case-insensitive)
-     */
     static async findByName(name) {
         const query = `
       SELECT mi.*, u.code as unit_code, u.name as unit_name
@@ -66,9 +54,6 @@ class MasterIngredientModel {
         return result.rows[0] ? this._mapRow(result.rows[0]) : null;
     }
 
-    /**
-     * Create a new master ingredient
-     */
     static async create({ name, default_unit_id = null, unit_family = null, base_unit_id = null, is_custom = false }) {
         const query = `
       INSERT INTO master_ingredients (name, default_unit_id, unit_family, base_unit_id, is_custom)
@@ -80,10 +65,8 @@ class MasterIngredientModel {
     }
 
 
-    // Derive unit_family and base_unit_id from a unit_id.
 
     static async deriveUnitFamilyFields(unitId) {
-        // get unit_family and base_unit_code from the selected unit
         const unitQuery = `
       SELECT unit_family, base_unit_code
       FROM units
@@ -94,7 +77,6 @@ class MasterIngredientModel {
 
         const { unit_family, base_unit_code } = unitResult.rows[0];
 
-        // look up base_unit_id from the code
         const baseQuery = `
       SELECT unit_id
       FROM units
@@ -106,18 +88,12 @@ class MasterIngredientModel {
         return { unit_family, base_unit_id };
     }
 
-    /**
-     * Find or create a master ingredient by name
-     * If exists, return it.
-     */
     static async findOrCreate({ name, default_unit_id = null, unit_id = null }) {
-        // First try to find existing
         const existing = await this.findByName(name);
         if (existing) {
             return { ingredient: existing, created: false };
         }
 
-        // Derive unit_family and base_unit_id from the selected unit (Change 2)
         let unit_family = null;
         let base_unit_id = null;
         if (unit_id) {
@@ -128,7 +104,6 @@ class MasterIngredientModel {
             }
         }
 
-        // Create new custom ingredient with derived fields
         const created = await this.create({
             name,
             default_unit_id: default_unit_id || unit_id,
@@ -139,9 +114,6 @@ class MasterIngredientModel {
         return { ingredient: created, created: true };
     }
 
-    /**
-     * Update a master ingredient
-     */
     static async update(masterIngredientId, { name, default_unit_id }) {
         const updates = [];
         const values = [];
@@ -171,17 +143,11 @@ class MasterIngredientModel {
         return result.rows[0] ? this._mapRow(result.rows[0]) : null;
     }
 
-    /**
-     * Delete a master ingredient
-     */
     static async delete(masterIngredientId) {
         const query = `DELETE FROM master_ingredients WHERE master_ingredient_id = $1`;
         await db.query(query, [masterIngredientId]);
     }
 
-    /**
-     * Map DB row to API response structure
-     */
     static _mapRow(row) {
         if (!row) return null;
         return {

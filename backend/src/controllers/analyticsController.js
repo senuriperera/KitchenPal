@@ -2,7 +2,6 @@ const db = require('../config/database');
 const { convertToDisplay, buildFamilyTotals, convertFamilyTotals } = require('../utils/quantityConverter');
 
 class AnalyticsController {
-  // Helper function to calculate time ago
   static timeAgo(date) {
     const mins = Math.floor((Date.now() - new Date(date)) / 60000);
     if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
@@ -12,7 +11,6 @@ class AnalyticsController {
     return `${days} day${days !== 1 ? 's' : ''} ago`;
   }
 
-  // Helper function to get date range
   static getDateRange(rangeType) {
     const now = new Date();
     const daysMap = {
@@ -27,15 +25,12 @@ class AnalyticsController {
     return dateFrom;
   }
 
-  // Endpoint 1: GET /api/analytics/dashboard-stats
   static async getDashboardStats(req, res) {
     try {
       const userRole = req.user.role;
       const userBranchId = req.user.branch_id;
       const queryBranchId = req.query.branch_id;
 
-      // branchFilter   → used for queries joining stock_ingredients (si.branch_id)
-      // wasteFilter    → used for waste_logs queries (wl.branch_id — more reliable)
       let branchFilter = '';
       let wasteFilter = '';
       let branchParams = [];
@@ -43,13 +38,12 @@ class AnalyticsController {
       if (userRole.toLowerCase() === 'admin') {
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
-          wasteFilter  = 'AND wl.branch_id = $1';
+          wasteFilter = 'AND wl.branch_id = $1';
           branchParams = [queryBranchId];
         }
-        // No queryBranchId → admin sees all branches, both filters stay empty
       } else {
         branchFilter = 'AND si.branch_id = $1';
-        wasteFilter  = 'AND wl.branch_id = $1';
+        wasteFilter = 'AND wl.branch_id = $1';
         branchParams = [userBranchId];
       }
 
@@ -68,7 +62,6 @@ class AnalyticsController {
         profitThisMonthResult
       ] = await Promise.all([
 
-        // 1. Items near expiry (within 3 days)
         db.query(`
           SELECT COUNT(DISTINCT ib.batch_id) as count
           FROM ingredient_batches ib
@@ -81,11 +74,10 @@ class AnalyticsController {
             ${branchFilter}
         `, branchParams),
 
-        // 2. Food wasted this month — join units directly via wl.unit_id
         db.query(`
           SELECT
             u.unit_family,
-            COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted
+            COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) AS total_wasted
           FROM waste_logs wl
           JOIN units u ON wl.unit_id = u.unit_id
           WHERE DATE_TRUNC('month', wl.logged_at) = DATE_TRUNC('month', NOW())
@@ -93,11 +85,10 @@ class AnalyticsController {
           GROUP BY u.unit_family
         `, branchParams),
 
-        // 3. Food wasted last month
         db.query(`
           SELECT
             u.unit_family,
-            COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted
+            COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) AS total_wasted
           FROM waste_logs wl
           JOIN units u ON wl.unit_id = u.unit_id
           WHERE DATE_TRUNC('month', wl.logged_at) = DATE_TRUNC('month', $${getParamIndex(1)}::timestamp)
@@ -105,7 +96,6 @@ class AnalyticsController {
           GROUP BY u.unit_family
         `, [...branchParams, lastMonthStart]),
 
-        // 4. Food saved this month (from discounted-recipe sales)
         db.query(`
           SELECT
             u.unit_family,
@@ -123,7 +113,6 @@ class AnalyticsController {
           GROUP BY u.unit_family, u.base_unit_code
         `, branchParams),
 
-        // 5. Food saved last month
         db.query(`
           SELECT
             u.unit_family,
@@ -141,7 +130,6 @@ class AnalyticsController {
           GROUP BY u.unit_family, u.base_unit_code
         `, [...branchParams, lastMonthStart]),
 
-        // 6. Active discounts
         db.query(`
           SELECT COUNT(*) as count
           FROM generated_recipes gr
@@ -149,7 +137,6 @@ class AnalyticsController {
             ${branchFilter ? 'AND gr.branch_id = $1' : ''}
         `, branchParams),
 
-        // 7. Profit from discounts this month
         db.query(`
           SELECT COALESCE(SUM(s.total_revenue), 0) as total_revenue
           FROM sales s
@@ -220,7 +207,6 @@ class AnalyticsController {
     }
   }
 
-  // Endpoint 2: GET /api/analytics/monthly-summary
   static async getMonthlySummary(req, res) {
     try {
       const userRole = req.user.role;
@@ -235,12 +221,12 @@ class AnalyticsController {
       if (userRole.toLowerCase() === 'admin') {
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
-          wasteFilter  = 'AND wl.branch_id = $1';
+          wasteFilter = 'AND wl.branch_id = $1';
           branchParams = [queryBranchId];
         }
       } else {
         branchFilter = 'AND si.branch_id = $1';
-        wasteFilter  = 'AND wl.branch_id = $1';
+        wasteFilter = 'AND wl.branch_id = $1';
         branchParams = [userBranchId];
       }
 
@@ -250,12 +236,11 @@ class AnalyticsController {
       const getParamIndex = (offset) => branchParams.length + offset;
 
       const [wastedResult, savedResult] = await Promise.all([
-        // Monthly waste — join units directly via wl.unit_id
         db.query(`
           SELECT
             DATE_TRUNC('month', wl.logged_at) as month,
             u.unit_family,
-            COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted
+            COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) AS total_wasted
           FROM waste_logs wl
           JOIN units u ON wl.unit_id = u.unit_id
           WHERE wl.logged_at >= $${getParamIndex(1)}
@@ -264,7 +249,6 @@ class AnalyticsController {
           ORDER BY month ASC
         `, [...branchParams, startDate]),
 
-        // Monthly saved (discounted-recipe sales)
         db.query(`
           SELECT
             DATE_TRUNC('month', s.sold_at) as month,
@@ -284,7 +268,6 @@ class AnalyticsController {
         `, [...branchParams, startDate])
       ]);
 
-      // Build maps for month → { weight, volume, count }
       const wastedMap = {};
       wastedResult.rows.forEach(row => {
         const key = new Date(row.month).toISOString().substring(0, 7);
@@ -299,40 +282,39 @@ class AnalyticsController {
         savedMap[key][row.unit_family] = parseFloat(row.total_saved);
       });
 
-      // Generate continuous monthly data (fills months with zero if no data)
       const monthlyData = [];
       let currentMonthWasted = { weight: 0, volume: 0, count: 0 };
-      let currentMonthSaved  = { weight: 0, volume: 0, count: 0 };
+      let currentMonthSaved = { weight: 0, volume: 0, count: 0 };
 
       for (let i = 0; i < months; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - months + 1 + i, 1);
-        const key  = date.toISOString().substring(0, 7);
+        const key = date.toISOString().substring(0, 7);
 
         const wasted = wastedMap[key] || { weight: 0, volume: 0, count: 0 };
-        const saved  = savedMap[key]  || { weight: 0, volume: 0, count: 0 };
+        const saved = savedMap[key] || { weight: 0, volume: 0, count: 0 };
 
         monthlyData.push({
-          month:  key,
+          month: key,
           wasted: convertFamilyTotals(wasted),
-          saved:  convertFamilyTotals(saved)
+          saved: convertFamilyTotals(saved)
         });
 
         if (i === months - 1) {
           currentMonthWasted = wasted;
-          currentMonthSaved  = saved;
+          currentMonthSaved = saved;
         }
       }
 
       const totalCurrentWasted = currentMonthWasted.weight + currentMonthWasted.volume + currentMonthWasted.count;
-      const totalCurrentSaved  = currentMonthSaved.weight  + currentMonthSaved.volume  + currentMonthSaved.count;
+      const totalCurrentSaved = currentMonthSaved.weight + currentMonthSaved.volume + currentMonthSaved.count;
       const savedPercentage = totalCurrentWasted + totalCurrentSaved > 0
         ? Math.round((totalCurrentSaved / (totalCurrentWasted + totalCurrentSaved)) * 100)
         : 0;
 
       res.json({
         currentMonth: {
-          wasted:          convertFamilyTotals(currentMonthWasted),
-          saved:           convertFamilyTotals(currentMonthSaved),
+          wasted: convertFamilyTotals(currentMonthWasted),
+          saved: convertFamilyTotals(currentMonthSaved),
           savedPercentage
         },
         monthlyData
@@ -343,7 +325,6 @@ class AnalyticsController {
     }
   }
 
-  // Endpoint 3: GET /api/analytics/top-wasted
   static async getTopWasted(req, res) {
     try {
       const userRole = req.user.role;
@@ -359,12 +340,12 @@ class AnalyticsController {
       if (userRole.toLowerCase() === 'admin') {
         if (queryBranchId) {
           branchFilter = 'AND si.branch_id = $1';
-          wasteFilter  = 'AND wl.branch_id = $1';
+          wasteFilter = 'AND wl.branch_id = $1';
           branchParams = [queryBranchId];
         }
       } else {
         branchFilter = 'AND si.branch_id = $1';
-        wasteFilter  = 'AND wl.branch_id = $1';
+        wasteFilter = 'AND wl.branch_id = $1';
         branchParams = [userBranchId];
       }
 
@@ -377,7 +358,6 @@ class AnalyticsController {
 
       const [topWastedResult, totalWasteResult, previousWasteResult] = await Promise.all([
 
-        // Top wasted ingredients — top N per unit_family, unit from wl.unit_id
         db.query(`
           SELECT ingredient_id, name, unit_family, total_wasted_base
           FROM (
@@ -385,10 +365,10 @@ class AnalyticsController {
               si.ingredient_id,
               si.name,
               u.unit_family,
-              COALESCE(SUM(wl.quantity_wasted), 0) AS total_wasted_base,
+              COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) AS total_wasted_base,
               ROW_NUMBER() OVER (
                 PARTITION BY u.unit_family
-                ORDER BY COALESCE(SUM(wl.quantity_wasted), 0) DESC
+                ORDER BY COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) DESC
               ) AS rn
             FROM waste_logs wl
             JOIN stock_ingredients si ON wl.ingredient_id = si.ingredient_id
@@ -401,11 +381,10 @@ class AnalyticsController {
           ORDER BY unit_family, total_wasted_base DESC
         `, [...branchParams, dateFrom, limit]),
 
-        // Total waste per family for percentage calculation
         db.query(`
           SELECT
             u.unit_family,
-            COALESCE(SUM(wl.quantity_wasted), 0) as total
+            COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) as total
           FROM waste_logs wl
           JOIN units u ON wl.unit_id = u.unit_id
           WHERE wl.logged_at >= $${getParamIndex(1)}
@@ -413,11 +392,10 @@ class AnalyticsController {
           GROUP BY u.unit_family
         `, [...branchParams, dateFrom]),
 
-        // Previous period total for change % calculation
         db.query(`
           SELECT
             u.unit_family,
-            COALESCE(SUM(wl.quantity_wasted), 0) as total
+            COALESCE(SUM(wl.quantity_wasted * u.to_base_factor), 0) as total
           FROM waste_logs wl
           JOIN units u ON wl.unit_id = u.unit_id
           WHERE wl.logged_at >= $${getParamIndex(1)}
@@ -437,7 +415,7 @@ class AnalyticsController {
         previousWasteByFamily[row.unit_family] = parseFloat(row.total);
       });
 
-      const totalCurrent  = totalWasteByFamily.weight  + totalWasteByFamily.volume  + totalWasteByFamily.count;
+      const totalCurrent = totalWasteByFamily.weight + totalWasteByFamily.volume + totalWasteByFamily.count;
       const totalPrevious = previousWasteByFamily.weight + previousWasteByFamily.volume + previousWasteByFamily.count;
       const changePercentage = totalPrevious > 0
         ? parseFloat((((totalCurrent - totalPrevious) / totalPrevious) * 100).toFixed(1))
@@ -469,7 +447,6 @@ class AnalyticsController {
     }
   }
 
-  // Endpoint 4: GET /api/analytics/recent-activity
   static async getRecentActivity(req, res) {
     try {
       const userRole = req.user.role;
@@ -544,10 +521,10 @@ class AnalyticsController {
       }
 
       activities = activities.slice(0, 10).map(activity => ({
-        type:     activity.type,
-        id:       activity.id,
-        message:  activity.message,
-        actor:    activity.actor || 'System',
+        type: activity.type,
+        id: activity.id,
+        message: activity.message,
+        actor: activity.actor || 'System',
         time_ago: AnalyticsController.timeAgo(activity.timestamp)
       }));
 
@@ -558,7 +535,6 @@ class AnalyticsController {
     }
   }
 
-  // Endpoint 5: GET /api/analytics/nearing-expiry-list
   static async getNearingExpiryList(req, res) {
     try {
       const userRole = req.user.role;
@@ -609,14 +585,14 @@ class AnalyticsController {
       `, branchParams);
 
       const nearingExpiry = expiryResult.rows.map(row => ({
-        ingredient_id:      row.ingredient_id,
-        batch_id:           row.batch_id,
-        name:               row.name,
-        image_url:          row.image_url,
+        ingredient_id: row.ingredient_id,
+        batch_id: row.batch_id,
+        name: row.name,
+        image_url: row.image_url,
         quantity_remaining: parseFloat(row.remaining_base_quantity),
-        unit:               row.unit_name,
-        expiry_date:        row.expiry_date,
-        days_left:          parseInt(row.days_until_expiry)
+        unit: row.unit_name,
+        expiry_date: row.expiry_date,
+        days_left: parseInt(row.days_until_expiry)
       }));
 
       res.json({ nearingExpiry });

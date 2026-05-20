@@ -1,10 +1,7 @@
 const db = require('../config/database');
 const RecipeModel = require('../models/Recipe');
 
-/**
- * POST /api/generated-recipes
- * Save staff's chosen recipe as a generated recipe (pending admin approval).
- */
+
 async function createGeneratedRecipe(req, res) {
     const { recipe_id, suggested_discount_percent, suggested_discount_price, selected_batches, suggested_servings } =
         req.body || {};
@@ -31,7 +28,6 @@ async function createGeneratedRecipe(req, res) {
     try {
         await client.query('BEGIN');
 
-        // Check if any of the selected ingredients are already locked in pending recipes
         const ingredientIds = selected_batches
             .map((b) => b.ingredient_id)
             .filter((id) => id != null);
@@ -57,7 +53,6 @@ async function createGeneratedRecipe(req, res) {
             }
         }
 
-        // 1) Insert into generated_recipes
         const insertRecipeResult = await client.query(
             `INSERT INTO generated_recipes (
          branch_id,
@@ -80,7 +75,6 @@ async function createGeneratedRecipe(req, res) {
 
         const generatedId = insertRecipeResult.rows[0].generated_id;
 
-        // 2) Insert into generated_recipe_triggers (one row per selected batch)
         const triggerValues = [];
         for (const batch of selected_batches) {
             if (!batch.ingredient_id || !batch.expiry_date) continue;
@@ -100,7 +94,6 @@ async function createGeneratedRecipe(req, res) {
             );
         }
 
-        // 3) Mark corresponding expiry_alert notifications as read for this staff member
         if (ingredientIds.length > 0) {
             await client.query(
                 `UPDATE notifications
@@ -113,7 +106,6 @@ async function createGeneratedRecipe(req, res) {
             );
         }
 
-        // 4) Fetch an active admin user
         const adminResult = await client.query(
             `SELECT user_id, name, role
        FROM users
@@ -159,7 +151,6 @@ async function createGeneratedRecipe(req, res) {
             console.log('No active admin user found');
         }
 
-        // 5) Fetch the newly created recipe details for WebSocket
         const recipeDetailsResult = await client.query(
             `SELECT
          gr.generated_id,
@@ -183,7 +174,6 @@ async function createGeneratedRecipe(req, res) {
 
         await client.query('COMMIT');
 
-        // Emit WebSocket event to notify clients of status change
         const io = req.app && req.app.get ? req.app.get('io') : null;
         if (io) {
             const triggerResult = await db.query(
@@ -212,10 +202,6 @@ async function createGeneratedRecipe(req, res) {
     }
 }
 
-/**
- * GET /api/generated-recipes
- * List generated recipes for the current staff branch.
- */
 async function getGeneratedRecipesForBranch(req, res) {
     try {
         const branchId = req.user && req.user.branch_id;
@@ -223,7 +209,6 @@ async function getGeneratedRecipesForBranch(req, res) {
             return res.status(400).json({ error: 'No branch associated with this account' });
         }
 
-        // First, deactivate generated recipes whose trigger ingredients are depleted or expired
         const io = req.app && req.app.get ? req.app.get('io') : null;
         await deactivateDepletedGeneratedRecipes(branchId, io);
 
@@ -270,15 +255,10 @@ async function getGeneratedRecipesForBranch(req, res) {
     }
 }
 
-/**
- * GET /api/generated-recipes/pending
- * Admin: list all pending generated recipes for discount approvals.
- */
 async function getPendingGeneratedRecipes(req, res) {
     try {
         console.log('Fetching pending generated recipes...');
 
-        // Check if there are ANY generated recipes
         const allRecipesResult = await db.query(
             `SELECT COUNT(*) as count FROM generated_recipes`
         );
@@ -320,10 +300,7 @@ async function getPendingGeneratedRecipes(req, res) {
     }
 }
 
-/**
- * PUT /api/generated-recipes/:id/approve
- * Admin: approve a generated recipe and notify all staff in the branch.
- */
+
 async function approveGeneratedRecipe(req, res) {
     const generatedId = parseInt(req.params.id, 10);
     const { final_discount_percent, final_discount_price } = req.body || {};
@@ -341,7 +318,6 @@ async function approveGeneratedRecipe(req, res) {
     try {
         await client.query('BEGIN');
 
-        // Update generated_recipes row
         const updateResult = await client.query(
             `UPDATE generated_recipes
        SET status = 'approved',
@@ -362,7 +338,6 @@ async function approveGeneratedRecipe(req, res) {
         const { branch_id: branchId, recipe_id: recipeId, generated_by: generatedBy } =
             updateResult.rows[0];
 
-        // Fetch recipe name and generated_by_name for notifications
         const detailsResult = await client.query(
             `SELECT r.name AS recipe_name, u.name AS generated_by_name
        FROM recipes r
@@ -374,7 +349,6 @@ async function approveGeneratedRecipe(req, res) {
         const recipeName = detailsResult.rows[0]?.recipe_name || 'Recipe';
         const generatedByName = detailsResult.rows[0]?.generated_by_name || 'staff member';
 
-        // Fetch all active staff in this branch
         const staffResult = await client.query(
             `SELECT user_id, name, role
        FROM users
@@ -422,7 +396,6 @@ async function approveGeneratedRecipe(req, res) {
 
         await client.query('COMMIT');
 
-        // Emit WebSocket event to notify clients of status change
         const io = req.app && req.app.get ? req.app.get('io') : null;
         if (io) {
             const triggerResult = await db.query(
@@ -450,10 +423,6 @@ async function approveGeneratedRecipe(req, res) {
     }
 }
 
-/**
- * PUT /api/generated-recipes/:id/reject
- * Admin: reject a generated recipe and notify all staff in the branch.
- */
 async function rejectGeneratedRecipe(req, res) {
     const generatedId = parseInt(req.params.id, 10);
     const { admin_note } = req.body || {};
@@ -469,7 +438,6 @@ async function rejectGeneratedRecipe(req, res) {
     try {
         await client.query('BEGIN');
 
-        // Update generated_recipes row
         const updateResult = await client.query(
             `UPDATE generated_recipes
        SET status = 'rejected',
@@ -489,7 +457,6 @@ async function rejectGeneratedRecipe(req, res) {
         const { branch_id: branchId, recipe_id: recipeId, generated_by: generatedBy } =
             updateResult.rows[0];
 
-        // Fetch recipe name and generated_by_name for notifications
         const detailsResult = await client.query(
             `SELECT r.name AS recipe_name, u.name AS generated_by_name
        FROM recipes r
@@ -501,7 +468,6 @@ async function rejectGeneratedRecipe(req, res) {
         const recipeName = detailsResult.rows[0]?.recipe_name || 'Recipe';
         const generatedByName = detailsResult.rows[0]?.generated_by_name || 'staff member';
 
-        // Fetch all active staff in this branch
         const staffResult = await client.query(
             `SELECT user_id, name, role
        FROM users
@@ -549,7 +515,6 @@ async function rejectGeneratedRecipe(req, res) {
 
         await client.query('COMMIT');
 
-        // Emit WebSocket event to notify clients of status change
         const io = req.app && req.app.get ? req.app.get('io') : null;
         if (io) {
             const triggerResult = await db.query(
@@ -577,10 +542,6 @@ async function rejectGeneratedRecipe(req, res) {
     }
 }
 
-/**
- * GET /api/generated-recipes/recently-approved
- * Admin: list recently approved generated recipes (last 10).
- */
 async function getRecentlyApprovedRecipes(req, res) {
     try {
         const result = await db.query(
@@ -619,10 +580,6 @@ async function getRecentlyApprovedRecipes(req, res) {
     }
 }
 
-/**
- * GET /api/generated-recipes/recently-rejected
- * Admin: list recently rejected generated recipes (last 10).
- */
 async function getRecentlyRejectedRecipes(req, res) {
     try {
         const result = await db.query(
@@ -660,10 +617,7 @@ async function getRecentlyRejectedRecipes(req, res) {
     }
 }
 
-/**
- * GET /api/generated-recipes/:id/ingredients
- * Get ingredients for a generated recipe.
- */
+
 async function getGeneratedRecipeIngredients(req, res) {
     const generatedId = parseInt(req.params.id, 10);
 
@@ -672,7 +626,6 @@ async function getGeneratedRecipeIngredients(req, res) {
     }
 
     try {
-        // First get the recipe_id from generated_recipes
         const generatedRecipeResult = await db.query(
             `SELECT recipe_id FROM generated_recipes WHERE generated_id = $1`,
             [generatedId]
@@ -684,7 +637,6 @@ async function getGeneratedRecipeIngredients(req, res) {
 
         const recipeId = generatedRecipeResult.rows[0].recipe_id;
 
-        // Reuse the central Recipe model to fetch ingredients
         const recipeIngredients = await RecipeModel.getIngredients(recipeId);
 
         const ingredients = recipeIngredients.map((row) => ({
@@ -702,15 +654,11 @@ async function getGeneratedRecipeIngredients(req, res) {
     }
 }
 
-/**
- * Helper function to deactivate generated recipes whose trigger ingredients are depleted or expired
- */
+
 async function deactivateDepletedGeneratedRecipes(branchId, io = null) {
     try {
         console.log('[deactivateDepletedGeneratedRecipes] Checking for depleted recipes in branch:', branchId);
 
-        // Find all active generated recipes with depleted or expired trigger ingredients
-        // A recipe should be deactivated if ANY of its trigger ingredients (specific batches) are depleted or expired
         const result = await db.query(
             `UPDATE generated_recipes gr
              SET is_active = false
@@ -739,10 +687,8 @@ async function deactivateDepletedGeneratedRecipes(branchId, io = null) {
             const deactivatedIds = result.rows.map(r => r.generated_id);
             console.log('[deactivateDepletedGeneratedRecipes] Deactivated recipes:', deactivatedIds);
 
-            // Emit WebSocket event for each deactivated recipe
             if (io) {
                 for (const row of result.rows) {
-                    // Get recipe name and trigger ingredients for the event
                     const detailsResult = await db.query(
                         `SELECT r.name AS recipe_name
                          FROM recipes r
@@ -775,7 +721,6 @@ async function deactivateDepletedGeneratedRecipes(branchId, io = null) {
         return result.rows.length;
     } catch (err) {
         console.error('[deactivateDepletedGeneratedRecipes] Error:', err);
-        // Don't throw - this is a background cleanup task
         return 0;
     }
 }
