@@ -44,27 +44,6 @@
           <div class="stat-sub">{{ stats.foodWasted.weight.display }}</div>
           <div class="stat-sub">{{ stats.foodWasted.volume.display }}</div>
           <div class="stat-sub">{{ stats.foodWasted.count.display }}</div>
-          <div
-            class="stat-trend"
-            [class.red]="stats.foodWasted.changePercent > 0"
-            [class.green]="stats.foodWasted.changePercent < 0"
-          >
-            <span
-              class="trend-arrow"
-              [class.up]="stats.foodWasted.changePercent > 0"
-              [class.down]="stats.foodWasted.changePercent < 0"
-            >
-              <span class="material-icons">{{
-                stats.foodWasted.changePercent > 0
-                  ? "trending_up"
-                  : "trending_down"
-              }}</span>
-            </span>
-            <span class="trend-text">
-              {{ stats.foodWasted.changePercent > 0 ? "↑" : "↓" }}
-              {{ abs(stats.foodWasted.changePercent) }}% vs last month
-            </span>
-          </div>
         </div>
 
         <!-- Food Saved -->
@@ -78,27 +57,6 @@
           <div class="stat-sub">{{ stats.foodSaved.weight.display }}</div>
           <div class="stat-sub">{{ stats.foodSaved.volume.display }}</div>
           <div class="stat-sub">{{ stats.foodSaved.count.display }}</div>
-          <div
-            class="stat-trend"
-            [class.green]="stats.foodSaved.changePercent > 0"
-            [class.red]="stats.foodSaved.changePercent < 0"
-          >
-            <span
-              class="trend-arrow"
-              [class.up]="stats.foodSaved.changePercent > 0"
-              [class.down]="stats.foodSaved.changePercent < 0"
-            >
-              <span class="material-icons">{{
-                stats.foodSaved.changePercent > 0
-                  ? "trending_up"
-                  : "trending_down"
-              }}</span>
-            </span>
-            <span class="trend-text">
-              {{ stats.foodSaved.changePercent > 0 ? "↑" : "↓" }}
-              {{ abs(stats.foodSaved.changePercent) }}% vs last month
-            </span>
-          </div>
         </div>
 
         <!-- Active Discounts -->
@@ -122,14 +80,6 @@
           </div>
           <div class="stat-value">
             Rs {{ stats.profitFromDiscounts.current | number: "1.2-2" }}
-          </div>
-          <div class="stat-trend green">
-            <span class="trend-arrow up">
-              <span class="material-icons">trending_up</span>
-            </span>
-            <span class="trend-text">
-              ↑ {{ stats.profitFromDiscounts.changePercent }}% vs last month
-            </span>
           </div>
         </div>
       </div>

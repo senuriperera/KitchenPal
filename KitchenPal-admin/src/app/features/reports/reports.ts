@@ -33,7 +33,11 @@ export class Reports implements OnInit, OnDestroy {
   monthlyChartInstance: any = null;
   pieChartInstance: any = null;
 
-  pieColors = ['#10B981', '#F97316', '#FCD34D', '#F87171', '#60A5FA'];
+  pieColors = [
+    '#10B981', '#F97316', '#FCD34D', '#F87171', '#60A5FA',
+    '#A78BFA', '#34D399', '#FBBF24', '#FB7185', '#38BDF8',
+    '#6366F1', '#EC4899', '#EAB308', '#22D3EE', '#F43F5E'
+  ];
 
   ngOnInit(): void {
     this.analyticsService.getBranches().subscribe({

@@ -2,11 +2,12 @@
  * Convert base quantity to display format with appropriate unit
  * @param {number} baseQty - Quantity in base units (g, ml, or unit)
  * @param {string} unitFamily - 'weight', 'volume', or 'count'
+ * @param {boolean} forceUnit - If true, always show larger units (kg for weight, L for volume)
  * @returns {object} { value, unit, display }
  */
-function convertToDisplay(baseQty, unitFamily) {
+function convertToDisplay(baseQty, unitFamily, forceUnit = false) {
   if (unitFamily === 'weight') {
-    if (baseQty >= 1000) {
+    if (baseQty >= 1000 || forceUnit) {
       return {
         value: parseFloat((baseQty / 1000).toFixed(2)),
         unit: 'kg',
@@ -21,7 +22,7 @@ function convertToDisplay(baseQty, unitFamily) {
   }
 
   if (unitFamily === 'volume') {
-    if (baseQty >= 1000) {
+    if (baseQty >= 1000 || forceUnit) {
       return {
         value: parseFloat((baseQty / 1000).toFixed(2)),
         unit: 'L',
@@ -70,13 +71,14 @@ function buildFamilyTotals(rows) {
 /**
  * Convert family totals to display format
  * @param {object} familyTotals - { weight, volume, count }
+ * @param {boolean} forceUnit - If true, always show larger units (kg, L)
  * @returns {object} Display format for each family
  */
-function convertFamilyTotals(familyTotals) {
+function convertFamilyTotals(familyTotals, forceUnit = false) {
   return {
-    weight: convertToDisplay(familyTotals.weight, 'weight'),
-    volume: convertToDisplay(familyTotals.volume, 'volume'),
-    count: convertToDisplay(familyTotals.count, 'count')
+    weight: convertToDisplay(familyTotals.weight, 'weight', forceUnit),
+    volume: convertToDisplay(familyTotals.volume, 'volume', forceUnit),
+    count: convertToDisplay(familyTotals.count, 'count', forceUnit)
   };
 }
 
