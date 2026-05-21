@@ -150,11 +150,11 @@ class AnalyticsController {
 
       const wastedThisMonthByFamily = buildFamilyTotals(wastedThisMonthResult.rows);
       const wastedLastMonthByFamily = buildFamilyTotals(wastedLastMonthResult.rows);
-      const wastedThisDisplay = convertFamilyTotals(wastedThisMonthByFamily);
+      const wastedThisDisplay = convertFamilyTotals(wastedThisMonthByFamily, true);
 
       const savedThisMonthByFamily = buildFamilyTotals(savedThisMonthResult.rows);
       const savedLastMonthByFamily = buildFamilyTotals(savedLastMonthResult.rows);
-      const savedThisDisplay = convertFamilyTotals(savedThisMonthByFamily);
+      const savedThisDisplay = convertFamilyTotals(savedThisMonthByFamily, true);
 
       const calculateChange = (current, previous) =>
         previous > 0
@@ -295,8 +295,8 @@ class AnalyticsController {
 
         monthlyData.push({
           month: key,
-          wasted: convertFamilyTotals(wasted),
-          saved: convertFamilyTotals(saved)
+          wasted: convertFamilyTotals(wasted, true),
+          saved: convertFamilyTotals(saved, true)
         });
 
         if (i === months - 1) {
@@ -313,8 +313,8 @@ class AnalyticsController {
 
       res.json({
         currentMonth: {
-          wasted: convertFamilyTotals(currentMonthWasted),
-          saved: convertFamilyTotals(currentMonthSaved),
+          wasted: convertFamilyTotals(currentMonthWasted, true),
+          saved: convertFamilyTotals(currentMonthSaved, true),
           savedPercentage
         },
         monthlyData
@@ -437,7 +437,7 @@ class AnalyticsController {
       });
 
       res.json({
-        totalWaste: convertFamilyTotals(totalWasteByFamily),
+        totalWaste: convertFamilyTotals(totalWasteByFamily, true),
         changePercentage,
         topWasted
       });

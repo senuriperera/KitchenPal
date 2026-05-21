@@ -396,6 +396,32 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+
+  // Custom scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+
+    &:hover {
+      background: #9ca3af;
+    }
+  }
+
+  // Firefox scrollbar
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
 }
 
 .activity-item {

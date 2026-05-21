@@ -55,6 +55,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.areaChart) {
+      this.areaChart.destroy();
+      this.areaChart = null;
+    }
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -73,8 +77,10 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
         this.summary = summary;
         this.activities = activity.activities || [];
         this.isLoading = false;
+        
+        // Render chart with a proper delay to ensure DOM is ready
         if (this.chartReady) {
-          setTimeout(() => this.renderAreaChart(), 0);
+          setTimeout(() => this.renderAreaChart(), 100);
         }
       },
       error: (err) => {
@@ -90,10 +96,26 @@ export class DashboardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   renderAreaChart(): void {
     const canvas = document.getElementById('areaChart') as HTMLCanvasElement;
-    if (!canvas || !this.summary?.monthlyData || typeof Chart === 'undefined') return;
+    if (!canvas) {
+      console.warn('Chart canvas not found');
+      return;
+    }
+
+    if (!this.summary?.monthlyData) {
+      console.warn('No summary data available');
+      return;
+    }
+
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart library not loaded');
+      return;
+    }
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn('Could not get 2d context from canvas');
+      return;
+    }
 
     const labels = this.summary.monthlyData.map((d: any) => {
       const date = new Date(d.month);
