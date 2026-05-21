@@ -2,7 +2,6 @@ const db = require('../config/database');
 
 class IngredientModel {
 
-  // ─── Get all stock ingredients for a branch (inventory list view) ──────────
   static async getAllByBranch(branch_id) {
     const query = `
             SELECT
@@ -32,7 +31,6 @@ class IngredientModel {
     return result.rows;
   }
 
-  // ─── Get detailed ingredient by ID (detail page) ───────────────────────────
   static async findByIdDetailed(ingredient_id) {
     const ingredientQuery = `
             SELECT
@@ -102,7 +100,6 @@ class IngredientModel {
     };
   }
 
-  // ─── Find existing ingredient by master_ingredient_id (for auto-fill) ──────
   static async findExistingByMasterIngredient(branch_id, master_ingredient_id) {
     const query = `
       SELECT
@@ -127,35 +124,16 @@ class IngredientModel {
     return result.rows[0] || null;
   }
 
-  // ─── Create ingredient (full 6-step transaction) ───────────────────────────
-  /**
-   * @param {Object} data
-   * @param {number|null}  data.master_ingredient_id   null → create new master row
-   * @param {string}       data.name
-   * @param {number}       data.quantity_in_stock
-   * @param {number}       data.unit_weight
-   * @param {number}       data.unit_weight_unit_id
-   * @param {number}       data.price
-   * @param {number}       data.storage_type_id
-   * @param {string}       data.manufacture_date       ISO string or null
-   * @param {string}       data.expiry_date            ISO string
-   * @param {string|null}  data.image_url
-   * @param {number}       data.added_by               user_id from JWT
-   * @param {number}       data.branch_id              branch_id from JWT
-   * @returns {Object}  The full created ingredient (same shape as findByIdDetailed)
-   */
+
   static async createWithTransaction(data) {
     const client = await db.getClient();
 
     try {
       await client.query('BEGIN');
-      console.log(`[IngredientModel] Starting transaction for: ${data.name}`);
 
-      // Step 1 — Resolve master_ingredient_id (create custom if new)
       let masterIngredientId = data.master_ingredient_id;
 
       if (!masterIngredientId) {
-        // Infer unit_family from selected unit
         const unitRow = await client.query(
           'SELECT unit_family, base_unit_code FROM units WHERE unit_id = $1',
           [data.unit_weight_unit_id]
@@ -180,13 +158,6 @@ class IngredientModel {
         masterIngredientId = masterRow.rows[0].master_ingredient_id;
       }
 
-      // Step 2 — Compute total_base_quantity
-      const unitRow = await client.query(
-        'SELECT to_base_factor, base_unit_code FROM units WHERE unit_id = $1',
-        [data.unit_weight_unit_id]
-      );
-      if (!unitRow.rows[0]) throw new Error('Invalid unit_weight_unit_id');
-
       const { to_base_factor, base_unit_code } = unitRow.rows[0];
       const total_base_quantity = parseFloat(data.quantity_in_stock) *
         parseFloat(data.unit_weight) *
@@ -198,7 +169,6 @@ class IngredientModel {
       );
       const base_unit_id = baseUnitRow.rows[0]?.unit_id;
 
-      // Step 3 — Check for duplicate if master_ingredient_id exists
       let ingredient_id;
 
       if (masterIngredientId) {
@@ -213,7 +183,7 @@ class IngredientModel {
           // Ingredient exists — UPDATE
           const existing = duplicateCheck.rows[0];
           const isDeleted = existing.deleted_at !== null;
-          
+
           await client.query(
             `UPDATE stock_ingredients SET
               total_base_quantity = ${isDeleted ? '$1' : 'total_base_quantity + $1'},

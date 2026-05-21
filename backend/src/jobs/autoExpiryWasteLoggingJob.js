@@ -3,7 +3,7 @@ const db = require('../config/database');
 
 
 async function runAutoExpiryWasteLogging() {
-  console.log('🕐 Auto-expiry waste logging job started...');
+  console.log('Auto-expiry waste logging job started...');
 
   const client = await db.getClient();
 
@@ -30,7 +30,7 @@ async function runAutoExpiryWasteLogging() {
     `);
 
     if (expiredBatchesRes.rows.length === 0) {
-      console.log('✅ No expired batches found');
+      console.log('No expired batches found');
       await client.query('COMMIT');
       client.release();
       return;
@@ -71,7 +71,7 @@ async function runAutoExpiryWasteLogging() {
       );
 
       loggedCount++;
-      console.log(`  ✓ Logged waste for ${batch.name} (expired ${batch.expiry_date})`);
+      console.log(` Logged waste for ${batch.name} (expired ${batch.expiry_date})`);
     }
 
     await client.query('COMMIT');

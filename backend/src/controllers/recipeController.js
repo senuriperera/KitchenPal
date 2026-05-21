@@ -1,7 +1,7 @@
 const Recipe = require('../models/Recipe');
 
 class RecipeController {
-    
+
     static async getAllRecipes(req, res) {
         try {
             const recipes = await Recipe.getAllStandardRecipes();
@@ -12,7 +12,7 @@ class RecipeController {
         }
     }
 
-    
+
     static async getRecipeById(req, res) {
         try {
             const { id } = req.params;
@@ -29,7 +29,7 @@ class RecipeController {
         }
     }
 
-    
+
     static async createRecipe(req, res) {
         try {
             const { name, image_url, cooking_time_minutes, description, base_price, ingredients, total_servings, serving_description } = req.body;
@@ -80,16 +80,16 @@ class RecipeController {
 
             const io = req.app.get('io');
             if (io) {
-                console.log(`📡 [WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
+                console.log(`[WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
                 const fullRecipe = await Recipe.getStandardRecipeById(recipe.recipe_id);
                 if (fullRecipe) {
-                    console.log(`📡 [WebSocket] Emitting recipe:created for recipe ${recipe.recipe_id}`);
+                    console.log(`[WebSocket] Emitting recipe:created for recipe ${recipe.recipe_id}`);
                     io.emit('recipe:created', fullRecipe);
                 } else {
-                    console.log(`⚠️ [WebSocket] Full recipe not found for ID ${recipe.recipe_id}`);
+                    console.log(`[WebSocket] Full recipe not found for ID ${recipe.recipe_id}`);
                 }
             } else {
-                console.log('⚠️ [WebSocket] io object not available!');
+                console.log('[WebSocket] io object not available!');
             }
         } catch (error) {
             console.error('Create recipe error:', error);
@@ -109,7 +109,7 @@ class RecipeController {
         }
     }
 
-    
+
     static async updateRecipe(req, res) {
         try {
             const { id } = req.params;
@@ -175,16 +175,16 @@ class RecipeController {
 
             const io = req.app.get('io');
             if (io) {
-                console.log(`📡 [WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
+                console.log(`[WebSocket] io object exists, client count: ${io.engine.clientsCount}`);
                 const fullRecipe = await Recipe.getStandardRecipeById(recipe.recipe_id);
                 if (fullRecipe) {
-                    console.log(`📡 [WebSocket] Emitting recipe:updated for recipe ${recipe.recipe_id}`);
+                    console.log(`[WebSocket] Emitting recipe:updated for recipe ${recipe.recipe_id}`);
                     io.emit('recipe:updated', fullRecipe);
                 } else {
-                    console.log(`⚠️ [WebSocket] Full recipe not found for ID ${recipe.recipe_id}`);
+                    console.log(`[WebSocket] Full recipe not found for ID ${recipe.recipe_id}`);
                 }
             } else {
-                console.log('⚠️ [WebSocket] io object not available!');
+                console.log('[WebSocket] io object not available!');
             }
         } catch (error) {
             console.error('Update recipe error:', error);
@@ -201,7 +201,7 @@ class RecipeController {
         }
     }
 
-    
+
     static async deleteRecipe(req, res) {
         try {
             const { id } = req.params;
@@ -215,10 +215,10 @@ class RecipeController {
 
             const io = req.app.get('io');
             if (io) {
-                console.log(`📡 [WebSocket] Emitting recipe:deleted for recipe ${id}`);
+                console.log(`[WebSocket] Emitting recipe:deleted for recipe ${id}`);
                 io.emit('recipe:deleted', { id: Number(id) });
             } else {
-                console.log('⚠️ [WebSocket] io object not available on delete!');
+                console.log('[WebSocket] io object not available on delete!');
             }
         } catch (error) {
             console.error('Delete recipe error:', error);
@@ -226,7 +226,7 @@ class RecipeController {
         }
     }
 
-    
+
     static async checkAvailability(req, res) {
         try {
             const branch_id = req.user.branch_id;

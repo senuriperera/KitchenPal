@@ -1,7 +1,6 @@
 const db = require('../config/database');
 
 class RecipeSuggestionModel {
-    // Create recipe suggestion
     static async create({
         branch_id,
         notification_id,
@@ -32,7 +31,6 @@ class RecipeSuggestionModel {
         return result.rows[0];
     }
 
-    // Get all suggestions by branch
     static async getAllByBranch(branch_id, status = null) {
         let query = `
       SELECT rs.*, r.name as recipe_name, r.image_url, r.cooking_time_minutes, r.base_price
@@ -53,7 +51,6 @@ class RecipeSuggestionModel {
         return result.rows;
     }
 
-    // Get suggestion by ID
     static async findById(suggestion_id) {
         const query = `
       SELECT rs.*, 
@@ -72,7 +69,6 @@ class RecipeSuggestionModel {
         return result.rows[0];
     }
 
-    // Approve suggestion
     static async approve(suggestion_id, approved_by_user_id) {
         const query = `
       UPDATE recipe_suggestions 
@@ -86,7 +82,6 @@ class RecipeSuggestionModel {
         return result.rows[0];
     }
 
-    // Reject suggestion
     static async reject(suggestion_id, rejection_reason) {
         const query = `
       UPDATE recipe_suggestions 
@@ -99,7 +94,6 @@ class RecipeSuggestionModel {
         return result.rows[0];
     }
 
-    // Update discount
     static async updateDiscount(suggestion_id, new_discount_percentage, new_discounted_price) {
         const query = `
       UPDATE recipe_suggestions 
@@ -112,7 +106,6 @@ class RecipeSuggestionModel {
         return result.rows[0];
     }
 
-    // Delete suggestion
     static async delete(suggestion_id) {
         const query = 'DELETE FROM recipe_suggestions WHERE suggestion_id = $1';
         await db.query(query, [suggestion_id]);

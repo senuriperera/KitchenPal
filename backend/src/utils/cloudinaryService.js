@@ -2,17 +2,14 @@ const cloudinary = require('cloudinary').v2;
 const config = require('../config/config');
 const multer = require('multer');
 
-// Configure Cloudinary
 cloudinary.config({
     cloud_name: config.cloudinary.cloudName,
     api_key: config.cloudinary.apiKey,
     api_secret: config.cloudinary.apiSecret,
 });
 
-// Configure multer to use memory storage
 const storage = multer.memoryStorage();
 
-// File filter for images only
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const mimetype = allowedTypes.test(file.mimetype);
@@ -24,24 +21,16 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Create multer upload
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB max file size
+        fileSize: 5 * 1024 * 1024,
     },
     fileFilter: fileFilter,
 });
 
-/**
- * Upload image to Cloudinary
- * @param {Buffer} buffer - Image buffer
- * @param {string} folder - Cloudinary folder name
- * @returns {Promise} - Cloudinary upload result
- */
 const uploadImage = (buffer, folder = 'kitchenpal/recipes') => {
     return new Promise((resolve, reject) => {
-        // Set timeout to prevent hanging
         const timeout = setTimeout(() => {
             reject(new Error('Cloudinary upload timeout after 30 seconds'));
         }, 30000);
@@ -67,11 +56,6 @@ const uploadImage = (buffer, folder = 'kitchenpal/recipes') => {
     });
 };
 
-/**
- * Delete image from Cloudinary
- * @param {string} publicId - Cloudinary public ID
- * @returns {Promise} - Cloudinary delete result
- */
 const deleteImage = async (publicId) => {
     try {
         const result = await cloudinary.uploader.destroy(publicId);
@@ -82,11 +66,6 @@ const deleteImage = async (publicId) => {
     }
 };
 
-/**
- * Get public ID from Cloudinary URL
- * @param {string} url - Cloudinary URL
- * @returns {string} - Public ID
- */
 const getPublicIdFromUrl = (url) => {
     if (!url) return null;
     const matches = url.match(/\/v\d+\/(.+)\./);

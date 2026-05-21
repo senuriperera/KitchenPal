@@ -1,7 +1,6 @@
 const db = require('../config/database');
 
 class UserModel {
-    // Create a new user
     static async create({ name, email, password_hash, role = 'user', branch_id }) {
         const query = `
             INSERT INTO users (name, email, password_hash, role, branch_id)
@@ -13,27 +12,23 @@ class UserModel {
         return result.rows[0];
     }
 
-    // Find user by email
     static async findByEmail(email) {
         const query = 'SELECT * FROM users WHERE email = $1';
         const result = await db.query(query, [email]);
         return result.rows[0];
     }
 
-    // Find user by ID
     static async findById(user_id) {
         const query = 'SELECT user_id, name, email, role, branch_id, created_at, last_login FROM users WHERE user_id = $1';
         const result = await db.query(query, [user_id]);
         return result.rows[0];
     }
 
-    // Update last login
     static async updateLastLogin(user_id) {
         const query = 'UPDATE users SET last_login = NOW() WHERE user_id = $1';
         await db.query(query, [user_id]);
     }
 
-    // Get all users (for admin)
     static async getAll() {
         const query = `
             SELECT 
@@ -54,7 +49,6 @@ class UserModel {
     }
 
 
-    // Get all users by branch (for managers)
     static async getAllByBranch(branch_id) {
         console.log('getAllByBranch called with branch_id:', branch_id);
         const query = `

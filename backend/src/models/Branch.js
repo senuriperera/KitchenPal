@@ -1,7 +1,6 @@
 const pool = require('../config/database');
 
 class BranchModel {
-    // Get all branches
     static async getAll() {
         const query = `
             SELECT 
@@ -21,7 +20,6 @@ class BranchModel {
         return result.rows;
     }
 
-    // Get branch by ID
     static async getById(branchId) {
         const query = `
             SELECT 
@@ -40,7 +38,6 @@ class BranchModel {
         return result.rows[0];
     }
 
-    // Create new branch
     static async create(branchData) {
         const { name, address, contact_email, contact_number } = branchData;
         const query = `
@@ -60,11 +57,9 @@ class BranchModel {
         return result.rows[0];
     }
 
-    // Update branch
     static async update(branchId, branchData) {
         const { name, address, contact_email, contact_number } = branchData;
 
-        // Build dynamic query based on provided fields
         const updates = [];
         const values = [];
         let paramCount = 1;
@@ -114,7 +109,6 @@ class BranchModel {
         return result.rows[0];
     }
 
-    // Soft delete branch
     static async delete(branchId) {
         const query = `
             UPDATE branches

@@ -1,10 +1,3 @@
-/**
- * Convert base quantity to display format with appropriate unit
- * @param {number} baseQty - Quantity in base units (g, ml, or unit)
- * @param {string} unitFamily - 'weight', 'volume', or 'count'
- * @param {boolean} forceUnit - If true, always show larger units (kg for weight, L for volume)
- * @returns {object} { value, unit, display }
- */
 function convertToDisplay(baseQty, unitFamily, forceUnit = false) {
   if (unitFamily === 'weight') {
     if (baseQty >= 1000 || forceUnit) {
@@ -44,7 +37,6 @@ function convertToDisplay(baseQty, unitFamily, forceUnit = false) {
     };
   }
 
-  // fallback
   return {
     value: parseFloat(baseQty.toFixed(2)),
     unit: 'g',
@@ -52,11 +44,6 @@ function convertToDisplay(baseQty, unitFamily, forceUnit = false) {
   };
 }
 
-/**
- * Build family totals from query results
- * @param {array} rows - Query result rows
- * @returns {object} { weight, volume, count }
- */
 function buildFamilyTotals(rows) {
   const result = { weight: 0, volume: 0, count: 0 };
   rows.forEach(row => {
@@ -68,12 +55,6 @@ function buildFamilyTotals(rows) {
   return result;
 }
 
-/**
- * Convert family totals to display format
- * @param {object} familyTotals - { weight, volume, count }
- * @param {boolean} forceUnit - If true, always show larger units (kg, L)
- * @returns {object} Display format for each family
- */
 function convertFamilyTotals(familyTotals, forceUnit = false) {
   return {
     weight: convertToDisplay(familyTotals.weight, 'weight', forceUnit),

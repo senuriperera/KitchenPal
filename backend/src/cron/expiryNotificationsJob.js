@@ -7,7 +7,6 @@ async function runExpiryNotificationsJob() {
     try {
         await client.query('BEGIN');
 
-        // Find expiring batches within 3 days
         const expiringResult = await client.query(
             `SELECT
          ib.batch_id,
@@ -42,7 +41,6 @@ async function runExpiryNotificationsJob() {
                 days_until_expiry,
             } = row;
 
-            // Check if a notification already exists today for this ingredient + branch
             const existingNotif = await client.query(
                 `SELECT notification_id
          FROM notifications
@@ -58,7 +56,6 @@ async function runExpiryNotificationsJob() {
                 continue;
             }
 
-            // Find all active staff and branch managers for this branch
             const staffResult = await client.query(
                 `SELECT user_id
          FROM users

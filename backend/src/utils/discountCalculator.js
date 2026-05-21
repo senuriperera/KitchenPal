@@ -1,9 +1,5 @@
 const IngredientModel = require('../models/Ingredient');
 
-/**
- * Calculate discount based on expiring ingredients and urgency
- * This is a fallback function. In production, you would integrate with a RAG model.
- */
 async function calculateDiscount(recipe, expiring_ingredient_ids) {
     try {
         // Get ingredient details

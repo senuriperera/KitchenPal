@@ -23,14 +23,14 @@ class SaleController {
 
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
-                // Emit inventory changed event for real-time updates in mobile/web
+
                 io.emit('inventory:changed', {
                     action: 'sale_created',
                     branch_id,
                     sale,
                     timestamp: new Date(),
                 });
-                // Emit notifications changed because ingredient quantities may affect notifications
+
                 io.emit('notifications:changed', {
                     action: 'inventory_updated',
                     branch_id,
@@ -125,12 +125,12 @@ class SaleController {
 
             const io = req.app && req.app.get ? req.app.get('io') : null;
             if (io) {
-                // Emit inventory changed event for real-time updates in mobile/web
+
                 io.emit('inventory:changed', {
                     action: 'sale_deleted',
                     timestamp: new Date(),
                 });
-                // Emit notifications changed because ingredient quantities may affect notifications
+
                 io.emit('notifications:changed', {
                     action: 'inventory_updated',
                     timestamp: new Date(),
