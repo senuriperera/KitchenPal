@@ -2,12 +2,10 @@ const IngredientModel = require('../models/Ingredient');
 
 async function calculateDiscount(recipe, expiring_ingredient_ids) {
     try {
-        // Get ingredient details
         const ingredients = await Promise.all(
             expiring_ingredient_ids.map(id => IngredientModel.findById(id))
         );
 
-        // Calculate days until expiry
         const today = new Date();
         const expiryDates = ingredients.map(ing => {
             const expiryDate = new Date(ing.expiry_date);
@@ -18,28 +16,26 @@ async function calculateDiscount(recipe, expiring_ingredient_ids) {
 
         const minDaysUntilExpiry = Math.min(...expiryDates);
 
-        // Calculate urgency level and discount percentage
         let urgency_level = 'low';
         let discount_percentage = 0;
 
         if (minDaysUntilExpiry <= 1) {
             urgency_level = 'critical';
-            discount_percentage = 50; // 50% discount
+            discount_percentage = 50;
         } else if (minDaysUntilExpiry <= 2) {
             urgency_level = 'high';
-            discount_percentage = 40; // 40% discount
+            discount_percentage = 40;
         } else if (minDaysUntilExpiry <= 3) {
             urgency_level = 'high';
-            discount_percentage = 30; // 30% discount
+            discount_percentage = 30;
         } else if (minDaysUntilExpiry <= 5) {
             urgency_level = 'medium';
-            discount_percentage = 20; // 20% discount
+            discount_percentage = 20;
         } else {
             urgency_level = 'low';
-            discount_percentage = 10; // 10% discount
+            discount_percentage = 10;
         }
 
-        // Calculate discounted price
         const base_price = parseFloat(recipe.base_price);
         const discounted_price = base_price * (1 - discount_percentage / 100);
 
@@ -52,7 +48,6 @@ async function calculateDiscount(recipe, expiring_ingredient_ids) {
     } catch (error) {
         console.error('Calculate discount error:', error);
 
-        // Fallback to default discount
         return {
             discount_percentage: 15,
             discounted_price: parseFloat((recipe.base_price * 0.85).toFixed(2)),
