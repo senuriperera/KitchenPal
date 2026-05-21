@@ -1,7 +1,6 @@
 const db = require('../config/database');
 
 class RecipeModel {
-    // Get recipe by ID with all details
     static async findById(recipe_id) {
         const query = `
             SELECT r.*,
@@ -18,7 +17,6 @@ class RecipeModel {
             return null;
         }
 
-        // Get recipe ingredients
         const ingredientsQuery = `
             SELECT ri.*,
                    mi.name as ingredient_name,
@@ -37,9 +35,7 @@ class RecipeModel {
         };
     }
 
-    // Find recipes that match given ingredients (for suggestions)
     static async findMatchingRecipes(branch_id, ingredient_ids) {
-        // Find recipes where the recipe's required ingredients match the expiring ingredients
         const query = `
             WITH recipe_matches AS (
                 SELECT 
@@ -70,7 +66,6 @@ class RecipeModel {
         return result.rows;
     }
 
-    // Get all recipes for a branch
     static async getAllByBranch(branch_id) {
         const query = `
             SELECT r.*,
@@ -86,7 +81,6 @@ class RecipeModel {
         return result.rows;
     }
 
-    // Get all recipes (for admin)
     static async getAll() {
         const query = `
             SELECT r.*,
@@ -101,7 +95,6 @@ class RecipeModel {
         return result.rows;
     }
 
-    // Get all standard recipes with ingredients (is_generated = false)
     static async getAllStandardRecipes() {
         const query = `
             SELECT 
@@ -141,7 +134,6 @@ class RecipeModel {
         return result.rows;
     }
 
-    // Get a single standard recipe by ID with ingredients
     static async getStandardRecipeById(recipeId) {
         const query = `
             SELECT 
@@ -180,7 +172,6 @@ class RecipeModel {
         return result.rows[0];
     }
 
-    // Create new recipe
     static async create({ branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by }) {
         const query = `
             INSERT INTO recipes (branch_id, name, image_url, cooking_time_minutes, description, base_price, is_generated, created_by)
@@ -192,14 +183,12 @@ class RecipeModel {
         return result.rows[0];
     }
 
-    // Create standard recipe with ingredients and auto-generated keywords (transaction)
     static async createStandardRecipe(recipeData, ingredients) {
         const client = await db.getClient();
 
         try {
             await client.query('BEGIN');
 
-            // 1. Insert recipe
             const recipeQuery = `
                 INSERT INTO recipes (
                     name, image_url, cooking_time_minutes, description, 
@@ -226,9 +215,7 @@ class RecipeModel {
             const recipe = recipeResult.rows[0];
             const recipeId = recipe.recipe_id;
 
-            // 2. Validate unit family and insert recipe ingredients
             if (ingredients && ingredients.length > 0) {
-                // Change 4: validate unit family for each ingredient before inserting
                 const validationQuery = `
                     SELECT u.unit_family AS unit_unit_family,
                            mi.unit_family AS ingredient_unit_family,
@@ -248,8 +235,6 @@ class RecipeModel {
 
                     if (validationResult.rows.length > 0) {
                         const { unit_unit_family, ingredient_unit_family, ingredient_name, unit_name } = validationResult.rows[0];
-                        // Only reject if BOTH families are known and they don't match
-                        // (skip validation if ingredient has no unit_family set yet in DB)
                         if (unit_unit_family && ingredient_unit_family && unit_unit_family !== ingredient_unit_family) {
                             await client.query('ROLLBACK');
                             const error = new Error(
@@ -278,16 +263,13 @@ class RecipeModel {
                 }
             }
 
-            // 3. Generate and insert keywords
             const keywords = new Set();
 
-            // Add recipe name words
             const recipeNameWords = recipeData.name.toLowerCase()
                 .split(/\s+/)
                 .filter(word => word.length > 2);
             recipeNameWords.forEach(word => keywords.add(word));
 
-            // Add ingredient name words
             if (ingredients && ingredients.length > 0) {
                 for (const ing of ingredients) {
                     const ingNameQuery = `
@@ -305,7 +287,6 @@ class RecipeModel {
                 }
             }
 
-            // Insert keywords
             if (keywords.size > 0) {
                 const keywordQuery = `
                     INSERT INTO recipe_keywords (recipe_id, keyword)
@@ -329,7 +310,6 @@ class RecipeModel {
         }
     }
 
-    // Update recipe
     static async update(recipe_id, { name, image_url, cooking_time_minutes, description, base_price, is_active }) {
         const query = `
             UPDATE recipes
@@ -348,7 +328,6 @@ class RecipeModel {
         return result.rows[0];
     }
 
-    // Update recipe with ingredients (transaction)
     static async updateWithIngredients(recipe_id, recipeData, ingredients) {
         const client = await db.getClient();
 
@@ -356,7 +335,6 @@ class RecipeModel {
             console.log('Starting transaction for recipe update:', recipe_id);
             await client.query('BEGIN');
 
-            // Change 3: Check recipe exists and is active before allowing edit
             const activeCheckResult = await client.query(
                 'SELECT recipe_id, is_active FROM recipes WHERE recipe_id = $1 AND is_generated = false',
                 [recipe_id]
@@ -372,7 +350,6 @@ class RecipeModel {
                 throw error;
             }
 
-            // 1. Update recipe
             const recipeQuery = `
                 UPDATE recipes
                 SET name = $2,
@@ -409,16 +386,13 @@ class RecipeModel {
             const recipe = recipeResult.rows[0];
             console.log('Recipe updated in DB:', recipe.recipe_id);
 
-            // 2. Delete existing ingredients
             const deleteIngredientsQuery = `
                 DELETE FROM recipe_ingredients WHERE recipe_id = $1
             `;
             const deleteResult = await client.query(deleteIngredientsQuery, [recipe_id]);
             console.log('Deleted', deleteResult.rowCount, 'existing ingredients');
 
-            // 3. Validate unit family and insert new ingredients
             if (ingredients && ingredients.length > 0) {
-                // Change 4: validate unit family for each ingredient before inserting
                 const validationQuery = `
                     SELECT u.unit_family AS unit_unit_family,
                            mi.unit_family AS ingredient_unit_family,
@@ -467,22 +441,17 @@ class RecipeModel {
                 console.log('Inserted', ingredients.length, 'new ingredients');
             }
 
-            // 4. Delete old keywords
             const deleteKeywordsQuery = `
                 DELETE FROM recipe_keywords WHERE recipe_id = $1
             `;
             await client.query(deleteKeywordsQuery, [recipe_id]);
 
-            // 5. Generate and insert new keywords
             const keywords = new Set();
-
-            // Add recipe name words
             const recipeNameWords = recipeData.name.toLowerCase()
                 .split(/\s+/)
                 .filter(word => word.length > 2);
             recipeNameWords.forEach(word => keywords.add(word));
 
-            // Add ingredient name words
             if (ingredients && ingredients.length > 0) {
                 for (const ing of ingredients) {
                     const ingNameQuery = `
@@ -500,7 +469,6 @@ class RecipeModel {
                 }
             }
 
-            // Insert keywords
             if (keywords.size > 0) {
                 const keywordQuery = `
                     INSERT INTO recipe_keywords (recipe_id, keyword)
@@ -527,7 +495,6 @@ class RecipeModel {
         }
     }
 
-    // Soft delete recipe (Change 3: set is_active = false instead of hard delete)
     static async delete(recipe_id) {
         const query = `
             UPDATE recipes
@@ -540,7 +507,6 @@ class RecipeModel {
         return result.rows[0];
     }
 
-    // Add ingredient to recipe
     static async addIngredient(recipe_id, { master_ingredient_id, quantity_required, unit_id, is_optional }) {
         const query = `
             INSERT INTO recipe_ingredients (recipe_id, master_ingredient_id, quantity_required, unit_id, is_optional)
@@ -554,14 +520,12 @@ class RecipeModel {
         return result.rows[0];
     }
 
-    // Remove ingredient from recipe
     static async removeIngredient(recipe_id, master_ingredient_id) {
         const query = 'DELETE FROM recipe_ingredients WHERE recipe_id = $1 AND master_ingredient_id = $2 RETURNING *';
         const result = await db.query(query, [recipe_id, master_ingredient_id]);
         return result.rows[0];
     }
 
-    // Get recipe ingredients
     static async getIngredients(recipe_id) {
         const query = `
             SELECT ri.*,

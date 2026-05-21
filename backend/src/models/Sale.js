@@ -1,7 +1,7 @@
 const db = require('../config/database');
 
 class SaleModel {
-    // Create sale and deduct inventory with proper FIFO logic
+
     static async create({
         branch_id,
         recipe_id,
@@ -21,9 +21,6 @@ class SaleModel {
         try {
             console.log('[SaleModel.create] Starting transaction...');
             await client.query('BEGIN');
-
-
-            // Fetch recipe details and total_servings
 
             console.log('[SaleModel.create] STEP 1: Fetching recipe details...');
             const recipeResult = await client.query(
@@ -48,8 +45,7 @@ class SaleModel {
 
             const totalServings = recipe.total_servings || 1;
             let basePrice = parseFloat(recipe.base_price);
-            
-            // If this is a sale from a generated recipe, use the discounted price
+
             if (generated_id) {
                 const generatedResult = await client.query(
                     `SELECT final_discount_price FROM generated_recipes WHERE generated_id = $1 AND status = 'approved'`,
@@ -59,12 +55,10 @@ class SaleModel {
                     basePrice = parseFloat(generatedResult.rows[0].final_discount_price);
                 }
             }
-            
+
             console.log('[SaleModel.create] totalServings:', totalServings);
             console.log('[SaleModel.create] basePrice:', basePrice);
 
-
-            // Fetch all recipe ingredients with unit conversion
 
             console.log('[SaleModel.create] STEP 2: Fetching recipe ingredients...');
             const ingredientsResult = await client.query(
@@ -88,7 +82,6 @@ class SaleModel {
                 throw new Error('Recipe has no ingredients defined');
             }
 
-            // Calculate base quantity needed per ingredient
             const servingFraction = quantity_sold / totalServings;
             const ingredientsToDeduct = ingredientsResult.rows.map((ing) => ({
                 master_ingredient_id: ing.master_ingredient_id,
@@ -101,12 +94,11 @@ class SaleModel {
             }));
 
 
-            // Stock check with FOR UPDATE lock (collect all failures)
 
             const insufficientIngredients = [];
 
             for (const ing of ingredientsToDeduct) {
-                if (ing.is_optional) continue; // Skip optional ingredients
+                if (ing.is_optional) continue;
 
                 const stockResult = await client.query(
                     `SELECT si.ingredient_id, si.total_base_quantity
@@ -135,12 +127,10 @@ class SaleModel {
                         });
                     }
 
-                    // Store ingredient_id for deduction step
                     ing.ingredient_id = stock.ingredient_id;
                 }
             }
 
-            // If any ingredient is insufficient, rollback and throw error
             if (insufficientIngredients.length > 0) {
                 console.log('[SaleModel.create] Insufficient stock detected!');
                 console.log('[SaleModel.create] Details:', JSON.stringify(insufficientIngredients, null, 2));
@@ -153,8 +143,6 @@ class SaleModel {
 
             console.log('[SaleModel.create] All ingredients have sufficient stock!');
 
-
-            // Insert into sales table
 
             console.log('[SaleModel.create] Inserting into sales table...');
             const totalRevenue = basePrice * quantity_sold;
@@ -175,8 +163,6 @@ class SaleModel {
             console.log('[SaleModel.create] Sale created! saleId:', saleId, 'soldAt:', soldAt);
 
 
-            // FIFO deduction for each ingredient + Update stock_ingredients
-
             console.log('[SaleModel.create] Starting FIFO deduction...');
             for (const ing of ingredientsToDeduct) {
                 if (ing.is_optional || !ing.ingredient_id) {
@@ -187,8 +173,6 @@ class SaleModel {
                 console.log('[SaleModel.create] Deducting ingredient:', ing.ingredient_name);
                 console.log('[SaleModel.create] Amount needed:', ing.base_qty_needed);
 
-                // Query batches oldest expiry first with FOR UPDATE lock
-                // Only include non-expired batches
                 const batchesResult = await client.query(
                     `SELECT batch_id, remaining_base_quantity
                      FROM ingredient_batches
@@ -205,7 +189,6 @@ class SaleModel {
 
                 let remainingToDeduct = ing.base_qty_needed;
 
-                // Loop through batches and deduct
                 for (const batch of batchesResult.rows) {
                     if (remainingToDeduct <= 0) break;
 
@@ -218,7 +201,6 @@ class SaleModel {
 
                     console.log('[SaleModel.create] Batch', batch.batch_id, '- deducting', deductFromBatch, '(remaining:', newRemaining, 'depleted:', isDepleted, ')');
 
-                    // Update batch
                     await client.query(
                         `UPDATE ingredient_batches SET
                             remaining_base_quantity = $1,
@@ -227,7 +209,6 @@ class SaleModel {
                         [newRemaining, isDepleted, batch.batch_id]
                     );
 
-                    // Record deduction in sale_deductions
                     await client.query(
                         `INSERT INTO sale_deductions (sale_id, batch_id, quantity_deducted)
                          VALUES ($1, $2, $3)`,
@@ -239,8 +220,6 @@ class SaleModel {
 
                 console.log('[SaleModel.create] Updating stock_ingredients for', ing.ingredient_name);
 
-                // Update stock_ingredients after all batch deductions
-                // Only count non-expired, non-depleted batches
                 await client.query(
                     `UPDATE stock_ingredients SET
                         total_base_quantity = total_base_quantity - $1,
@@ -258,9 +237,6 @@ class SaleModel {
                 );
             }
 
-            // ─────────────────────────────────────────────────────────
-            // STEP 7: Commit and return
-            // ─────────────────────────────────────────────────────────
             console.log('[SaleModel.create] STEP 7: Committing transaction...');
             await client.query('COMMIT');
             console.log('[SaleModel.create] Transaction committed successfully!');
@@ -290,7 +266,6 @@ class SaleModel {
         }
     }
 
-    // Get all sales by branch
     static async getAllByBranch(branch_id, filters = {}) {
         let query = `
       SELECT s.*,
@@ -322,7 +297,6 @@ class SaleModel {
         return result.rows;
     }
 
-    // Get sale by ID
     static async findById(sale_id) {
         const query = `
       SELECT s.*,
@@ -337,7 +311,6 @@ class SaleModel {
         return result.rows[0];
     }
 
-    // Get sales statistics
     static async getStatistics(branch_id, start_date, end_date) {
         const query = `
       SELECT
@@ -356,7 +329,6 @@ class SaleModel {
         return result.rows[0];
     }
 
-    // Delete sale
     static async delete(sale_id) {
         const query = 'DELETE FROM sales WHERE sale_id = $1';
         await db.query(query, [sale_id]);
