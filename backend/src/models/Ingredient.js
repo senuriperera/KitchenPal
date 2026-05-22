@@ -131,15 +131,15 @@ class IngredientModel {
     try {
       await client.query('BEGIN');
 
+      const unitRow = await client.query(
+        'SELECT unit_family, base_unit_code, to_base_factor FROM units WHERE unit_id = $1',
+        [data.unit_weight_unit_id]
+      );
+      if (!unitRow.rows[0]) throw new Error('Invalid unit_weight_unit_id');
+
       let masterIngredientId = data.master_ingredient_id;
 
       if (!masterIngredientId) {
-        const unitRow = await client.query(
-          'SELECT unit_family, base_unit_code FROM units WHERE unit_id = $1',
-          [data.unit_weight_unit_id]
-        );
-        if (!unitRow.rows[0]) throw new Error('Invalid unit_weight_unit_id');
-
         const { unit_family, base_unit_code } = unitRow.rows[0];
 
         const baseUnitRow = await client.query(
